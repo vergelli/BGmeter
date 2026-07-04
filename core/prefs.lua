@@ -1,0 +1,43 @@
+-- bgmeter :: core/prefs.lua
+-- Thin accessor over sv.prefs, so the UI reads/writes settings through one place
+-- and never has to nil-check the SavedVars tree. Defaults live in zenimax/savedvars.
+
+BGMeter = BGMeter or {}
+local BGMeter = BGMeter
+
+local Prefs = {}
+
+local FALLBACK = {
+    max_history = 50, auto_open = true, sounds = true, animate = true,
+    show_haul = true, show_veterancy = true, show_standing = true,
+    show_awards = true, show_vanguard = false, vanguard_dock = false,
+    vanguard_fade = true, opacity = 0.97, sort_key = "damage", sort_desc = true,
+}
+
+local function tbl()
+    local sv = BGMeter.zenimax.savedvars.get()
+    if sv then
+        sv.prefs = sv.prefs or {}
+        return sv.prefs
+    end
+    return FALLBACK
+end
+
+function Prefs.get(key)
+    local p = tbl()
+    local v = p[key]
+    if v == nil then v = FALLBACK[key] end
+    return v
+end
+
+function Prefs.set(key, value)
+    tbl()[key] = value
+end
+
+function Prefs.toggle(key)
+    local v = not Prefs.get(key)
+    Prefs.set(key, v)
+    return v
+end
+
+BGMeter.Prefs = Prefs
