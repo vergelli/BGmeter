@@ -403,6 +403,85 @@ end
 
 local MEDAL_PERROW, MEDAL_STEP, MEDAL_CAP = 7, 24, 14
 
+local medal_card = nil
+
+local function build_medal_card()
+    if medal_card then return medal_card end
+    local root = BGMeter.zenimax.ui.create_control(nil, W.win, CT_CONTROL)
+    root:SetDimensions(280, 96)
+    root:SetDrawLevel(30)
+    root:SetDrawTier(DT_HIGH)
+    root:SetHidden(true)
+
+    local bg = P.rect(root, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
+    bg:SetAnchorFill(root)
+    P.frame(root):SetAnchorFill(root)
+
+    local strip = P.rect(root, K.COLOR.gold)
+    strip:SetAnchor(TOPLEFT, root, TOPLEFT, 4, 4)
+    strip:SetAnchor(BOTTOMLEFT, root, BOTTOMLEFT, 4, -4)
+    strip:SetWidth(2)
+
+    local icon = P.icon(root)
+    icon:SetDimensions(40, 40)
+    icon:SetAnchor(TOPLEFT, root, TOPLEFT, 14, 12)
+
+    local name = P.label(root, S.FONT.header, K.COLOR.text)
+    name:SetAnchor(TOPLEFT, root, TOPLEFT, 64, 12)
+    name:SetDimensions(202, 20)
+
+    local count = P.label(root, S.FONT.small, K.COLOR.gold)
+    count:SetAnchor(TOPLEFT, root, TOPLEFT, 64, 34)
+    count:SetDimensions(202, 14)
+
+    local cond = P.label(root, S.FONT.small, K.COLOR.text_dim)
+    cond:SetAnchor(TOPLEFT, root, TOPLEFT, 14, 60)
+    cond:SetWidth(252)
+
+    local reward = P.label(root, S.FONT.small, K.COLOR.gold)
+    reward:SetDimensions(252, 14)
+
+    medal_card = { root = root, icon = icon, name = name, count = count, cond = cond, reward = reward }
+    return medal_card
+end
+
+local function hide_medal_card()
+    if medal_card then medal_card.root:SetHidden(true) end
+end
+
+local function show_medal_card(mi)
+    local id = mi.bgmMedalId
+    local n = mi.bgmMedalCount or 1
+    BGMeter.Log.debug("medal hover: id=%s x%d", tostring(id), n)
+    local info = id and Icons.medal_info(id) or nil
+    if not info then return end
+    local c = build_medal_card()
+
+    c.icon:SetTexture(info.icon)
+    set_text(c.name, info.name)
+    set_text(c.count, (n > 1) and ("earned x" .. n) or "earned this match")
+
+    local ch = 0
+    if info.condition and info.condition ~= "" then
+        set_text(c.cond, info.condition)
+        ch = math.max(14, c.cond:GetTextHeight() or 14)
+    else
+        set_text(c.cond, "")
+    end
+    c.cond:SetHeight(ch)
+
+    local rtext = (info.reward and info.reward > 0)
+        and string.format("+%s score%s", F.commas(info.reward), n > 1 and " each" or "") or ""
+    set_text(c.reward, rtext)
+    c.reward:ClearAnchors()
+    c.reward:SetAnchor(TOPLEFT, c.cond, BOTTOMLEFT, 0, 4)
+
+    c.root:SetHeight(math.max(60 + ch + ((rtext ~= "") and 22 or 6), 64))
+    c.root:ClearAnchors()
+    c.root:SetAnchor(TOPRIGHT, mi, TOPLEFT, -10, -6)
+    c.root:SetHidden(false)
+end
+
 local function build_haul(win)
     local p = {}
     local PAD = 16
@@ -535,7 +614,12 @@ local function build_haul(win)
     W.tip_static(p.cp.icon, "Champion Points earned this match")
     W.tip_dynamic(p.vetIcon)
     W.tip_dynamic(p.standRank)
-    for i = 1, #p.medalIcons do W.tip_dynamic(p.medalIcons[i]) end
+    for i = 1, #p.medalIcons do
+        local mi = p.medalIcons[i]
+        mi:SetMouseEnabled(true)
+        mi:SetHandler("OnMouseEnter", function() show_medal_card(mi) end)
+        mi:SetHandler("OnMouseExit", hide_medal_card)
+    end
     return p
 end
 
@@ -1195,31 +1279,25 @@ local function render_haul(m, animate)
     local lr = BGMeter.Match.local_row(m)
     local ids = lr and lr.medalIds or {}
     local counts = lr and lr.medalCounts or {}
+    hide_medal_card()
     for i = 1, #p.medalIcons do
         local mi, badge, id = p.medalIcons[i], p.medalBadges[i], ids[i]
         local info = id and Icons.medal_info(id) or nil
         if info and info.icon then
             mi:SetTexture(info.icon); mi:SetHidden(false)
             local n = counts[id] or 1
+            mi.bgmMedalId = id
+            mi.bgmMedalCount = n
             if n > 1 then
                 set_text(badge, "x" .. n)
                 badge:SetHidden(false)
             else
                 badge:SetHidden(true)
             end
-            local lines = {
-                F.icon(info.icon, 40),
-                "|cffffff" .. info.name .. "|r" .. (n > 1 and ("  |cf2cc55x" .. n .. "|r") or ""),
-            }
-            if info.condition and info.condition ~= "" then
-                lines[#lines + 1] = "|c9a9a9a" .. info.condition .. "|r"
-            end
-            if info.reward and info.reward > 0 then
-                lines[#lines + 1] = string.format("|cf2cc55+%s score%s|r", F.commas(info.reward), n > 1 and " each" or "")
-            end
-            W.tips[mi] = table.concat(lines, "\n")
         else
-            mi:SetHidden(true); badge:SetHidden(true); W.tips[mi] = nil
+            mi:SetHidden(true); badge:SetHidden(true)
+            mi.bgmMedalId = nil
+            mi.bgmMedalCount = nil
         end
     end
     set_text(p.medalMore, (#ids > #p.medalIcons) and ("+" .. (#ids - #p.medalIcons)) or "")
@@ -1405,7 +1483,10 @@ local function apply_visibility()
         settings_open = false
         W.settings.window:SetHidden(true)
     end
-    if not want then W._chart_hover_stop() end
+    if not want then
+        W._chart_hover_stop()
+        hide_medal_card()
+    end
 end
 
 function W.on_scene(onHud)
@@ -1447,6 +1528,7 @@ function W.hide()
     user_visible = false
     W.win:SetHidden(true); W._persist_hidden(true)
     W._chart_hover_stop()
+    hide_medal_card()
 end
 
 function W.toggle()
