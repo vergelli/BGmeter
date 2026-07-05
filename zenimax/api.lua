@@ -17,6 +17,7 @@ A.get_api_version = GetAPIVersion
 A.get_timestamp = GetTimeStamp
 A.get_display_name = GetDisplayName
 A.get_char_name = function() return GetUnitName("player") end
+A.get_ui_mouse = GetUIMousePosition
 
 -- ── Match metadata ────────────────────────────────────────────────────────
 A.get_bg_id          = GetCurrentBattlegroundId

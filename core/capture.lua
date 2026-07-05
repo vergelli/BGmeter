@@ -80,15 +80,23 @@ end
 local function read_teams(m)
     local A = BGMeter.zenimax.api
     local round = current_round()
-    local teams = {}
+    local present = {}
+    for _, row in ipairs(m.battle) do
+        if row.team ~= nil then present[row.team] = true end
+    end
+    local order = {}
     for _, t in ipairs(team_list()) do
-        if t ~= nil then
-            teams[#teams + 1] = {
-                team      = t,
-                score     = safe(A.get_team_score, round, t) or 0,
-                roundsWon = safe(A.get_rounds_won, t) or 0,
-            }
+        if t ~= nil and (present[t] or next(present) == nil) then
+            order[#order + 1] = t
         end
+    end
+    local teams = {}
+    for _, t in ipairs(order) do
+        teams[#teams + 1] = {
+            team      = t,
+            score     = safe(A.get_team_score, round, t) or 0,
+            roundsWon = safe(A.get_rounds_won, t) or 0,
+        }
     end
     m.teams = teams
     m.numRounds = (m.bgId and safe(A.get_num_rounds, m.bgId)) or 1

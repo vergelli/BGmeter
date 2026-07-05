@@ -18,6 +18,9 @@ local built = false
 local current_index = 1
 local selected_row = nil
 local settings_open = false
+local user_visible = false
+local on_hud = true
+local in_combat = false
 local C, K, L, F, P, S, Bar, Icons, Awards, Prefs, Anim, Sound
 
 -- Numeric columns, anchored from the RIGHT edge of each row so the table reflows
@@ -48,11 +51,15 @@ local TX = {
     export = { n = "EsoUI/Art/Bank/bank_tabIcon_withdraw_up.dds", p = "EsoUI/Art/Bank/bank_tabIcon_withdraw_down.dds", o = "EsoUI/Art/Bank/bank_tabIcon_withdraw_over.dds" },
 }
 
-local BANNER_ART = "EsoUI/Art/Battlegrounds/battleground_banner_%s_%s.dds"
 local SCOREBG_L  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_left.dds"
 local SCOREBG_R  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_right.dds"
 local PIP_ART    = "EsoUI/Art/Battlegrounds/battleground_round_%s.dds"
 local PIP_EMPTY  = "EsoUI/Art/Battlegrounds/battleground_round_empty.dds"
+
+local MAP_ART = {
+    ["temple"] = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
+}
+local MAP_ART_ALPHA = 0.12
 
 local TEAM_KEY
 
@@ -172,12 +179,6 @@ local function build_header(win)
     if h.bannerGlow.SetBlendMode then h.bannerGlow:SetBlendMode(TEX_BLEND_MODE_ADD) end
     h.bannerGlow:SetHidden(true)
 
-    h.bannerArt = P.icon(win)
-    h.bannerArt:SetAnchor(TOP, win, TOP, 0, 2)
-    h.bannerArt:SetDimensions(300, 40)
-    h.bannerArt:SetColor(1, 1, 1, 0.9)
-    h.bannerArt:SetHidden(true)
-
     h.banner = P.label(win, S.FONT.banner, K.COLOR.text)
     h.banner:SetAnchor(TOP, win, TOP, 0, 8)
     h.banner:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
@@ -235,8 +236,9 @@ local function layout_chips(m)
             if multi then
                 local pips = {}
                 local key = team_art_key(t.team)
+                local colorName = key and K.TEAM_ART[key] or nil
                 for r = 1, math.min(m.numRounds, 5) do
-                    pips[#pips + 1] = F.icon((r <= (t.roundsWon or 0)) and (key and PIP_ART:format(key) or PIP_EMPTY) or PIP_EMPTY, 12)
+                    pips[#pips + 1] = F.icon((r <= (t.roundsWon or 0)) and (colorName and PIP_ART:format(colorName) or PIP_EMPTY) or PIP_EMPTY, 12)
                 end
                 txt = table.concat(pips, "")
             else
@@ -327,6 +329,25 @@ local function build_battle(win)
             return d
         end,
         function(d) d:SetHidden(true) end)
+
+    local probe = P.line(b.chart, { 1, 1, 1, 1 }, 2)
+    if probe then
+        probe:SetHidden(true)
+        b.lines_ok = true
+        b.line_pool = BGMeter.Plot.pool.new(
+            function() return P.line(b.chart, { 1, 1, 1, 1 }, 2) end,
+            function(ln) ln:SetHidden(true); ln:ClearAnchors() end)
+    else
+        b.lines_ok = false
+    end
+
+    b.cursor = P.rect(b.chart, { 1, 1, 1, 0.30 })
+    b.cursor:SetDimensions(1, L.chart_h - 4)
+    b.cursor:SetHidden(true)
+
+    b.chart:SetMouseEnabled(true)
+    b.chart:SetHandler("OnMouseEnter", function() W._chart_hover_start() end)
+    b.chart:SetHandler("OnMouseExit", function() W._chart_hover_stop() end)
 
     return b
 end
@@ -478,22 +499,22 @@ local function build_haul(win)
     p.eff:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     p.sep = P.rect(p.container, { 1, 1, 1, 0.10 })
-    p.sep:SetAnchor(TOPLEFT, p.eff, BOTTOMLEFT, 0, 14)
+    p.sep:SetAnchor(BOTTOMLEFT, p.container, BOTTOMLEFT, PAD, -96)
     p.sep:SetDimensions(INNER, 1)
 
     p.standHeading = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
     p.standHeading:SetText("COMPETITIVE STANDING")
-    p.standHeading:SetAnchor(TOPLEFT, p.sep, BOTTOMLEFT, 0, 12)
+    p.standHeading:SetAnchor(TOPLEFT, p.sep, BOTTOMLEFT, 0, 10)
     p.standHeading:SetDimensions(INNER, 16)
     p.standHeading:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     p.standRank = P.label(p.container, S.FONT.big, K.COLOR.text)
-    p.standRank:SetAnchor(TOP, p.standHeading, BOTTOM, 0, 6)
+    p.standRank:SetAnchor(TOP, p.standHeading, BOTTOM, 0, 4)
     p.standRank:SetDimensions(INNER, 30)
     p.standRank:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     p.standSub = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
-    p.standSub:SetAnchor(TOP, p.standRank, BOTTOM, 0, 4)
+    p.standSub:SetAnchor(TOP, p.standRank, BOTTOM, 0, 2)
     p.standSub:SetDimensions(INNER, 18)
     p.standSub:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
@@ -564,6 +585,7 @@ local function build_settings()
     win:SetMovable(true)
     win:SetClampedToScreen(true)
     win:SetHidden(true)
+    win:SetDrawTier(DT_HIGH)
     s.window = win
 
     local bg = P.rect(win, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
@@ -685,14 +707,20 @@ local function build()
     W.bg = P.rect(win, K.COLOR.bg)
     W.bg:SetAnchorFill(win)
 
+    W.bgMap = P.icon(win)
+    W.bgMap:SetAnchor(TOPLEFT, win, TOPLEFT, 8, 8)
+    W.bgMap:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -8, -8)
+    W.bgMap:SetColor(1, 1, 1, MAP_ART_ALPHA)
+    W.bgMap:SetHidden(true)
+
     W.bgArtL = P.icon(win, SCOREBG_L)
     W.bgArtL:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin - 6, L.header_h - 4)
-    W.bgArtL:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.haul_w + L.gap + L.margin - 6), -(L.footer_h - 4))
+    W.bgArtL:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.haul_w + L.gap + L.margin - 6), -10)
     W.bgArtL:SetColor(1, 1, 1, 0.22)
 
     W.bgArtR = P.icon(win, SCOREBG_R)
     W.bgArtR:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin - 6), L.header_h - 4)
-    W.bgArtR:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.margin - 6), -(L.footer_h - 4))
+    W.bgArtR:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.margin - 6), -10)
     W.bgArtR:SetWidth(L.haul_w + 12)
     W.bgArtR:SetColor(1, 1, 1, 0.22)
 
@@ -742,6 +770,25 @@ end
 
 -- ── render ────────────────────────────────────────────────────────────────
 
+local function apply_map_art(m)
+    local art = W.bgMap
+    if not art then return end
+    local name = (m and m.name or ""):lower()
+    local tex = nil
+    for key, path in pairs(MAP_ART) do
+        if name:find(key, 1, true) then tex = path; break end
+    end
+    if not tex then art:SetHidden(true); return end
+    art:SetTexture(tex)
+    art:SetHidden(false)
+    if type(zo_callLater) == "function" then
+        zo_callLater(function()
+            local ok, loaded = pcall(function() return art:IsTextureLoaded() end)
+            if ok and loaded == false then art:SetHidden(true) end
+        end, 500)
+    end
+end
+
 local function render_header(m)
     local total = BGMeter.History.count()
     local dur = (m.durationMs and m.durationMs > 0) and ("  ·  " .. F.duration(m.durationMs)) or ""
@@ -754,7 +801,6 @@ local function render_header(m)
     set_text(W.header.subtitle, (m.name or "Battleground") .. dur .. when)
     set_text(W.header.counter, string.format("%d / %d", current_index, math.max(total, 1)))
     local glow = W.header.bannerGlow
-    local art  = W.header.bannerArt
     local function set_banner(text, col, glowCol)
         set_text(W.header.banner, text); S.color(W.header.banner, col)
         if glow then
@@ -762,20 +808,11 @@ local function render_header(m)
             else glow:SetHidden(true) end
         end
     end
-    local artKey = team_art_key(m.localTeam)
-    local artResult = (m.result == "WIN" and "win") or (m.result == "LOSS" and "loss") or nil
-    if art then
-        if artKey and artResult then
-            art:SetTexture(BANNER_ART:format(K.TEAM_ART[artKey] or artKey, artResult))
-            art:SetHidden(false)
-        else
-            art:SetHidden(true)
-        end
-    end
     if m.result == "WIN" then set_banner("VICTORY", K.COLOR.heal, K.COLOR.heal)
     elseif m.result == "LOSS" then set_banner("DEFEAT", K.COLOR.accent, K.COLOR.accent)
     elseif m.result == "TIE" then set_banner("DRAW", K.COLOR.gold, K.COLOR.gold)
     else set_banner("MATCH RESULTS", K.COLOR.text_dim, nil) end
+    apply_map_art(m)
     layout_chips(m)
 end
 
@@ -867,9 +904,22 @@ local function timeline_ok(m)
     return Prefs.get("show_timeline") and tl and tl.t and #tl.t >= 3
 end
 
+local function series_max(arr, n)
+    local mx = 0
+    for i = 1, n do
+        local v = arr and arr[i] or 0
+        if v > mx then mx = v end
+    end
+    return mx
+end
+
+local chart_state = nil
+
 local function render_timeline(m)
     local b = W.battle
     b.dot_pool:release_all()
+    if b.line_pool then b.line_pool:release_all() end
+    chart_state = nil
     if not timeline_ok(m) then
         b.chart:SetHidden(true)
         return
@@ -888,32 +938,43 @@ local function render_timeline(m)
     local h = L.chart_h
     if w <= 8 then return end
 
-    local maxScore = 1
     local series = { tl.s1, tl.s2, tl.s3 }
+    local smax = {}
+    local maxScore = 1
     for s = 1, 3 do
-        local arr = series[s]
-        for i = 1, n do
-            local v = arr and arr[i] or 0
-            if v > maxScore then maxScore = v end
-        end
+        smax[s] = series_max(series[s], n)
+        if smax[s] > maxScore then maxScore = smax[s] end
     end
 
     local tspan = math.max(1, tl.t[n] or 1)
     local plot_h = h - 18
+    local function px(i) return math.floor((tl.t[i] / tspan) * (w - 6) + 0.5) end
+    local function py(arr, i) return 14 + math.floor((1 - (arr[i] or 0) / maxScore) * plot_h + 0.5) end
+
     for s = 1, 3 do
         local arr = series[s]
         local team = tl.teams and tl.teams[s]
-        local tc = team and S.team_color(team) or K.COLOR.text_dim
-        if arr then
-            for i = 1, n do
-                local dot = b.dot_pool:acquire()
-                local x = math.floor((tl.t[i] / tspan) * (w - 6) + 0.5)
-                local y = 14 + math.floor((1 - (arr[i] or 0) / maxScore) * plot_h + 0.5)
-                dot:ClearAnchors()
-                dot:SetAnchor(TOPLEFT, b.chart, TOPLEFT, x, y)
-                dot:SetDimensions(3, 3)
-                P.set_rect_color(dot, { tc[1], tc[2], tc[3], 0.95 })
-                dot:SetHidden(false)
+        if arr and smax[s] > 0 and team then
+            local tc = S.team_color(team)
+            if b.lines_ok then
+                for i = 2, n do
+                    local ln = b.line_pool:acquire()
+                    ln:ClearAnchors()
+                    ln:SetAnchor(TOPLEFT, b.chart, TOPLEFT, px(i - 1), py(arr, i - 1))
+                    ln:SetAnchor(TOPRIGHT, b.chart, TOPLEFT, px(i), py(arr, i))
+                    ln:SetColor(tc[1], tc[2], tc[3], 0.95)
+                    if ln.SetThickness then ln:SetThickness(2) end
+                    ln:SetHidden(false)
+                end
+            else
+                for i = 1, n do
+                    local dot = b.dot_pool:acquire()
+                    dot:ClearAnchors()
+                    dot:SetAnchor(TOPLEFT, b.chart, TOPLEFT, px(i), py(arr, i))
+                    dot:SetDimensions(3, 3)
+                    P.set_rect_color(dot, { tc[1], tc[2], tc[3], 0.95 })
+                    dot:SetHidden(false)
+                end
             end
         end
     end
@@ -930,6 +991,63 @@ local function render_timeline(m)
             mark:SetHidden(false)
         end
     end
+
+    chart_state = { tl = tl, n = n, w = w, smax = smax }
+end
+
+local function hexc(c)
+    return string.format("%02x%02x%02x",
+        math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+end
+
+local function chart_hover_poll()
+    local b = W.battle
+    local st = chart_state
+    if not st or b.chart:IsHidden() then W._chart_hover_stop(); return end
+    local A = BGMeter.zenimax.api
+    if type(A.get_ui_mouse) ~= "function" then return end
+    local mx = A.get_ui_mouse()
+    local rel = mx - b.chart:GetLeft()
+    local w = b.chart:GetWidth()
+    if rel < 0 then rel = 0 elseif rel > w then rel = w end
+
+    local tl, n = st.tl, st.n
+    local tspan = math.max(1, tl.t[n] or 1)
+    local want_t = (rel / math.max(1, w - 6)) * tspan
+    local idx = 1
+    for i = 1, n do
+        if tl.t[i] <= want_t then idx = i else break end
+    end
+
+    local x = math.floor((tl.t[idx] / tspan) * (w - 6) + 0.5)
+    b.cursor:ClearAnchors()
+    b.cursor:SetAnchor(TOPLEFT, b.chart, TOPLEFT, x, 2)
+    b.cursor:SetHidden(false)
+
+    local parts = { "team score  ·  t " .. F.duration(tl.t[idx]) }
+    local series = { tl.s1, tl.s2, tl.s3 }
+    for s = 1, 3 do
+        local team = tl.teams and tl.teams[s]
+        if team and st.smax[s] > 0 then
+            local tc = S.team_color(team)
+            parts[#parts + 1] = string.format("|c%s%s  %s|r",
+                hexc(tc), team_name(team), F.commas((series[s] and series[s][idx]) or 0))
+        end
+    end
+    if ZO_Tooltips_ShowTextTooltip then
+        ZO_Tooltips_ShowTextTooltip(b.chart, TOP, table.concat(parts, "\n"))
+    end
+end
+
+function W._chart_hover_start()
+    if not chart_state then return end
+    BGMeter.zenimax.events.register_update("BGMeterChartHover", 100, chart_hover_poll)
+end
+
+function W._chart_hover_stop()
+    BGMeter.zenimax.events.unregister_update("BGMeterChartHover")
+    if W.battle and W.battle.cursor then W.battle.cursor:SetHidden(true) end
+    if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
 end
 
 local function render_haul(m, animate)
@@ -999,6 +1117,12 @@ local function render_haul(m, animate)
 
     local standControls = { p.sep, p.standHeading, p.standRank, p.standSub }
     if not Prefs.get("show_standing") then hide_all(standControls, true); return end
+    local effBottom = p.eff:GetBottom() or 0
+    local sepTop = p.sep:GetTop() or 0
+    if effBottom > 0 and sepTop > 0 and effBottom + 6 > sepTop then
+        hide_all(standControls, true)
+        return
+    end
     hide_all(standControls, false)
 
     -- The big rank font lacks the movement glyphs, so the indicator lives on the
@@ -1052,7 +1176,7 @@ function W.render(animate)
     if not m then
         set_text(W.header.banner, "NO MATCHES YET"); S.color(W.header.banner, K.COLOR.text_dim)
         if W.header.bannerGlow then W.header.bannerGlow:SetHidden(true) end
-        if W.header.bannerArt then W.header.bannerArt:SetHidden(true) end
+        if W.bgMap then W.bgMap:SetHidden(true) end
         layout_chips(nil)
         set_text(W.header.subtitle, "finish a battleground, or try  /bgmeter demo")
         set_text(W.header.counter, "0 / 0")
@@ -1122,13 +1246,41 @@ function W.toggle_settings()
     end
 end
 
+local function apply_visibility()
+    if not built then return end
+    local want = user_visible and on_hud and not in_combat
+    local was_hidden = W.win:IsHidden()
+    W.win:SetHidden(not want)
+    if want and was_hidden then
+        W.win:SetAlpha(1)
+        W.render(false)
+    end
+    if not want and settings_open then
+        settings_open = false
+        W.settings.window:SetHidden(true)
+    end
+    if not want then W._chart_hover_stop() end
+end
+
+function W.on_scene(onHud)
+    on_hud = onHud and true or false
+    apply_visibility()
+end
+
+function W.on_combat(_, inCombat)
+    in_combat = inCombat and true or false
+    apply_visibility()
+end
+
 function W.show_match(index)
     build()
     current_index = index or 1
     selected_row = nil
     settings_open = false
     W.settings.window:SetHidden(true)
-    W.win:SetHidden(false)
+    user_visible = true
+    apply_visibility()
+    if W.win:IsHidden() then return end
     W.render(true)
     if Prefs.get("animate") then W.win:SetAlpha(0); Anim.value(0, 1, 220, function(v) W.win:SetAlpha(v) end)
     else W.win:SetAlpha(1) end
@@ -1146,12 +1298,14 @@ function W.hide()
     if not built then return end
     settings_open = false
     W.settings.window:SetHidden(true)
+    user_visible = false
     W.win:SetHidden(true); W._persist_hidden(true)
+    W._chart_hover_stop()
 end
 
 function W.toggle()
     build()
-    if W.win:IsHidden() then W.show() else W.hide() end
+    if user_visible then W.hide() else W.show() end
 end
 
 function W.on_move_stop()
@@ -1173,6 +1327,32 @@ function W._persist_hidden(hidden)
     if sv then sv.window = sv.window or {}; sv.window.hidden = hidden end
 end
 
-function W.init() BGMeter.Log.debug("window ready") end
+local function safe_m(obj, method, ...)
+    if not obj or type(obj[method]) ~= "function" then return nil end
+    local ok, a = pcall(obj[method], obj, ...)
+    if not ok then return nil end
+    return a
+end
+
+function W.init()
+    local zc = BGMeter.zenimax.constants
+    if zc.EVENT_PLAYER_COMBAT_STATE then
+        BGMeter.zenimax.events.register("BGMeterWinCombat", zc.EVENT_PLAYER_COMBAT_STATE, W.on_combat)
+    end
+    if SCENE_MANAGER then
+        local function handler(_, newState)
+            if newState == SCENE_SHOWN then W.on_scene(true)
+            elseif newState == SCENE_HIDDEN then W.on_scene(false) end
+        end
+        for _, name in ipairs({ "hud", "hudui" }) do
+            local sc = safe_m(SCENE_MANAGER, "GetScene", name)
+            if sc and type(sc.RegisterCallback) == "function" then
+                pcall(function() sc:RegisterCallback("StateChange", handler) end)
+            end
+        end
+    end
+    on_hud = (BGMeter.zenimax.scene and BGMeter.zenimax.scene.is_hud_scene()) and true or false
+    BGMeter.Log.debug("window ready")
+end
 
 BGMeter.UI.window = W

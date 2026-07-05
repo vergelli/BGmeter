@@ -58,11 +58,11 @@ local function cmd_dump()
 end
 
 -- ── /bgmeter demo  (synthetic match -> see the window without queueing a BG) ─
-local function cmd_demo()
+local function cmd_demo(two_teams)
     local Match = BGMeter.Match
     local A = BGMeter.zenimax.api
     local m = Match.new()
-    m.name, m.gameType, m.result = "Mournhold Sewers", nil, "WIN"
+    m.name, m.gameType, m.result = two_teams and "Ularra Temple" or "Mournhold Sewers", nil, "WIN"
     m.startMs, m.endMs = 0, 14 * 60000
     m.localTeam = BGMeter.zenimax.constants.BATTLEGROUND_TEAM_FIRE_DRAKES
     m.capturedAt = (type(A.get_timestamp) == "function") and A.get_timestamp() or 0
@@ -79,22 +79,25 @@ local function cmd_demo()
     }
     local C = BGMeter.zenimax.constants
     local teams = { C.BATTLEGROUND_TEAM_FIRE_DRAKES, C.BATTLEGROUND_TEAM_PIT_DAEMONS, C.BATTLEGROUND_TEAM_STORM_LORDS }
+    local nteams = two_teams and 2 or 3
     for i, s in ipairs(sample) do
         local r = Match.new_row()
         r.displayName, r.damage, r.healing = s[1], s[2], s[3]
         r.taken = math.floor(s[2] * 0.55)
         r.kills, r.deaths, r.assists, r.score, r.medals = s[4], s[5], s[6], s[7] * 1000, s[8]
         r.isLocal = s[9]
-        r.team = teams[((i - 1) % 3) + 1]
+        r.team = teams[((i - 1) % nteams) + 1]
         m.battle[#m.battle + 1] = r
     end
 
-    m.numRounds = 1
+    m.numRounds = two_teams and 3 or 1
     m.teams = {
-        { team = teams[1], score = 512, roundsWon = 0 },
-        { team = teams[2], score = 430, roundsWon = 0 },
-        { team = teams[3], score = 381, roundsWon = 0 },
+        { team = teams[1], score = 512, roundsWon = two_teams and 2 or 0 },
+        { team = teams[2], score = 430, roundsWon = two_teams and 1 or 0 },
     }
+    if not two_teams then
+        m.teams[3] = { team = teams[3], score = 381, roundsWon = 0 }
+    end
 
     m.timeline = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = teams }
     for i = 1, 60 do
@@ -103,7 +106,7 @@ local function cmd_demo()
         m.timeline.r[i]  = 1
         m.timeline.s1[i] = math.floor(512 * p * (0.85 + 0.15 * math.sin(p * 9)))
         m.timeline.s2[i] = math.floor(430 * p * (0.90 + 0.10 * math.sin(3 + p * 7)))
-        m.timeline.s3[i] = math.floor(381 * p * (0.88 + 0.12 * math.sin(1.5 + p * 11)))
+        m.timeline.s3[i] = two_teams and 0 or math.floor(381 * p * (0.88 + 0.12 * math.sin(1.5 + p * 11)))
     end
 
     m.killfeed = {}
@@ -187,7 +190,9 @@ local function on_slash(args)
     elseif args == "fade" or args == "bar fade" then
         BGMeter.UI.vanguard.toggle_fade()
     elseif args == "demo" then
-        cmd_demo()
+        cmd_demo(false)
+    elseif args == "demo2" or args == "demo 2" then
+        cmd_demo(true)
     elseif args == "last" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.window.show_match(1) end
@@ -201,7 +206,7 @@ local function on_slash(args)
         Log.DEBUG = not Log.DEBUG
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
     else
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|demo|ap|dump|clear|debug]")
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|demo|demo2|ap|dump|clear|debug]")
     end
 end
 

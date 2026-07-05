@@ -79,4 +79,15 @@ function P.icon(parent, texturePath, name)
     return c
 end
 
+function P.line(parent, color, thickness)
+    local ok, c = pcall(function()
+        return ui().create_from_virtual(uniq("BGMeterLine"), parent, "BGMeterLineTemplate")
+    end)
+    if not ok or not c then return nil end
+    if c.SetThickness then c:SetThickness(thickness or 2) end
+    local col = color or { 1, 1, 1, 1 }
+    c:SetColor(col[1], col[2], col[3], col[4] or 1)
+    return c
+end
+
 BGMeter.Plot.primitives = P
