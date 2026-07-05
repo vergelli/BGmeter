@@ -184,4 +184,51 @@ function Match.flag_occupation(lanes, tspan)
     return out, neutral / total
 end
 
+function Match.flag_stats(lanes)
+    if not lanes or #lanes == 0 then return nil end
+    local per = {}
+    local function bucket(team)
+        local b = per[team]
+        if not b then
+            b = { team = team, caps = 0, defs = 0, holdMs = 0, holds = 0 }
+            per[team] = b
+        end
+        return b
+    end
+    local first = nil
+    for _, lane in ipairs(lanes) do
+        for _, tick in ipairs(lane.ticks) do
+            if tick.own and tick.own ~= 0 then
+                local bk = bucket(tick.own)
+                if tick.kind == "cap" then
+                    bk.caps = bk.caps + 1
+                    if not first or tick.t < first.t then
+                        first = { team = tick.own, t = tick.t, letter = lane.letter }
+                    end
+                else
+                    bk.defs = bk.defs + 1
+                end
+            end
+        end
+        for _, seg in ipairs(lane.segs) do
+            if seg.own and seg.own ~= 0 then
+                local bk = bucket(seg.own)
+                bk.holdMs = bk.holdMs + math.max(0, (seg.t1 or 0) - (seg.t0 or 0))
+                bk.holds = bk.holds + 1
+            end
+        end
+    end
+    local out = {}
+    for _, b in pairs(per) do
+        b.avgHoldMs = (b.holds > 0) and math.floor(b.holdMs / b.holds) or 0
+        out[#out + 1] = b
+    end
+    table.sort(out, function(x, y)
+        if x.caps ~= y.caps then return x.caps > y.caps end
+        return x.holdMs > y.holdMs
+    end)
+    if #out == 0 then return nil end
+    return { per = out, first = first }
+end
+
 BGMeter.Match = Match

@@ -389,6 +389,10 @@ local function build_battle(win)
     b.occLegend = P.label(b.occ, S.FONT.small, K.COLOR.text)
     b.occLegend:SetAnchor(TOPRIGHT, b.occ, TOPRIGHT, -4, 2)
 
+    b.occStats = P.label(b.occ, S.FONT.small, K.COLOR.text_dim)
+    b.occStats:SetAnchor(TOPLEFT, b.occ, TOPLEFT, 4, 32)
+    b.occStats:SetAnchor(TOPRIGHT, b.occ, TOPRIGHT, -4, 32)
+
     b.occ_pool = BGMeter.Plot.pool.new(
         function() return P.rect(b.occ, { 1, 1, 1, 1 }) end,
         function(r) r:SetHidden(true); r:ClearAnchors() end)
@@ -1169,7 +1173,7 @@ local function neutral_color()
     return { 0.55, 0.55, 0.60 }
 end
 
-local function render_occupation(b, occ, neutralPct, w)
+local function render_occupation(b, occ, neutralPct, stats, w)
     b.occ:SetHeight(L.occ_h)
     b.occ:SetHidden(false)
     local bw = w - 6
@@ -1202,6 +1206,21 @@ local function render_occupation(b, occ, neutralPct, w)
         end
     end
     b.occLegend:SetText(table.concat(parts, "  ·  "))
+
+    local sp = {}
+    if stats then
+        for _, e in ipairs(stats.per) do
+            local tc = S.team_color(e.team)
+            sp[#sp + 1] = string.format("|c%s%s  %d caps · %d defs · avg hold %s|r",
+                hexc(tc), team_name(e.team), e.caps, e.defs, F.duration(e.avgHoldMs))
+        end
+        if stats.first then
+            local tc = S.team_color(stats.first.team)
+            sp[#sp + 1] = string.format("|c%sfirst %s @ %s|r",
+                hexc(tc), tostring(stats.first.letter), F.duration(stats.first.t))
+        end
+    end
+    b.occStats:SetText(table.concat(sp, "    "))
 end
 
 local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off)
@@ -1272,8 +1291,11 @@ local function render_timeline(m)
     local tspan = math.max(1, tl.t[n] or 1)
 
     local lanes = BGMeter.Match.flag_lanes(m, tspan)
-    local occ, neutralPct
-    if lanes then occ, neutralPct = BGMeter.Match.flag_occupation(lanes, tspan) end
+    local occ, neutralPct, fstats
+    if lanes then
+        occ, neutralPct = BGMeter.Match.flag_occupation(lanes, tspan)
+        fstats = BGMeter.Match.flag_stats(lanes)
+    end
     if occ and #occ == 0 then occ = nil end
     local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0
     local occ_h = occ and L.occ_h or 0
@@ -1359,7 +1381,7 @@ local function render_timeline(m)
         render_ribbon(b, lanes, ribbon_h, tspan, w, rib_off)
     end
     if occ then
-        render_occupation(b, occ, neutralPct, w)
+        render_occupation(b, occ, neutralPct, fstats, w)
     end
 
     chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes }
