@@ -161,4 +161,27 @@ function Match.flag_lanes(m, tspan)
     return lanes
 end
 
+function Match.flag_occupation(lanes, tspan)
+    if not lanes or #lanes == 0 or not tspan or tspan <= 0 then return nil end
+    local total = tspan * #lanes
+    local by = {}
+    local neutral = 0
+    for _, lane in ipairs(lanes) do
+        for _, seg in ipairs(lane.segs) do
+            local d = math.max(0, (seg.t1 or 0) - (seg.t0 or 0))
+            if seg.own and seg.own ~= 0 then
+                by[seg.own] = (by[seg.own] or 0) + d
+            else
+                neutral = neutral + d
+            end
+        end
+    end
+    local out = {}
+    for team, ms in pairs(by) do
+        out[#out + 1] = { team = team, ms = ms, pct = ms / total }
+    end
+    table.sort(out, function(a, b) return a.ms > b.ms end)
+    return out, neutral / total
+end
+
 BGMeter.Match = Match

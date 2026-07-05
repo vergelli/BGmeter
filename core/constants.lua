@@ -62,6 +62,7 @@ K.LAYOUT = {
     lane_h     = 10,
     lane_gap   = 3,
     ribbon_top = 16,
+    occ_h      = 32,
 }
 
 K.ALPHA = {

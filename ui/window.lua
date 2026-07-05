@@ -373,6 +373,26 @@ local function build_battle(win)
     b.ribbon:SetHandler("OnMouseEnter", function() W._chart_hover_start() end)
     b.ribbon:SetHandler("OnMouseExit", function() W._chart_hover_stop() end)
 
+    b.occ = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
+    b.occ:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, 0)
+    b.occ:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, 0)
+    b.occ:SetHeight(0)
+    b.occ:SetHidden(true)
+
+    b.occBg = P.rect(b.occ, { 1, 1, 1, K.ALPHA.chart_bg })
+    b.occBg:SetAnchorFill(b.occ)
+
+    b.occTitle = P.label(b.occ, S.FONT.small, K.COLOR.text_dim)
+    b.occTitle:SetText("FLAG OCCUPATION")
+    b.occTitle:SetAnchor(TOPLEFT, b.occ, TOPLEFT, 4, 2)
+
+    b.occLegend = P.label(b.occ, S.FONT.small, K.COLOR.text)
+    b.occLegend:SetAnchor(TOPRIGHT, b.occ, TOPRIGHT, -4, 2)
+
+    b.occ_pool = BGMeter.Plot.pool.new(
+        function() return P.rect(b.occ, { 1, 1, 1, 1 }) end,
+        function(r) r:SetHidden(true); r:ClearAnchors() end)
+
     return b
 end
 
@@ -1131,6 +1151,11 @@ end
 
 local chart_state = nil
 
+local function hexc(c)
+    return string.format("%02x%02x%02x",
+        math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+end
+
 local function ribbon_letter(b, i)
     local lbl = b.ribbon_letters[i]
     if not lbl then
@@ -1144,7 +1169,45 @@ local function neutral_color()
     return { 0.55, 0.55, 0.60 }
 end
 
-local function render_ribbon(b, lanes, ribbon_h, tspan, w)
+local function render_occupation(b, occ, neutralPct, w)
+    b.occ:SetHeight(L.occ_h)
+    b.occ:SetHidden(false)
+    local bw = w - 6
+    local x = 0
+    local parts = {}
+    for _, e in ipairs(occ) do
+        local tc = S.team_color(e.team)
+        local seg_w = math.floor(e.pct * bw + 0.5)
+        if seg_w > 1 then
+            local r = b.occ_pool:acquire()
+            r:SetAnchor(TOPLEFT, b.occ, TOPLEFT, x, 18)
+            r:SetDimensions(seg_w, 10)
+            P.set_rect_color(r, { tc[1], tc[2], tc[3], 0.80 })
+            r:SetHidden(false)
+            x = x + seg_w
+        end
+        parts[#parts + 1] = string.format("|c%s%s %d%%|r",
+            hexc(tc), team_name(e.team), math.floor(e.pct * 100 + 0.5))
+    end
+    if x < bw then
+        local r = b.occ_pool:acquire()
+        r:SetAnchor(TOPLEFT, b.occ, TOPLEFT, x, 18)
+        r:SetDimensions(bw - x, 10)
+        local nc = neutral_color()
+        P.set_rect_color(r, { nc[1], nc[2], nc[3], K.ALPHA.ribbon_neutral })
+        r:SetHidden(false)
+        if neutralPct and neutralPct >= 0.005 then
+            parts[#parts + 1] = string.format("|c8c8c95neutral %d%%|r",
+                math.floor(neutralPct * 100 + 0.5))
+        end
+    end
+    b.occLegend:SetText(table.concat(parts, "  ·  "))
+end
+
+local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off)
+    b.ribbon:ClearAnchors()
+    b.ribbon:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -y_off)
+    b.ribbon:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -y_off)
     b.ribbon:SetHeight(ribbon_h)
     b.ribbon:SetHidden(false)
     local function rx(t) return math.floor((t / tspan) * (w - 6) + 0.5) end
@@ -1196,6 +1259,8 @@ local function render_timeline(m)
     b.ribbon_pool:release_all()
     for _, lbl in ipairs(b.ribbon_letters) do lbl:SetHidden(true) end
     b.ribbon:SetHidden(true)
+    b.occ_pool:release_all()
+    b.occ:SetHidden(true)
     chart_state = nil
     if not timeline_ok(m) then
         b.chart:SetHidden(true)
@@ -1207,10 +1272,17 @@ local function render_timeline(m)
     local tspan = math.max(1, tl.t[n] or 1)
 
     local lanes = BGMeter.Match.flag_lanes(m, tspan)
+    local occ, neutralPct
+    if lanes then occ, neutralPct = BGMeter.Match.flag_occupation(lanes, tspan) end
+    if occ and #occ == 0 then occ = nil end
     local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0
+    local occ_h = occ and L.occ_h or 0
 
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
+    if occ_h > 0 and cont_h - rows_h < L.chart_h + ribbon_h + occ_h + 8 then
+        occ, occ_h = nil, 0
+    end
     if ribbon_h > 0 and cont_h - rows_h < L.chart_h + ribbon_h + 8 then
         lanes, ribbon_h = nil, 0
     end
@@ -1218,10 +1290,12 @@ local function render_timeline(m)
         b.chart:SetHidden(true)
         return
     end
+    local rib_off = (occ_h > 0) and (occ_h + 2) or 0
+    local chart_off = (ribbon_h > 0) and (rib_off + ribbon_h + 2) or rib_off
     b.chart:SetHidden(false)
     b.chart:ClearAnchors()
-    b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -(ribbon_h > 0 and ribbon_h + 2 or 0))
-    b.chart:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -(ribbon_h > 0 and ribbon_h + 2 or 0))
+    b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -chart_off)
+    b.chart:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -chart_off)
     b.chart:SetHeight(L.chart_h)
 
     local w = b.chart:GetWidth()
@@ -1282,15 +1356,13 @@ local function render_timeline(m)
     end
 
     if lanes then
-        render_ribbon(b, lanes, ribbon_h, tspan, w)
+        render_ribbon(b, lanes, ribbon_h, tspan, w, rib_off)
+    end
+    if occ then
+        render_occupation(b, occ, neutralPct, w)
     end
 
     chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes }
-end
-
-local function hexc(c)
-    return string.format("%02x%02x%02x",
-        math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
 end
 
 local function chart_hover_poll()
@@ -1513,6 +1585,8 @@ function W.render(animate)
         W.battle.chart:SetHidden(true)
         W.battle.ribbon_pool:release_all()
         W.battle.ribbon:SetHidden(true)
+        W.battle.occ_pool:release_all()
+        W.battle.occ:SetHidden(true)
         set_text(W.detail, "")
         return
     end
