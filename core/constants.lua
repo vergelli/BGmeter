@@ -59,6 +59,9 @@ K.LAYOUT = {
     chart_h    = 96,
     pad        = 16,
     dyn_min_cap = 940,
+    lane_h     = 10,
+    lane_gap   = 3,
+    ribbon_top = 16,
 }
 
 K.ALPHA = {
@@ -73,6 +76,8 @@ K.ALPHA = {
     row_selected = 0.13,
     row_mvp      = 0.08,
     row_you      = 0.07,
+    ribbon_fill    = 0.50,
+    ribbon_neutral = 0.14,
 }
 
 K.ANIM = {

@@ -114,6 +114,43 @@ local function cmd_demo(two_teams)
         m.killfeed[i] = { t = i * 85000, kind = (i % 3 == 0) and "death" or "kill" }
     end
 
+    do
+        local CZ = BGMeter.zenimax.constants
+        local function ev_id(label)
+            for k, v in pairs(CZ.OBJ_EVENT_LABEL) do
+                if v == label then return k end
+            end
+            return -1
+        end
+        local CAP, NEU = ev_id("captured"), ev_id("neutral")
+        local ob = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
+        local letters = { "A", "B", "C" }
+        local nflags = two_teams and 2 or 3
+        for i = 1, nflags do
+            ob.list[i] = { letter = letters[i], name = "Flag " .. letters[i], keepId = 100 + i, objectiveId = 1 }
+        end
+        local function push(t, o, ev, own)
+            local i = #ob.t + 1
+            ob.t[i], ob.r[i], ob.o[i], ob.ev[i], ob.st[i], ob.own[i] = t, 1, o, ev, -1, own
+        end
+        local dur = 14 * 60000
+        for i = 1, nflags do push(60000, i, -1, 0) end
+        local script = {
+            { 0.10, 1, CAP, teams[1] }, { 0.12, 2, CAP, teams[2] }, { 0.15, 3, CAP, teams[1] },
+            { 0.25, 2, NEU, 0 },        { 0.28, 2, CAP, teams[1] },
+            { 0.35, 1, CAP, teams[1] },
+            { 0.45, 3, NEU, 0 },        { 0.48, 3, CAP, teams[2] },
+            { 0.55, 1, NEU, 0 },        { 0.58, 1, CAP, teams[2] },
+            { 0.70, 2, CAP, teams[1] },
+            { 0.78, 3, NEU, 0 },        { 0.81, 3, CAP, teams[3] },
+            { 0.90, 1, NEU, 0 },        { 0.93, 1, CAP, teams[1] },
+        }
+        for _, e in ipairs(script) do
+            if e[2] <= nflags then push(math.floor(e[1] * dur), e[2], e[3], e[4]) end
+        end
+        m.objectives = ob
+    end
+
     local medalIds = BGMeter.Icons.scan_medal_ids(300, 6)
     if #medalIds > 0 then
         local lr = Match.local_row(m)

@@ -112,4 +112,53 @@ function Match.derive(m)
     return m
 end
 
+function Match.flag_lanes(m, tspan)
+    local ob = m.objectives
+    if not ob or not ob.t or #ob.t == 0 or not ob.list or #ob.list == 0 then return nil end
+    local CZ = BGMeter.zenimax.constants
+    local lanes = {}
+    for li = 1, math.min(#ob.list, 4) do
+        lanes[li] = { letter = tostring(ob.list[li].letter), segs = {}, ticks = {}, cur = nil, t0 = 0 }
+    end
+    local function close(lane, t1)
+        if lane.cur ~= nil and t1 > lane.t0 then
+            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur }
+        end
+    end
+    for i = 1, #ob.t do
+        local lane = lanes[ob.o[i]]
+        if lane then
+            local t = math.min(math.max(ob.t[i] or 0, 0), tspan)
+            local evl = CZ.OBJ_EVENT_LABEL[ob.ev[i]] or (ob.ev[i] == -1 and "initial") or "?"
+            local own = ob.own[i] or 0
+            if lane.cur == nil then lane.cur, lane.t0 = 0, 0 end
+            if evl == "initial" then
+                if own ~= lane.cur then
+                    close(lane, t)
+                    lane.cur, lane.t0 = own, t
+                end
+            elseif evl == "captured" or evl == "recaptured" then
+                if own ~= lane.cur then
+                    close(lane, t)
+                    lane.cur, lane.t0 = own, t
+                    lane.ticks[#lane.ticks + 1] = { t = t, own = own, kind = "cap" }
+                else
+                    lane.ticks[#lane.ticks + 1] = { t = t, own = own, kind = "def" }
+                end
+            elseif evl == "neutral" then
+                if lane.cur ~= 0 then
+                    close(lane, t)
+                    lane.cur, lane.t0 = 0, t
+                end
+            end
+        end
+    end
+    for _, lane in ipairs(lanes) do
+        if lane.cur == nil then lane.cur, lane.t0 = 0, 0 end
+        close(lane, tspan)
+        lane.cur = nil
+    end
+    return lanes
+end
+
 BGMeter.Match = Match
