@@ -414,7 +414,8 @@ local function build_haul(win)
     p.container:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -L.margin, -L.footer_h)
     p.container:SetWidth(L.haul_w)
 
-    P.backdrop(p.container):SetAnchorFill(p.container)
+    p.bd = P.backdrop(p.container)
+    p.bd:SetAnchorFill(p.container)
     P.frame(p.container):SetAnchorFill(p.container)
 
     p.heading = P.label(p.container, S.FONT.header, K.COLOR.gold)
@@ -1309,6 +1310,38 @@ end
 function W.export()
     local m = BGMeter.History.get(current_index)
     if BGMeter.UI.export then BGMeter.UI.export.show(m) end
+end
+
+local layers_debug = false
+
+function W.toggle_layers_debug()
+    build()
+    layers_debug = not layers_debug
+    local Log = BGMeter.Log
+    if layers_debug then
+        P.set_rect_color(W.bg, { 1, 0, 1, 0.30 })
+        W.bgMap:SetColor(0, 1, 0, 0.50)
+        W.bgArtL:SetColor(1, 0, 0, 0.70)
+        W.bgArtR:SetColor(1, 0.55, 0, 0.70)
+        P.set_rect_color(W.haul.bd, { 0, 0.4, 1, 0.70 })
+        P.set_rect_color(W.battle.chartBg, { 1, 1, 0, 0.50 })
+        Log.say("layer debug ON:")
+        Log.say("  |cff00ffMAGENTA|r = base window rect (W.bg)")
+        Log.say("  |c00ff00GREEN|r = map loading screen (bgMap)")
+        Log.say("  |cff0000RED|r = scoreboardBG left art")
+        Log.say("  |cff8c00ORANGE|r = scoreboardBG right art")
+        Log.say("  |c0066ffBLUE|r = haul panel backdrop")
+        Log.say("  |cffff00YELLOW|r = timeline chart strip")
+        Log.say("run |cFFFFFF/bgmeter layers|r again to restore")
+    else
+        apply_visual_prefs()
+        W.bgMap:SetColor(1, 1, 1, MAP_ART_ALPHA)
+        W.bgArtL:SetColor(1, 1, 1, 0.22)
+        W.bgArtR:SetColor(1, 1, 1, 0.22)
+        P.set_rect_color(W.haul.bd, K.COLOR.panel)
+        P.set_rect_color(W.battle.chartBg, { 1, 1, 1, 0.04 })
+        Log.say("layer debug OFF")
+    end
 end
 
 function W.sort_by(key)

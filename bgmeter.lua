@@ -199,6 +199,8 @@ local function on_slash(args)
     elseif args == "export" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.export.show(BGMeter.History.most_recent()) end
+    elseif args == "layers" then
+        BGMeter.UI.window.toggle_layers_debug()
     elseif args == "clear" then
         BGMeter.History.clear()
         Log.say("history cleared")
