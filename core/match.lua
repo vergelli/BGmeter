@@ -25,6 +25,10 @@ function Match.new()
         localTeam  = nil,
         capturedAt = nil,        -- wall-clock (GetTimeStamp) for history labels
         standing   = nil,        -- competitive leaderboard standing (filled async; see core/standing)
+        teams      = nil,
+        numRounds  = 1,
+        timeline   = nil,
+        killfeed   = nil,
 
         -- face 1: the battle
         battle = {},             -- array of player rows (see Match.new_row)
@@ -55,6 +59,7 @@ function Match.new_row()
         isLocal     = false,
         damage      = 0,
         healing     = 0,
+        taken       = 0,
         kills       = 0,
         deaths      = 0,
         assists     = 0,

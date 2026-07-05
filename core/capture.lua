@@ -1,17 +1,13 @@
--- bgmeter :: core/capture.lua
--- The capture engine. Owns the in-flight match: snapshots progression baselines
--- when a match starts, accumulates AP/XP/CP/veterancy deltas during it, and reads
--- the full scoreboard into a Match record when it finishes. No UI here -- it just
--- produces a finished Match and hands it to pipeline/presentation.
-
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
 
 local Capture = {}
 
--- In-flight state. nil between matches.
-local active = nil          -- the Match record being built
-local baseline = nil        -- progression baselines at match start
+local SAMPLE_NAME = "BGMeterScoreSample"
+local SAMPLE_MS   = 5000
+
+local active = nil
+local baseline = nil
 
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
@@ -20,12 +16,26 @@ local function safe(fn, ...)
     return a, b, c, d
 end
 
--- Count the medals a single scoreboard entry earned, and collect their ids
--- (for rendering the real medal icons). Returns (count, idList).
+local function team_list()
+    local C = BGMeter.zenimax.constants
+    return { C.BATTLEGROUND_TEAM_FIRE_DRAKES, C.BATTLEGROUND_TEAM_PIT_DAEMONS, C.BATTLEGROUND_TEAM_STORM_LORDS }
+end
+
+local function current_round()
+    local A = BGMeter.zenimax.api
+    return safe(A.get_bg_round_index) or 1
+end
+
+local function read_score(i, stype, round)
+    local A = BGMeter.zenimax.api
+    local v = safe(A.get_entry_cumulative, i, stype, round)
+    if v == nil then v = safe(A.get_entry_score, i, stype, round) end
+    return v or 0
+end
+
 local function count_entry_medals(i, round)
     local A = BGMeter.zenimax.api
     local count, last, ids = 0, nil, {}
-    -- Hard cap the loop so a misbehaving iterator can never hang the frame.
     for _ = 1, 64 do
         local id = safe(A.get_next_entry_medal, i, round, last)
         if not id then break end
@@ -37,12 +47,11 @@ local function count_entry_medals(i, round)
     return count, ids
 end
 
--- Read the live scoreboard into m.battle. Reusable by the /bgmeter dump command.
 function Capture.read_battle(m)
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     local Match = BGMeter.Match
-    local round = nil  -- current round
+    local round = current_round()
     local n = safe(A.get_num_entries, round) or 0
 
     m.battle = {}
@@ -55,19 +64,36 @@ function Capture.read_battle(m)
         row.isLocal     = isLocal and true or false
         row.classId     = safe(A.get_entry_class, i, round)
         row.lives       = safe(A.get_entry_lives, i, round)
-        row.damage      = safe(A.get_entry_score, i, C.SCORE_TRACKER_TYPE_DAMAGE_DONE, round)  or 0
-        row.healing     = safe(A.get_entry_score, i, C.SCORE_TRACKER_TYPE_HEALING_DONE, round) or 0
-        row.kills       = safe(A.get_entry_score, i, C.SCORE_TRACKER_TYPE_KILL, round)         or 0
-        row.deaths      = safe(A.get_entry_score, i, C.SCORE_TRACKER_TYPE_DEATH, round)        or 0
-        row.assists     = safe(A.get_entry_score, i, C.SCORE_TRACKER_TYPE_ASSISTS, round)      or 0
-        row.score       = safe(A.get_entry_score, i, C.SCORE_TRACKER_TYPE_SCORE, round)        or 0
+        row.damage      = read_score(i, C.SCORE_TRACKER_TYPE_DAMAGE_DONE, round)
+        row.healing     = read_score(i, C.SCORE_TRACKER_TYPE_HEALING_DONE, round)
+        row.taken       = read_score(i, C.SCORE_TRACKER_TYPE_DAMAGE_TAKEN, round)
+        row.kills       = read_score(i, C.SCORE_TRACKER_TYPE_KILL, round)
+        row.deaths      = read_score(i, C.SCORE_TRACKER_TYPE_DEATH, round)
+        row.assists     = read_score(i, C.SCORE_TRACKER_TYPE_ASSISTS, round)
+        row.score       = read_score(i, C.SCORE_TRACKER_TYPE_SCORE, round)
         row.medals, row.medalIds = count_entry_medals(i, round)
         m.battle[#m.battle + 1] = row
     end
     return m
 end
 
--- Resolve the win/loss/tie label for the local player's team.
+local function read_teams(m)
+    local A = BGMeter.zenimax.api
+    local round = current_round()
+    local teams = {}
+    for _, t in ipairs(team_list()) do
+        if t ~= nil then
+            teams[#teams + 1] = {
+                team      = t,
+                score     = safe(A.get_team_score, round, t) or 0,
+                roundsWon = safe(A.get_rounds_won, t) or 0,
+            }
+        end
+    end
+    m.teams = teams
+    m.numRounds = (m.bgId and safe(A.get_num_rounds, m.bgId)) or 1
+end
+
 local function read_result(localTeam)
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
@@ -77,10 +103,28 @@ local function read_result(localTeam)
     return C.RESULT_LABEL[r]
 end
 
--- ── Lifecycle ─────────────────────────────────────────────────────────────
+local function sample_scores()
+    if not active or not active.timeline then return end
+    local A = BGMeter.zenimax.api
+    local tl = active.timeline
+    local round = current_round()
+    local i = #tl.t + 1
+    tl.t[i] = (safe(A.now_ms) or 0) - (active.startMs or 0)
+    tl.r[i] = round
+    local teams = team_list()
+    tl.s1[i] = (teams[1] ~= nil and safe(A.get_team_score, round, teams[1])) or 0
+    tl.s2[i] = (teams[2] ~= nil and safe(A.get_team_score, round, teams[2])) or 0
+    tl.s3[i] = (teams[3] ~= nil and safe(A.get_team_score, round, teams[3])) or 0
+end
 
--- Called when the BG transitions into an active running state. Snapshots every
--- progression baseline so the finish delta is "what this match earned".
+local function start_sampler()
+    BGMeter.zenimax.events.register_update(SAMPLE_NAME, SAMPLE_MS, sample_scores)
+end
+
+local function stop_sampler()
+    BGMeter.zenimax.events.unregister_update(SAMPLE_NAME)
+end
+
 function Capture.begin()
     local A = BGMeter.zenimax.api
     local Match = BGMeter.Match
@@ -92,20 +136,22 @@ function Capture.begin()
     active.name      = active.bgId and safe(A.get_bg_name, active.bgId) or nil
     active.gameType  = safe(A.get_bg_game_type)
     active.localTeam = safe(A.get_local_team)
+    active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
+    active.killfeed  = {}
 
     baseline = {
         ap  = safe(A.get_alliance_points) or 0,
-        xp  = safe(A.get_unit_xp) or 0,
         cp  = safe(A.get_cp_earned) or 0,
         vet = Vet.snapshot(),
     }
     active.haul.vetStart = baseline.vet
 
-    BGMeter.Log.debug("match begin: bg=%s ap0=%d xp0=%d", tostring(active.name), baseline.ap, baseline.xp)
+    start_sampler()
+    sample_scores()
+
+    BGMeter.Log.debug("match begin: bg=%s ap0=%d", tostring(active.name), baseline.ap)
 end
 
--- Event accumulators -- a live cross-check on the baseline delta, and the only
--- way to flag a veterancy tier-up the moment it happens.
 function Capture.on_ap(_, alliancePoints, _playSound, difference)
     if not active or not difference then return end
     active.haul.apGained = active.haul.apGained + difference
@@ -131,33 +177,45 @@ function Capture.on_reward_track(_, rewardTrackType, _trackId, prevTier, newTier
     end
 end
 
--- Called when the BG reaches FINISHED. Reads the scoreboard, finalises the haul
--- from baseline deltas (authoritative) and returns the completed Match record.
+function Capture.on_kill(_, killedChar, killedDisp, _killedTeam, killerChar, killerDisp, _killerTeam)
+    if not active or not active.killfeed then return end
+    local A = BGMeter.zenimax.api
+    local myDisp = safe(A.get_display_name)
+    local myChar = safe(A.get_char_name)
+    local kind = nil
+    if (killerDisp and killerDisp == myDisp) or (killerChar and killerChar == myChar) then
+        kind = "kill"
+    elseif (killedDisp and killedDisp == myDisp) or (killedChar and killedChar == myChar) then
+        kind = "death"
+    end
+    if not kind then return end
+    local t = (safe(A.now_ms) or 0) - (active.startMs or 0)
+    active.killfeed[#active.killfeed + 1] = { t = t, kind = kind }
+end
+
 function Capture.finalize()
     if not active then return nil end
     local A = BGMeter.zenimax.api
     local Match = BGMeter.Match
-    local Vet = BGMeter.Veterancy
+
+    stop_sampler()
+    sample_scores()
 
     active.endMs = safe(A.now_ms) or active.startMs
-    active.capturedAt = safe(GetTimeStamp)
+    active.capturedAt = safe(A.get_timestamp)
     active.result = read_result(active.localTeam)
 
     Capture.read_battle(active)
+    read_teams(active)
 
-    -- Haul totals: baseline delta is the source of truth; fall back to the
-    -- event-accumulated value if a baseline read failed.
     if baseline then
         local apNow = safe(A.get_alliance_points)
-        local xpNow = safe(A.get_unit_xp)
         local cpNow = safe(A.get_cp_earned)
         if apNow then active.haul.apGained = math.max(active.haul.apGained, apNow - baseline.ap) end
-        if xpNow then active.haul.xpGained = math.max(active.haul.xpGained, xpNow - baseline.xp) end
         if cpNow then active.haul.cpGained = math.max(active.haul.cpGained, cpNow - baseline.cp) end
     end
 
-    active.haul.vetEnd = Vet.snapshot()
-    -- Medals the local player earned this match (from their scoreboard row).
+    active.haul.vetEnd = BGMeter.Veterancy.snapshot()
     local lr = Match.local_row(active)
     if lr then active.haul.medals = lr.medals end
 
@@ -168,11 +226,15 @@ function Capture.finalize()
     return finished
 end
 
--- Are we mid-match? (Used to guard the dump command.)
+function Capture.abort()
+    if not active then return end
+    stop_sampler()
+    BGMeter.Log.debug("capture aborted (left battleground mid-match)")
+    active, baseline = nil, nil
+end
+
 function Capture.is_active() return active ~= nil end
 
--- For /bgmeter dump: build a throwaway Match snapshot of the current state
--- without disturbing any in-flight capture.
 function Capture.snapshot_now()
     local A = BGMeter.zenimax.api
     local Match = BGMeter.Match
@@ -184,6 +246,7 @@ function Capture.snapshot_now()
     m.localTeam = safe(A.get_local_team)
     m.result   = read_result(m.localTeam)
     Capture.read_battle(m)
+    read_teams(m)
     m.haul.vetEnd = Vet.snapshot()
     return m
 end

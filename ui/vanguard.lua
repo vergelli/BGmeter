@@ -670,7 +670,7 @@ end
 function V.show()
     build()
     Prefs.set("show_vanguard", true)
-    V.onHud = (BGMeter.zenimax.scene and BGMeter.zenimax.scene.is_hud_scene()) and true or true
+    V.onHud = (BGMeter.zenimax.scene and BGMeter.zenimax.scene.is_hud_scene()) and true or false
     expanded = false
     show_panel(false)
     V.apply_mode()

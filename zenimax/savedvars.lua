@@ -20,18 +20,19 @@ local DEFAULTS = {
     window   = { x = 0, y = 0, w = 0, h = 0, hidden = true, scale = 1.0 },
     vanguard = { x = 0, y = 0, w = 0, locked = false },  -- the AvA/veterancy HUD bar (w=0 -> default)
     prefs    = {
-        max_history    = 50,    -- how many matches to keep
-        auto_open      = true,  -- pop the window automatically at match end
-        sounds         = true,  -- play native ESO cues (open / win / rank-up / PB)
-        animate        = true,  -- animate bar fills and counters
-        show_haul      = true,  -- show the right-hand progression panel
-        show_veterancy = true,  -- veterancy medallion + season track
-        show_standing  = true,  -- competitive leaderboard standing
-        show_awards    = true,  -- MVP / standout badges on rows
-        show_vanguard  = false, -- the floating veterancy/AP HUD bar (off by default)
-        vanguard_dock  = false, -- dock the bar to the native XP bar (vs free-floating)
-        vanguard_fade  = true,  -- idle the bar dim, brighten on AP/veterancy gain
-        opacity        = 0.97,  -- window background opacity
+        max_history    = 50,
+        auto_open_mode = "exit",
+        sounds         = true,
+        animate        = true,
+        show_haul      = true,
+        show_veterancy = true,
+        show_standing  = true,
+        show_awards    = true,
+        show_timeline  = true,
+        show_vanguard  = false,
+        vanguard_dock  = false,
+        vanguard_fade  = true,
+        opacity        = 0.97,
         sort_key       = "damage",
         sort_desc      = true,
     },

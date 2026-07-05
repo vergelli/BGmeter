@@ -12,7 +12,8 @@ local function sv()
     return BGMeter.zenimax.savedvars.get()
 end
 
--- Prepend a finished match; trim to the configured cap.
+local HEAVY_KEEP = 10
+
 function History.push(match)
     local data = sv()
     if not data then return end
@@ -21,6 +22,10 @@ function History.push(match)
     local cap = (data.prefs and data.prefs.max_history) or 50
     while #data.matches > cap do
         table.remove(data.matches)
+    end
+    for i = HEAVY_KEEP + 1, #data.matches do
+        data.matches[i].timeline = nil
+        data.matches[i].killfeed = nil
     end
     BGMeter.Log.debug("history push -> %d stored", #data.matches)
 end

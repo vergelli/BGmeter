@@ -40,13 +40,31 @@ local ICON_STAR  = "EsoUI/Art/Collections/favorite_starOnly.dds"          -- MVP
 local ICON_SORTUP = "EsoUI/Art/Miscellaneous/list_sortUp.dds"             -- sort ascending
 local ICON_SORTDN = "EsoUI/Art/Miscellaneous/list_sortDown.dds"           -- sort descending
 
--- chrome button textures (copied from the sibling Verditer's proven set)
 local TX = {
-    close = { n = "EsoUI/Art/Buttons/decline_up.dds",   p = "EsoUI/Art/Buttons/decline_down.dds",   o = "EsoUI/Art/Buttons/decline_over.dds" },
-    gear  = { n = "EsoUI/Art/MenuBar/menuBar_mainMenu_over.dds", p = "EsoUI/Art/MenuBar/menuBar_mainMenu_down.dds", o = "EsoUI/Art/MenuBar/menuBar_mainMenu_over.dds" },
-    prev  = { n = "EsoUI/Art/Buttons/large_leftArrow_up.dds",  p = "EsoUI/Art/Buttons/large_leftArrow_down.dds",  o = "EsoUI/Art/Buttons/large_leftArrow_over.dds" },
-    nextb = { n = "EsoUI/Art/Buttons/large_rightArrow_up.dds", p = "EsoUI/Art/Buttons/large_rightArrow_down.dds", o = "EsoUI/Art/Buttons/large_rightArrow_over.dds" },
+    close  = { n = "EsoUI/Art/Buttons/decline_up.dds",   p = "EsoUI/Art/Buttons/decline_down.dds",   o = "EsoUI/Art/Buttons/decline_over.dds" },
+    gear   = { n = "EsoUI/Art/MenuBar/menuBar_mainMenu_over.dds", p = "EsoUI/Art/MenuBar/menuBar_mainMenu_down.dds", o = "EsoUI/Art/MenuBar/menuBar_mainMenu_over.dds" },
+    prev   = { n = "EsoUI/Art/Buttons/large_leftArrow_up.dds",  p = "EsoUI/Art/Buttons/large_leftArrow_down.dds",  o = "EsoUI/Art/Buttons/large_leftArrow_over.dds" },
+    nextb  = { n = "EsoUI/Art/Buttons/large_rightArrow_up.dds", p = "EsoUI/Art/Buttons/large_rightArrow_down.dds", o = "EsoUI/Art/Buttons/large_rightArrow_over.dds" },
+    export = { n = "EsoUI/Art/Bank/bank_tabIcon_withdraw_up.dds", p = "EsoUI/Art/Bank/bank_tabIcon_withdraw_down.dds", o = "EsoUI/Art/Bank/bank_tabIcon_withdraw_over.dds" },
 }
+
+local BANNER_ART = "EsoUI/Art/Battlegrounds/battleground_banner_%s_%s.dds"
+local SCOREBG_L  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_left.dds"
+local SCOREBG_R  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_right.dds"
+local PIP_ART    = "EsoUI/Art/Battlegrounds/battleground_round_%s.dds"
+local PIP_EMPTY  = "EsoUI/Art/Battlegrounds/battleground_round_empty.dds"
+
+local TEAM_KEY
+
+local function team_art_key(team)
+    if not TEAM_KEY then
+        TEAM_KEY = {}
+        if C.BATTLEGROUND_TEAM_FIRE_DRAKES then TEAM_KEY[C.BATTLEGROUND_TEAM_FIRE_DRAKES] = "fire" end
+        if C.BATTLEGROUND_TEAM_PIT_DAEMONS then TEAM_KEY[C.BATTLEGROUND_TEAM_PIT_DAEMONS] = "pit" end
+        if C.BATTLEGROUND_TEAM_STORM_LORDS then TEAM_KEY[C.BATTLEGROUND_TEAM_STORM_LORDS] = "storm" end
+    end
+    return TEAM_KEY[team]
+end
 
 -- ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -107,10 +125,26 @@ local function pop(control)
 end
 
 local function team_name(team)
+    if team == nil then return "" end
+    local A = BGMeter.zenimax.api
+    if type(A.get_team_name) == "function" then
+        local ok, name = pcall(A.get_team_name, team)
+        if ok and name and name ~= "" then return name end
+    end
     if team == C.BATTLEGROUND_TEAM_FIRE_DRAKES then return "Fire Drakes" end
     if team == C.BATTLEGROUND_TEAM_PIT_DAEMONS then return "Pit Daemons" end
     if team == C.BATTLEGROUND_TEAM_STORM_LORDS then return "Storm Lords" end
     return ""
+end
+
+local function team_icon(team)
+    if team == nil then return nil end
+    local A = BGMeter.zenimax.api
+    if type(A.get_team_icon) == "function" then
+        local ok, icon = pcall(A.get_team_icon, team)
+        if ok and icon and icon ~= "" then return icon end
+    end
+    return nil
 end
 
 local function hide_all(list, hidden) for _, c in ipairs(list) do c:SetHidden(hidden) end end
@@ -132,37 +166,109 @@ local function build_header(win)
     h.subtitle = P.label(win, S.FONT.small, K.COLOR.text_dim)
     h.subtitle:SetAnchor(TOPLEFT, h.emblem, BOTTOMLEFT, 0, 8)
 
-    -- soft additive glow behind the result banner (created first = drawn under),
-    -- tinted by the result colour for a sense of "moment"
     h.bannerGlow = P.icon(win, "EsoUI/Art/Crafting/crafting_tooltip_glow_center.dds")
-    h.bannerGlow:SetAnchor(TOP, win, TOP, 0, 6)
-    h.bannerGlow:SetDimensions(440, 76)
+    h.bannerGlow:SetAnchor(TOP, win, TOP, 0, 2)
+    h.bannerGlow:SetDimensions(360, 64)
     if h.bannerGlow.SetBlendMode then h.bannerGlow:SetBlendMode(TEX_BLEND_MODE_ADD) end
     h.bannerGlow:SetHidden(true)
 
+    h.bannerArt = P.icon(win)
+    h.bannerArt:SetAnchor(TOP, win, TOP, 0, 2)
+    h.bannerArt:SetDimensions(300, 40)
+    h.bannerArt:SetColor(1, 1, 1, 0.9)
+    h.bannerArt:SetHidden(true)
+
     h.banner = P.label(win, S.FONT.banner, K.COLOR.text)
-    h.banner:SetAnchor(TOP, win, TOP, 0, 14)
+    h.banner:SetAnchor(TOP, win, TOP, 0, 8)
     h.banner:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
-    -- top-right cluster, anchored by absolute offset-from-right so it never drifts
+    h.chips = {}
+    for i = 1, 3 do
+        local chip = {}
+        chip.icon = P.icon(win)
+        chip.icon:SetDimensions(18, 18)
+        chip.label = P.label(win, S.FONT.small, K.COLOR.text)
+        chip.label:SetAnchor(LEFT, chip.icon, RIGHT, 3, 0)
+        chip.label:SetHeight(18)
+        chip.icon:SetHidden(true)
+        chip.label:SetHidden(true)
+        h.chips[i] = chip
+    end
+
     h.close = mk_button(win, TX.close, 22, function() W.hide() end, "Close")
     h.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -L.margin, 14)
 
     h.gear = mk_button(win, TX.gear, 28, function() W.toggle_settings() end, "Settings")
     h.gear:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 30), 11)
 
+    h.export = mk_button(win, TX.export, 24, function() W.export() end, "Export match data")
+    h.export:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 64), 13)
+
     h.next = mk_button(win, TX.nextb, 26, function() W.step(1) end, "Newer match")
-    h.next:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 68), 13)
+    h.next:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 100), 13)
 
     h.counter = P.label(win, S.FONT.small, K.COLOR.text_dim)
-    h.counter:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 100), 17)
+    h.counter:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 132), 17)
     h.counter:SetDimensions(48, 18)
     h.counter:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     h.prev = mk_button(win, TX.prev, 26, function() W.step(-1) end, "Older match")
-    h.prev:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 152), 13)
+    h.prev:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 184), 13)
 
     return h
+end
+
+local function layout_chips(m)
+    local h = W.header
+    local teams = m and m.teams
+    local n = (teams and #teams) or 0
+    if n == 0 then
+        for i = 1, 3 do h.chips[i].icon:SetHidden(true); h.chips[i].label:SetHidden(true) end
+        return
+    end
+    local multi = (m.numRounds or 1) > 1
+    local widths, total = {}, 0
+    for i = 1, 3 do
+        local chip, t = h.chips[i], teams[i]
+        if t then
+            local txt
+            if multi then
+                local pips = {}
+                local key = team_art_key(t.team)
+                for r = 1, math.min(m.numRounds, 5) do
+                    pips[#pips + 1] = F.icon((r <= (t.roundsWon or 0)) and (key and PIP_ART:format(key) or PIP_EMPTY) or PIP_EMPTY, 12)
+                end
+                txt = table.concat(pips, "")
+            else
+                txt = F.abbrev(t.score or 0)
+            end
+            chip.label:SetText(txt)
+            local tc = S.team_color(t.team)
+            chip.label:SetColor(tc[1], tc[2], tc[3], 1)
+            local ic = team_icon(t.team)
+            if ic then chip.icon:SetTexture(ic); chip.icon:SetColor(1, 1, 1, 1)
+            else chip.icon:SetTexture("EsoUI/Art/Collections/favorite_starOnly.dds"); chip.icon:SetColor(tc[1], tc[2], tc[3], 1) end
+            local wpx = 21 + chip.label:GetTextWidth()
+            widths[i] = wpx
+            total = total + wpx
+        end
+    end
+    local GAPX = 18
+    total = total + GAPX * (n - 1)
+    local x = -total / 2
+    for i = 1, 3 do
+        local chip, t = h.chips[i], teams[i]
+        if t and widths[i] then
+            chip.icon:ClearAnchors()
+            chip.icon:SetAnchor(TOP, W.win, TOP, x + 9, 46)
+            chip.icon:SetHidden(false)
+            chip.label:SetHidden(false)
+            x = x + widths[i] + GAPX
+        else
+            chip.icon:SetHidden(true)
+            chip.label:SetHidden(true)
+        end
+    end
 end
 
 -- ── build: battle table ─────────────────────────────────────────────────────
@@ -200,6 +306,28 @@ local function build_battle(win)
 
     b.row_pool = BGMeter.Plot.pool.new(function() return W._make_row(b.container) end,
         function(row) row.container:SetHidden(true) end)
+
+    b.chart = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
+    b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, 0)
+    b.chart:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, 0)
+    b.chart:SetHeight(L.chart_h)
+    b.chart:SetHidden(true)
+
+    b.chartBg = P.rect(b.chart, { 1, 1, 1, 0.04 })
+    b.chartBg:SetAnchorFill(b.chart)
+
+    b.chartTitle = P.label(b.chart, S.FONT.small, K.COLOR.text_dim)
+    b.chartTitle:SetText("MATCH TIMELINE")
+    b.chartTitle:SetAnchor(TOPLEFT, b.chart, TOPLEFT, 4, 2)
+
+    b.dot_pool = BGMeter.Plot.pool.new(
+        function()
+            local d = P.rect(b.chart, { 1, 1, 1, 1 })
+            d:SetDimensions(3, 3)
+            return d
+        end,
+        function(d) d:SetHidden(true) end)
+
     return b
 end
 
@@ -380,32 +508,57 @@ end
 
 -- ── build: settings overlay ──────────────────────────────────────────────────
 
-local TOGGLES = {
-    { key = "auto_open",      label = "Auto-open after a match" },
-    { key = "sounds",         label = "Sound cues" },
-    { key = "animate",        label = "Animations" },
-    { key = "show_haul",      label = "Show the haul panel" },
-    { key = "show_veterancy", label = "Show veterancy" },
-    { key = "show_standing",  label = "Show competitive standing" },
-    { key = "show_awards",    label = "Show MVP / column leaders" },
-    { key = "show_vanguard",  label = "Veterancy/AP bar (HUD)" },
-    { key = "vanguard_dock",  label = "Bar: dock to the XP bar" },
-    { key = "vanguard_fade",  label = "Bar: auto-fade when idle" },
+local AUTO_OPEN_STATES = { "exit", "instant", "off" }
+local AUTO_OPEN_LABELS = { exit = "ON EXIT", instant = "INSTANT", off = "OFF" }
+
+local SETTINGS_SECTIONS = {
+    { title = "GENERAL", rows = {
+        { kind = "cycle",  key = "auto_open_mode", label = "Auto-open results" },
+        { kind = "toggle", key = "sounds",         label = "Sound cues" },
+        { kind = "toggle", key = "animate",        label = "Animations" },
+    } },
+    { title = "RESULT WINDOW", rows = {
+        { kind = "toggle", key = "show_haul",      label = "Haul panel" },
+        { kind = "toggle", key = "show_veterancy", label = "Veterancy track" },
+        { kind = "toggle", key = "show_standing",  label = "Competitive standing" },
+        { kind = "toggle", key = "show_awards",    label = "MVP / column leaders" },
+        { kind = "toggle", key = "show_timeline",  label = "Match timeline chart" },
+    } },
+    { title = "VANGUARD BAR", rows = {
+        { kind = "toggle", key = "show_vanguard",  label = "Show the HUD bar" },
+        { kind = "toggle", key = "vanguard_dock",  label = "Dock to the XP bar" },
+        { kind = "toggle", key = "vanguard_fade",  label = "Auto-fade when idle" },
+    } },
 }
 
--- A separate, movable settings window (the Verditer pattern) -- NOT an overlay
--- on top of the main window. Clear rows: a label on the left, an ON/OFF button
--- on the right; action buttons across the bottom.
 local function text_button(parent, label)
     local b = BGMeter.zenimax.ui.create_from_virtual(nil, parent, "ZO_DefaultButton")
     b:SetText(label)
     return b
 end
 
+local function on_pref_changed(key)
+    if BGMeter.UI.vanguard then
+        if key == "show_vanguard" then
+            if Prefs.get("show_vanguard") then BGMeter.UI.vanguard.show() else BGMeter.UI.vanguard.hide() end
+        elseif key == "vanguard_dock" or key == "vanguard_fade" then
+            BGMeter.UI.vanguard.sync()
+        end
+    end
+    Sound.play("nav")
+    W.render(false)
+end
+
 local function build_settings()
     local s = {}
+    local ROW_H, SEC_H, PADX = 28, 24, 18
+
+    local rowsTotal = 0
+    for _, sec in ipairs(SETTINGS_SECTIONS) do rowsTotal = rowsTotal + #sec.rows end
+    local winH = 56 + #SETTINGS_SECTIONS * SEC_H + rowsTotal * ROW_H + 92
+
     local win = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterSettingsWindow")
-    win:SetDimensions(324, 452)
+    win:SetDimensions(324, winH)
     win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0)
     win:SetMouseEnabled(true)
     win:SetMovable(true)
@@ -433,50 +586,69 @@ local function build_settings()
     s.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -14, 15)
 
     s.rows = {}
-    local y = 52
-    for _, t in ipairs(TOGGLES) do
-        local name = P.label(win, S.FONT.row, K.COLOR.text)
-        name:SetText(t.label)
-        name:SetAnchor(TOPLEFT, win, TOPLEFT, 22, y)
-        name:SetDimensions(214, 26)
-        name:SetVerticalAlignment(TEXT_ALIGN_CENTER)
-        local btn = text_button(win, "")
-        btn:SetDimensions(60, 26)
-        btn:SetAnchor(TOPRIGHT, win, TOPRIGHT, -20, y - 1)
-        local key = t.key
-        local function paint() btn:SetText(Prefs.get(key) and "ON" or "OFF") end
-        btn:SetHandler("OnClicked", function()
-            local on = Prefs.toggle(key)
-            -- The vanguard HUD is a separate window, so toggling any vanguard_*
-            -- pref must re-apply to it (the other toggles only affect W.render).
-            if BGMeter.UI.vanguard then
-                if key == "show_vanguard" then
-                    if on then BGMeter.UI.vanguard.show() else BGMeter.UI.vanguard.hide() end
-                elseif key == "vanguard_dock" or key == "vanguard_fade" then
-                    BGMeter.UI.vanguard.sync()
-                end
+    local y = 48
+    for _, sec in ipairs(SETTINGS_SECTIONS) do
+        local head = P.label(win, S.FONT.small, K.COLOR.gold)
+        head:SetText(sec.title)
+        head:SetAnchor(TOPLEFT, win, TOPLEFT, PADX, y + 6)
+        head:SetDimensions(200, 14)
+        local rule = P.rect(win, { 1, 1, 1, 0.08 })
+        rule:SetAnchor(TOPLEFT, win, TOPLEFT, PADX, y + SEC_H - 2)
+        rule:SetAnchor(TOPRIGHT, win, TOPRIGHT, -PADX, y + SEC_H - 2)
+        rule:SetHeight(1)
+        y = y + SEC_H
+
+        for _, t in ipairs(sec.rows) do
+            local name = P.label(win, S.FONT.row, K.COLOR.text)
+            name:SetText(t.label)
+            name:SetAnchor(TOPLEFT, win, TOPLEFT, PADX + 4, y)
+            name:SetDimensions(190, ROW_H - 2)
+            name:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+            local btn = text_button(win, "")
+            btn:SetDimensions(84, ROW_H - 4)
+            btn:SetAnchor(TOPRIGHT, win, TOPRIGHT, -PADX, y)
+            local key, kind = t.key, t.kind
+            local paint
+            if kind == "cycle" then
+                paint = function() btn:SetText(AUTO_OPEN_LABELS[Prefs.get(key)] or "?") end
+                btn:SetHandler("OnClicked", function()
+                    local cur = Prefs.get(key)
+                    local idx = 1
+                    for i, v in ipairs(AUTO_OPEN_STATES) do if v == cur then idx = i break end end
+                    Prefs.set(key, AUTO_OPEN_STATES[(idx % #AUTO_OPEN_STATES) + 1])
+                    paint(); on_pref_changed(key)
+                end)
+            else
+                paint = function() btn:SetText(Prefs.get(key) and "ON" or "OFF") end
+                btn:SetHandler("OnClicked", function()
+                    Prefs.toggle(key)
+                    paint(); on_pref_changed(key)
+                end)
             end
-            paint(); Sound.play("nav"); W.render(false)
-        end)
-        s.rows[key] = paint
-        y = y + 30
+            s.rows[key] = paint
+            y = y + ROW_H
+        end
     end
 
     local clear = text_button(win, "Clear match history")
-    clear:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, 18, -52)
-    clear:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -18, -52)
+    clear:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, PADX, -52)
+    clear:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -PADX, -52)
     clear:SetHeight(28)
     clear:SetHandler("OnClicked", function() BGMeter.History.clear(); current_index = 1; W.toggle_settings(); W.render(false) end)
 
     local reset = text_button(win, "Reset window size & position")
-    reset:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, 18, -16)
-    reset:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -18, -16)
+    reset:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, PADX, -16)
+    reset:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -PADX, -16)
     reset:SetHeight(28)
     reset:SetHandler("OnClicked", function()
         local sv = BGMeter.zenimax.savedvars.get()
-        if sv then sv.window.x, sv.window.y, sv.window.w, sv.window.h = 0, 0, 0, 0 end
+        if sv then
+            sv.window.x, sv.window.y, sv.window.w, sv.window.h = 0, 0, 0, 0
+            sv.window.scale = 1.0
+        end
         W.cur_w, W.cur_h = L.window_w, L.window_h
         W.win:SetDimensions(W.cur_w, W.cur_h)
+        W.win:SetScale(1)
         W.win:ClearAnchors(); W.win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0)
         W.render(false)
     end)
@@ -512,6 +684,18 @@ local function build()
 
     W.bg = P.rect(win, K.COLOR.bg)
     W.bg:SetAnchorFill(win)
+
+    W.bgArtL = P.icon(win, SCOREBG_L)
+    W.bgArtL:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin - 6, L.header_h - 4)
+    W.bgArtL:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.haul_w + L.gap + L.margin - 6), -(L.footer_h - 4))
+    W.bgArtL:SetColor(1, 1, 1, 0.22)
+
+    W.bgArtR = P.icon(win, SCOREBG_R)
+    W.bgArtR:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin - 6), L.header_h - 4)
+    W.bgArtR:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.margin - 6), -(L.footer_h - 4))
+    W.bgArtR:SetWidth(L.haul_w + 12)
+    W.bgArtR:SetColor(1, 1, 1, 0.22)
+
     P.frame(win):SetAnchorFill(win)
 
     local strip = P.rect(win, K.COLOR.accent)
@@ -562,13 +746,15 @@ local function render_header(m)
     local total = BGMeter.History.count()
     local dur = (m.durationMs and m.durationMs > 0) and ("  ·  " .. F.duration(m.durationMs)) or ""
     local when = ""
-    if m.capturedAt and type(GetTimeStamp) == "function" then
-        local ago = GetTimeStamp() - m.capturedAt
+    local A = BGMeter.zenimax.api
+    if m.capturedAt and type(A.get_timestamp) == "function" then
+        local ago = A.get_timestamp() - m.capturedAt
         if ago >= 0 then when = "  ·  " .. (ago < 60 and "just now" or (F.countdown(ago) .. " ago")) end
     end
     set_text(W.header.subtitle, (m.name or "Battleground") .. dur .. when)
     set_text(W.header.counter, string.format("%d / %d", current_index, math.max(total, 1)))
     local glow = W.header.bannerGlow
+    local art  = W.header.bannerArt
     local function set_banner(text, col, glowCol)
         set_text(W.header.banner, text); S.color(W.header.banner, col)
         if glow then
@@ -576,10 +762,21 @@ local function render_header(m)
             else glow:SetHidden(true) end
         end
     end
+    local artKey = team_art_key(m.localTeam)
+    local artResult = (m.result == "WIN" and "win") or (m.result == "LOSS" and "loss") or nil
+    if art then
+        if artKey and artResult then
+            art:SetTexture(BANNER_ART:format(K.TEAM_ART[artKey] or artKey, artResult))
+            art:SetHidden(false)
+        else
+            art:SetHidden(true)
+        end
+    end
     if m.result == "WIN" then set_banner("VICTORY", K.COLOR.heal, K.COLOR.heal)
     elseif m.result == "LOSS" then set_banner("DEFEAT", K.COLOR.accent, K.COLOR.accent)
     elseif m.result == "TIE" then set_banner("DRAW", K.COLOR.gold, K.COLOR.gold)
     else set_banner("MATCH RESULTS", K.COLOR.text_dim, nil) end
+    layout_chips(m)
 end
 
 local function render_battle(m, animate)
@@ -588,7 +785,13 @@ local function render_battle(m, animate)
 
     local key = Prefs.get("sort_key") or "damage"
     if key == "name" then
-        table.sort(m.battle, function(a, z) return (a.displayName or a.charName or "") < (z.displayName or z.charName or "") end)
+        local desc = Prefs.get("sort_desc")
+        table.sort(m.battle, function(a, z)
+            local an = (a.displayName or a.charName or ""):lower()
+            local zn = (z.displayName or z.charName or ""):lower()
+            if desc then return an > zn end
+            return an < zn
+        end)
     else
         BGMeter.Match.sort(m, key, Prefs.get("sort_desc"))
     end
@@ -656,6 +859,76 @@ local function render_battle(m, animate)
         row.container:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then W.select(prow) end end)
 
         y = y + L.row_h
+    end
+end
+
+local function timeline_ok(m)
+    local tl = m.timeline
+    return Prefs.get("show_timeline") and tl and tl.t and #tl.t >= 3
+end
+
+local function render_timeline(m)
+    local b = W.battle
+    b.dot_pool:release_all()
+    if not timeline_ok(m) then
+        b.chart:SetHidden(true)
+        return
+    end
+    local rows_h = 24 + #m.battle * L.row_h
+    local cont_h = b.container:GetHeight()
+    if cont_h - rows_h < L.chart_h + 8 then
+        b.chart:SetHidden(true)
+        return
+    end
+    b.chart:SetHidden(false)
+
+    local tl = m.timeline
+    local n = #tl.t
+    local w = b.chart:GetWidth()
+    local h = L.chart_h
+    if w <= 8 then return end
+
+    local maxScore = 1
+    local series = { tl.s1, tl.s2, tl.s3 }
+    for s = 1, 3 do
+        local arr = series[s]
+        for i = 1, n do
+            local v = arr and arr[i] or 0
+            if v > maxScore then maxScore = v end
+        end
+    end
+
+    local tspan = math.max(1, tl.t[n] or 1)
+    local plot_h = h - 18
+    for s = 1, 3 do
+        local arr = series[s]
+        local team = tl.teams and tl.teams[s]
+        local tc = team and S.team_color(team) or K.COLOR.text_dim
+        if arr then
+            for i = 1, n do
+                local dot = b.dot_pool:acquire()
+                local x = math.floor((tl.t[i] / tspan) * (w - 6) + 0.5)
+                local y = 14 + math.floor((1 - (arr[i] or 0) / maxScore) * plot_h + 0.5)
+                dot:ClearAnchors()
+                dot:SetAnchor(TOPLEFT, b.chart, TOPLEFT, x, y)
+                dot:SetDimensions(3, 3)
+                P.set_rect_color(dot, { tc[1], tc[2], tc[3], 0.95 })
+                dot:SetHidden(false)
+            end
+        end
+    end
+
+    if m.killfeed then
+        for _, k in ipairs(m.killfeed) do
+            local mark = b.dot_pool:acquire()
+            local x = math.floor((math.min(k.t or 0, tspan) / tspan) * (w - 6) + 0.5)
+            mark:ClearAnchors()
+            mark:SetAnchor(BOTTOMLEFT, b.chart, BOTTOMLEFT, x, -2)
+            mark:SetDimensions(2, 8)
+            if k.kind == "kill" then P.set_rect_color(mark, K.COLOR.gold)
+            else P.set_rect_color(mark, K.COLOR.accent) end
+            mark:SetHidden(false)
+        end
     end
 end
 
@@ -779,14 +1052,19 @@ function W.render(animate)
     if not m then
         set_text(W.header.banner, "NO MATCHES YET"); S.color(W.header.banner, K.COLOR.text_dim)
         if W.header.bannerGlow then W.header.bannerGlow:SetHidden(true) end
+        if W.header.bannerArt then W.header.bannerArt:SetHidden(true) end
+        layout_chips(nil)
         set_text(W.header.subtitle, "finish a battleground, or try  /bgmeter demo")
         set_text(W.header.counter, "0 / 0")
         W.battle.row_pool:release_all()
+        W.battle.dot_pool:release_all()
+        W.battle.chart:SetHidden(true)
         set_text(W.detail, "")
         return
     end
     render_header(m)
     render_battle(m, animate)
+    render_timeline(m)
     render_haul(m, animate)
     W.render_detail(m)
 end
@@ -794,9 +1072,12 @@ end
 function W.render_detail(m)
     if selected_row then
         local r = selected_row
-        set_text(W.detail, string.format("%s  ·  %s  --  %s dmg  ·  %s heal  ·  %d kills  %d deaths  %d assists  ·  %d medals",
-            r.displayName or r.charName or "?", team_name(r.team),
-            F.commas(r.damage), F.commas(r.healing), r.kills, r.deaths, r.assists, r.medals or 0))
+        local ic = team_icon(r.team)
+        local prefix = ic and (F.icon(ic, 16) .. " ") or ""
+        local taken = (r.taken and r.taken > 0) and string.format("  ·  %s taken", F.abbrev(r.taken)) or ""
+        set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d  ·  %d medals",
+            prefix, r.displayName or r.charName or "?", team_name(r.team),
+            F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, r.medals or 0))
         S.color(W.detail, K.COLOR.text_dim)
     else
         local session = BGMeter.Session and BGMeter.Session.summary()
@@ -806,6 +1087,11 @@ function W.render_detail(m)
 end
 
 -- ── controller actions ──────────────────────────────────────────────────────
+
+function W.export()
+    local m = BGMeter.History.get(current_index)
+    if BGMeter.UI.export then BGMeter.UI.export.show(m) end
+end
 
 function W.sort_by(key)
     if Prefs.get("sort_key") == key then Prefs.set("sort_desc", not Prefs.get("sort_desc"))

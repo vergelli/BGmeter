@@ -8,17 +8,26 @@ local BGMeter = BGMeter
 local Prefs = {}
 
 local FALLBACK = {
-    max_history = 50, auto_open = true, sounds = true, animate = true,
+    max_history = 50, auto_open_mode = "exit", sounds = true, animate = true,
     show_haul = true, show_veterancy = true, show_standing = true,
-    show_awards = true, show_vanguard = false, vanguard_dock = false,
-    vanguard_fade = true, opacity = 0.97, sort_key = "damage", sort_desc = true,
+    show_awards = true, show_timeline = true, show_vanguard = false,
+    vanguard_dock = false, vanguard_fade = true, opacity = 0.97,
+    sort_key = "damage", sort_desc = true,
 }
+
+local function migrate(p)
+    if p.auto_open ~= nil and p.auto_open_mode == nil then
+        p.auto_open_mode = p.auto_open and "exit" or "off"
+        p.auto_open = nil
+    end
+    return p
+end
 
 local function tbl()
     local sv = BGMeter.zenimax.savedvars.get()
     if sv then
         sv.prefs = sv.prefs or {}
-        return sv.prefs
+        return migrate(sv.prefs)
     end
     return FALLBACK
 end

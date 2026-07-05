@@ -14,6 +14,9 @@ local A = {}
 -- ── Time / diagnostics ────────────────────────────────────────────────────
 A.now_ms = GetGameTimeMilliseconds
 A.get_api_version = GetAPIVersion
+A.get_timestamp = GetTimeStamp
+A.get_display_name = GetDisplayName
+A.get_char_name = function() return GetUnitName("player") end
 
 -- ── Match metadata ────────────────────────────────────────────────────────
 A.get_bg_id          = GetCurrentBattlegroundId
@@ -24,6 +27,12 @@ A.is_active_bg       = IsActiveWorldBattleground
 A.get_bg_name        = GetBattlegroundName        -- (battlegroundId) -> string
 A.get_local_team     = function() return GetUnitBattlegroundTeam("player") end
 A.get_result_for_team = GetBattlegroundResultForTeam -- (team) -> BattlegroundResult
+A.get_num_rounds     = GetBattlegroundNumRounds
+A.get_round_result   = GetCurrentBattlegroundRoundResult
+A.get_rounds_won     = GetCurrentBattlegroundRoundsWonByTeam
+A.get_team_score     = GetCurrentBattlegroundScore
+A.get_team_icon      = GetBattlegroundTeamIcon
+A.get_team_name      = GetBattlegroundTeamName
 
 -- ── Scoreboard ────────────────────────────────────────────────────────────
 A.get_num_entries          = GetNumScoreboardEntries                -- (roundIndex?) -> n
