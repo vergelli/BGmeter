@@ -377,6 +377,11 @@ function Capture.finalize()
     return finished
 end
 
+function Capture.rescan(reason)
+    if not active then return end
+    scan_objectives(reason)
+end
+
 function Capture.abort()
     if not active then return end
     stop_sampler()

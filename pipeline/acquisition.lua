@@ -32,6 +32,10 @@ local function on_state_change(_, previousState, currentState)
         Capture.begin()
     end
 
+    if currentState == C.BATTLEGROUND_STATE_RUNNING and Capture.is_active() then
+        Capture.rescan("gates open")
+    end
+
     if currentState == C.BATTLEGROUND_STATE_FINISHED then
         local match = Capture.finalize()
         if match then BGMeter.Pipeline.presentation.publish(match) end
