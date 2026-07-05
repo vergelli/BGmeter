@@ -114,6 +114,22 @@ local function cmd_demo(two_teams)
         m.killfeed[i] = { t = i * 85000, kind = (i % 3 == 0) and "death" or "kill" }
     end
 
+    local medalIds = BGMeter.Icons.scan_medal_ids(300, 6)
+    if #medalIds > 0 then
+        local lr = Match.local_row(m)
+        if lr then
+            lr.medalIds = medalIds
+            lr.medalCounts = {}
+            local total = 0
+            for i, id in ipairs(medalIds) do
+                local n = (i % 3 == 0) and 3 or 1
+                lr.medalCounts[id] = n
+                total = total + n
+            end
+            lr.medals = total
+        end
+    end
+
     m.haul.apGained, m.haul.xpGained, m.haul.cpGained, m.haul.medals = 14200, 38400, 2, 3
     m.haul.vetStart = { rank = 14, tier = 14, percent = 0.73, progressToNext = 3650, tierTotal = 5000, seasonName = "Whitestrake's Mayhem", secondsLeft = 387600, inZone = true }
     m.haul.vetEnd   = { rank = 14, tier = 14, percent = 0.81, progressToNext = 4050, tierTotal = 5000, rankTitle = "Veteran Lieutenant", seasonName = "Whitestrake's Mayhem", secondsLeft = 387600, inZone = true }

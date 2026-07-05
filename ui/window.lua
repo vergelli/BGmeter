@@ -1182,9 +1182,9 @@ local function render_haul(m, animate)
     local counts = lr and lr.medalCounts or {}
     for i = 1, #p.medalIcons do
         local mi, badge, id = p.medalIcons[i], p.medalBadges[i], ids[i]
-        local tex = id and Icons.medal(id) or nil
-        if tex then
-            mi:SetTexture(tex); mi:SetHidden(false)
+        local info = id and Icons.medal_info(id) or nil
+        if info and info.icon then
+            mi:SetTexture(info.icon); mi:SetHidden(false)
             local n = counts[id] or 1
             if n > 1 then
                 set_text(badge, "x" .. n)
@@ -1192,17 +1192,17 @@ local function render_haul(m, animate)
             else
                 badge:SetHidden(true)
             end
-            local ok, nm, _ic, cond, reward = pcall(GetMedalInfo, id)
-            if ok then
-                local lines = { (nm and nm ~= "" and nm or "Medal") .. (n > 1 and ("  |cf2cc55x" .. n .. "|r") or "") }
-                if cond and cond ~= "" then lines[#lines + 1] = "|c9a9a9a" .. cond .. "|r" end
-                if reward and reward > 0 then
-                    lines[#lines + 1] = string.format("|cf2cc55+%s score%s|r", F.commas(reward), n > 1 and " each" or "")
-                end
-                W.tips[mi] = table.concat(lines, "\n")
-            else
-                W.tips[mi] = nil
+            local lines = {
+                F.icon(info.icon, 40),
+                "|cffffff" .. info.name .. "|r" .. (n > 1 and ("  |cf2cc55x" .. n .. "|r") or ""),
+            }
+            if info.condition and info.condition ~= "" then
+                lines[#lines + 1] = "|c9a9a9a" .. info.condition .. "|r"
             end
+            if info.reward and info.reward > 0 then
+                lines[#lines + 1] = string.format("|cf2cc55+%s score%s|r", F.commas(info.reward), n > 1 and " each" or "")
+            end
+            W.tips[mi] = table.concat(lines, "\n")
         else
             mi:SetHidden(true); badge:SetHidden(true); W.tips[mi] = nil
         end

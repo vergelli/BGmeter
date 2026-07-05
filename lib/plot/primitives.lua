@@ -25,15 +25,12 @@ function P.label(parent, font, color, name)
     return c
 end
 
--- ESO ships a guaranteed-present solid-white texture; tinting it via SetColor
--- is the most reliable solid fill (an empty-texture CT_TEXTURE renders nothing,
--- and a code-created CT_BACKDROP has no center texture to modulate).
-local WHITE = "EsoUI/Art/Miscellaneous/listItem_backdrop_white.dds"
+local FILL = "EsoUI/Art/UnitAttributeVisualizer/attributeBar_dynamic_fill.dds"
 
--- A solid colour rectangle (bar fill, row highlight, panels, window chrome).
 function P.rect(parent, color, name)
     local c = ui().create_control(name or uniq("BGMeterRect"), parent, CT_TEXTURE)
-    c:SetTexture(WHITE)
+    c:SetTexture(FILL)
+    c:SetTextureCoords(0, 1, 0, 0.05)
     local col = color or { 1, 1, 1, 1 }
     c:SetColor(col[1], col[2], col[3], col[4] or 1)
     return c

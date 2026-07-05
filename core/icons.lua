@@ -38,12 +38,40 @@ function Icons.ap()
     return safe(BGMeter.zenimax.api.get_currency_icon, C.CURT_ALLIANCE_POINTS)
 end
 
--- A medal's icon texture, from its id.
 function Icons.medal(medalId)
-    if not medalId or type(GetMedalInfo) ~= "function" then return nil end
-    local ok, _name, icon = pcall(GetMedalInfo, medalId)
-    if not ok then return nil end
-    return icon
+    local info = Icons.medal_info(medalId)
+    return info and info.icon or nil
+end
+
+local medal_bank = {}
+
+function Icons.medal_info(medalId)
+    if not medalId then return nil end
+    local cached = medal_bank[medalId]
+    if cached ~= nil then
+        if cached == false then return nil end
+        return cached
+    end
+    if type(GetMedalInfo) ~= "function" then return nil end
+    local ok, name, icon, condition, reward = pcall(GetMedalInfo, medalId)
+    if not ok or not name or name == "" then
+        medal_bank[medalId] = false
+        return nil
+    end
+    local info = { name = name, icon = icon, condition = condition, reward = reward }
+    medal_bank[medalId] = info
+    return info
+end
+
+function Icons.scan_medal_ids(limit, cap)
+    local found = {}
+    for id = 1, (limit or 300) do
+        if Icons.medal_info(id) then
+            found[#found + 1] = id
+            if #found >= (cap or 8) then break end
+        end
+    end
+    return found
 end
 
 BGMeter.Icons = Icons
