@@ -1751,6 +1751,8 @@ function W.show_match(index)
     W._persist_hidden(false)
 end
 
+function W.current() return current_index end
+
 function W.show() W.show_match(current_index); Sound.play("open") end
 
 function W.refresh_if_visible()

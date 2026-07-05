@@ -294,8 +294,13 @@ local function cmd_report()
     end
     add("")
 
-    add("--- last stored match ---")
-    local m = BGMeter.History.most_recent()
+    local midx = (BGMeter.UI.window.current and BGMeter.UI.window.current()) or 1
+    local m = BGMeter.History.get(midx)
+    if not m then
+        midx = 1
+        m = BGMeter.History.most_recent()
+    end
+    add("--- stored match %d of %d (as shown in window) ---", midx, BGMeter.History.count())
     if m then
         local lr = BGMeter.Match.local_row(m)
         local tids = {}
