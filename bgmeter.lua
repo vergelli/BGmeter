@@ -210,7 +210,7 @@ local function cmd_report()
     local nEntries = safe(A.get_num_entries, round) or 0
     local localIdx = safe(A.get_local_entry_index, round)
     add("scoreboard entries=%d  localIndex=%s", nEntries, tostring(localIdx))
-    if localIdx and localIdx > 0 then
+    if localIdx and localIdx > 0 and localIdx <= nEntries then
         safe(A.gen_cumulative_medals, localIdx, round)
         local last, found = nil, 0
         for _ = 1, 32 do

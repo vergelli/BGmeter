@@ -86,6 +86,7 @@ function W.tip_dynamic(control)
     control:SetMouseEnabled(true)
     control:SetHandler("OnMouseEnter", function()
         local t = W.tips[control]
+        BGMeter.Log.debug("tip enter: %s (text=%s)", tostring(control:GetName()), t and "yes" or "no")
         if t and t ~= "" and ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(control, BOTTOM, t) end
     end)
     control:SetHandler("OnMouseExit", function()
@@ -394,7 +395,13 @@ function W._make_row(parent)
         row.cells[col.key] = lbl
     end
 
-    row.container:SetHandler("OnMouseEnter", function() P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover }) end)
+    row.container:SetHandler("OnMouseEnter", function()
+        if W._last_row_log ~= row then
+            W._last_row_log = row
+            BGMeter.Log.debug("row enter: %s", tostring(row.prow and (row.prow.displayName or row.prow.charName) or "?"))
+        end
+        P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
+    end)
     row.container:SetHandler("OnMouseExit", function() P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 }) end)
     return row
 end
