@@ -59,7 +59,7 @@ local PIP_EMPTY  = "EsoUI/Art/Battlegrounds/battleground_round_empty.dds"
 local MAP_ART = {
     ["temple"] = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
 }
-local MAP_ART_ALPHA = 0.12
+local MAP_ART_ALPHA = 0.24
 
 local TEAM_KEY
 
@@ -383,6 +383,9 @@ function W._make_row(parent)
     row.name:SetAnchor(LEFT, row.container, LEFT, NAME_X, 0)
     row.name:SetAnchor(RIGHT, row.container, RIGHT, -NAME_RIGHT, 0)
     row.name:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
+    if TEXT_WRAP_MODE_ELLIPSIS and row.name.SetWrapMode then
+        row.name:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+    end
 
     for _, col in ipairs(COLS) do
         local lbl = P.label(row.container, S.FONT.row, K.COLOR.text)
@@ -708,8 +711,8 @@ local function build()
     W.bg:SetAnchorFill(win)
 
     W.bgMap = P.icon(win)
-    W.bgMap:SetAnchor(TOPLEFT, win, TOPLEFT, 8, 8)
-    W.bgMap:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -8, -8)
+    W.bgMap:SetAnchor(TOPLEFT, win, TOPLEFT, 2, 2)
+    W.bgMap:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -2, -2)
     W.bgMap:SetColor(1, 1, 1, MAP_ART_ALPHA)
     W.bgMap:SetHidden(true)
 
@@ -741,6 +744,9 @@ local function build()
     W.battle   = build_battle(win)
     W.haul     = build_haul(win)
     W.settings = build_settings()
+
+    W.measure = P.label(win, S.FONT.row, K.COLOR.text)
+    W.measure:SetHidden(true)
 
     -- empty-state emblem (crossed swords), shown only when there's no match yet
     W.emptyIcon = P.icon(win, "EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
@@ -816,9 +822,35 @@ local function render_header(m)
     layout_chips(m)
 end
 
+local DYN_MIN_CAP = 940
+
+local function apply_dynamic_min_width(m)
+    if not W.measure then return end
+    local maxw = 0
+    for _, prow in ipairs(m.battle) do
+        W.measure:SetText(prow.displayName or prow.charName or "?")
+        local tw = W.measure:GetTextWidth() or 0
+        if tw > maxw then maxw = tw end
+    end
+    if maxw <= 0 then return end
+    local needed = math.ceil(maxw) + 26 + NAME_X + NAME_RIGHT + 2 * L.margin + L.haul_w + L.gap
+    local dyn = math.max(L.min_w, math.min(needed, DYN_MIN_CAP))
+    if dyn ~= W.dyn_min then
+        W.dyn_min = dyn
+        W.win:SetDimensionConstraints(dyn, L.min_h, L.max_w, L.max_h)
+    end
+    if W.cur_w < dyn then
+        W.cur_w = dyn
+        W.win:SetWidth(dyn)
+        local sv = BGMeter.zenimax.savedvars.get()
+        if sv then sv.window = sv.window or {}; sv.window.w = dyn end
+    end
+end
+
 local function render_battle(m, animate)
     local b = W.battle
     b.row_pool:release_all()
+    apply_dynamic_min_width(m)
 
     local key = Prefs.get("sort_key") or "damage"
     if key == "name" then
