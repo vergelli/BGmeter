@@ -182,6 +182,85 @@ local function cmd_ap()
     if Ava.probe then Log.say("  earn some AP now -- each gain prints its reason code") end
 end
 
+local function cmd_report()
+    local A = BGMeter.zenimax.api
+    local F = BGMeter.Format
+    local lines = {}
+    local function add(fmt, ...)
+        if select("#", ...) > 0 then lines[#lines + 1] = string.format(fmt, ...)
+        else lines[#lines + 1] = fmt end
+    end
+    local function safe(fn, ...)
+        if type(fn) ~= "function" then return nil end
+        local ok, a = pcall(fn, ...)
+        if not ok then return nil end
+        return a
+    end
+
+    add("bgmeter diagnostic report -- v%s", K.VERSION)
+    add("api=%s  world=%s", tostring(safe(A.get_api_version)), tostring(safe(GetWorldName)))
+    local round = safe(A.get_bg_round_index)
+    add("bg: active=%s  state=%s  round=%s  numRounds=%s",
+        tostring(safe(A.is_active_bg)), tostring(safe(A.get_bg_state)),
+        tostring(round), tostring(safe(A.get_num_rounds, safe(A.get_bg_id))))
+    add("")
+
+    add("--- live medal probe (local player) ---")
+    round = round or 1
+    local nEntries = safe(A.get_num_entries, round) or 0
+    local localIdx = safe(A.get_local_entry_index, round)
+    add("scoreboard entries=%d  localIndex=%s", nEntries, tostring(localIdx))
+    if localIdx and localIdx > 0 then
+        safe(A.gen_cumulative_medals, localIdx, round)
+        local last, found = nil, 0
+        for _ = 1, 32 do
+            local id = safe(A.get_next_cumulative_medal, last)
+            if not id then break end
+            found = found + 1
+            local n = safe(A.get_cumulative_medal_count, id) or 1
+            local info = BGMeter.Icons.medal_info(id)
+            add("  cumulative: id=%d x%d  %s", id, n, info and info.name or "?")
+            last = id
+        end
+        add("  cumulative path found: %d", found)
+        last, found = nil, 0
+        for _ = 1, 32 do
+            local id = safe(A.get_next_entry_medal, localIdx, round, last)
+            if not id then break end
+            found = found + 1
+            add("  per-round: id=%d", id)
+            last = id
+        end
+        add("  per-round path found: %d", found)
+    else
+        add("  (no scoreboard data right now -- run this at match end or on the scoreboard screen)")
+    end
+    add("")
+
+    add("--- last stored match ---")
+    local m = BGMeter.History.most_recent()
+    if m then
+        local lr = BGMeter.Match.local_row(m)
+        add("name=%s  result=%s  rounds=%s  teams=%d  rows=%d",
+            tostring(m.name), tostring(m.result), tostring(m.numRounds),
+            m.teams and #m.teams or 0, #m.battle)
+        add("local: medals=%s  medalIds=%d  timeline=%d samples  killfeed=%d",
+            tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
+            m.timeline and m.timeline.t and #m.timeline.t or 0,
+            m.killfeed and #m.killfeed or 0)
+    else
+        add("(none)")
+    end
+    add("")
+
+    add("--- log tail (%d lines, [d]=debug [s]=say [e]=error) ---", #BGMeter.Log.lines())
+    for _, l in ipairs(BGMeter.Log.lines()) do
+        lines[#lines + 1] = l
+    end
+
+    BGMeter.UI.export.show_text(table.concat(lines, "\n"))
+end
+
 -- ── slash router ──────────────────────────────────────────────────────────
 local function on_slash(args)
     args = (args or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
@@ -217,6 +296,8 @@ local function on_slash(args)
         else BGMeter.UI.export.show(BGMeter.History.most_recent()) end
     elseif args == "layers" then
         BGMeter.UI.window.toggle_layers_debug()
+    elseif args == "report" then
+        cmd_report()
     elseif args == "clear" then
         BGMeter.History.clear()
         Log.say("history cleared")
@@ -224,7 +305,7 @@ local function on_slash(args)
         Log.DEBUG = not Log.DEBUG
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
     else
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|demo|demo2|ap|dump|clear|debug]")
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|report|demo|demo2|ap|dump|clear|debug|layers]")
     end
 end
 

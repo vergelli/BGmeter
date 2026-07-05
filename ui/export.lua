@@ -150,21 +150,25 @@ local function build()
     controls = { window = win, edit = edit }
 end
 
+function E.show_text(text)
+    build()
+    controls.edit:SetText(text or "")
+    controls.window:SetHidden(false)
+    controls.edit:TakeFocus()
+    controls.edit:SelectAll()
+end
+
 function E.show(m)
     if not m then
         BGMeter.Log.say("no match to export")
         return
     end
-    build()
     local ok, text = pcall(E.build_text, m)
     if not ok then
         BGMeter.Log.error("export failed: %s", tostring(text))
         return
     end
-    controls.edit:SetText(text)
-    controls.window:SetHidden(false)
-    controls.edit:TakeFocus()
-    controls.edit:SelectAll()
+    E.show_text(text)
 end
 
 function E.hide()

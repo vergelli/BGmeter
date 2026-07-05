@@ -1,32 +1,55 @@
--- bgmeter :: observability/log.lua
--- Minimal structured logging. DEBUG-gated chat output with a coloured prefix.
--- Flip BGMeter.Log.DEBUG to true (or `/bgmeter debug`) to see internals.
-
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
 
 local Log = {}
 Log.DEBUG = false
 
-local PREFIX = "|cE34234[bgmeter]|r "   -- vermilion-ish red, brand placeholder
+local PREFIX = "|cE34234[bgmeter]|r "
 
-local function emit(color, fmt, ...)
+local ring = {}
+local RING_CAP = 300
+local ring_n = 0
+
+local function remember(tag, msg)
+    ring_n = ring_n + 1
+    ring[#ring + 1] = string.format("%04d %s %s", ring_n, tag, msg)
+    if #ring > RING_CAP then table.remove(ring, 1) end
+end
+
+local function format_msg(fmt, ...)
     local ok, msg = pcall(string.format, fmt, ...)
     if not ok then msg = tostring(fmt) end
+    return msg
+end
+
+local function chat(color, msg)
     if CHAT_SYSTEM and CHAT_SYSTEM.AddMessage then
         CHAT_SYSTEM:AddMessage(PREFIX .. "|c" .. color .. msg .. "|r")
     end
 end
 
--- Always shown -- user-facing output (dump results, confirmations).
-function Log.say(fmt, ...) emit("FFFFFF", fmt, ...) end
-
--- DEBUG-gated -- internal tracing.
-function Log.debug(fmt, ...)
-    if Log.DEBUG then emit("AAAAAA", fmt, ...) end
+function Log.say(fmt, ...)
+    local msg = format_msg(fmt, ...)
+    remember("[s]", msg)
+    chat("FFFFFF", msg)
 end
 
--- Always shown -- errors are never swallowed silently.
-function Log.error(fmt, ...) emit("FF4040", fmt, ...) end
+function Log.debug(fmt, ...)
+    local msg = format_msg(fmt, ...)
+    remember("[d]", msg)
+    if Log.DEBUG then chat("AAAAAA", msg) end
+end
+
+function Log.error(fmt, ...)
+    local msg = format_msg(fmt, ...)
+    remember("[e]", msg)
+    chat("FF4040", msg)
+end
+
+function Log.lines()
+    local out = {}
+    for i = 1, #ring do out[i] = ring[i] end
+    return out
+end
 
 BGMeter.Log = Log
