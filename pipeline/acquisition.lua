@@ -24,6 +24,10 @@ local function on_state_change(_, previousState, currentState)
     local C = BGMeter.zenimax.constants
     local Capture = BGMeter.Capture
 
+    BGMeter.Log.debug("bg state: %s -> %s",
+        tostring(C.BG_STATE_LABEL[previousState] or previousState),
+        tostring(C.BG_STATE_LABEL[currentState] or currentState))
+
     if not Capture.is_active() and is_live_state(currentState) then
         Capture.begin()
     end

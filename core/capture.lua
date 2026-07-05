@@ -190,28 +190,36 @@ local function record_obj_event(idx, controlEvent, controlState, owner)
     ob.own[i] = owner or -1
 end
 
-local function scan_objectives()
+local function scan_objectives(reason)
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
+    local Log = BGMeter.Log
     local n = safe(A.get_num_objectives) or 0
     for i = 1, n do
         local keepId, objectiveId, ctx = safe(A.get_objective_ids, i)
         if keepId and objectiveId then
             local isBg = safe(A.is_bg_objective, keepId, objectiveId, ctx)
             local otype = safe(A.get_objective_type, keepId, objectiveId, ctx)
+            local name = safe(A.get_objective_info, keepId, objectiveId, ctx)
             if isBg and otype == C.OBJECTIVE_CAPTURE_AREA then
-                local name = safe(A.get_objective_info, keepId, objectiveId, ctx)
                 local idx = register_objective(keepId, objectiveId, ctx, name)
                 if idx then
                     local st = safe(A.get_objective_control_state, keepId, objectiveId, ctx)
                     local owner = safe(A.get_capture_area_owner, keepId, objectiveId, ctx)
                     record_obj_event(idx, -1, st, owner)
+                    Log.debug("scan: [%s] %s st=%s own=%s ids=%s:%s",
+                        tostring(active.objectives.list[idx].letter), tostring(clean_name(name)),
+                        tostring(C.OBJ_STATE_LABEL[st] or st), tostring(owner),
+                        tostring(keepId), tostring(objectiveId))
                 end
+            elseif isBg then
+                Log.debug("scan: skipped non-capture-area objective type=%s name=%s ids=%s:%s",
+                    tostring(otype), tostring(clean_name(name)), tostring(keepId), tostring(objectiveId))
             end
         end
     end
-    BGMeter.Log.debug("objective scan: %d total, %d capture areas registered",
-        n, active and #active.objectives.list or 0)
+    Log.debug("objective scan (%s): %d total, %d capture areas tracked",
+        tostring(reason), n, active and #active.objectives.list or 0)
 end
 
 function Capture.on_objective(_, keepId, objectiveId, ctx, name, controlEvent, controlState, owner)
@@ -232,6 +240,12 @@ local function sample_scores()
     local A = BGMeter.zenimax.api
     local tl = active.timeline
     local round = current_round()
+    if active.lastRound and round ~= active.lastRound then
+        BGMeter.Log.debug("round change: r%s -> r%s (rescanning objectives)",
+            tostring(active.lastRound), tostring(round))
+        scan_objectives("round change")
+    end
+    active.lastRound = round
     local i = #tl.t + 1
     tl.t[i] = (safe(A.now_ms) or 0) - (active.startMs or 0)
     tl.r[i] = round
@@ -265,7 +279,6 @@ function Capture.begin()
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
     obj_lookup = {}
     obj_last = {}
-    scan_objectives()
 
     baseline = {
         ap  = safe(A.get_alliance_points) or 0,
@@ -277,7 +290,13 @@ function Capture.begin()
     start_sampler()
     sample_scores()
 
-    BGMeter.Log.debug("match begin: bg=%s ap0=%d", tostring(active.name), baseline.ap)
+    local C = BGMeter.zenimax.constants
+    BGMeter.Log.debug("match begin: bg=%s id=%s gameType=%s rounds=%s localTeam=%s ap0=%d",
+        tostring(active.name), tostring(active.bgId),
+        tostring(C.GAME_TYPE_LABEL[active.gameType] or active.gameType),
+        tostring(active.bgId and safe(A.get_num_rounds, active.bgId)),
+        tostring(active.localTeam), baseline.ap)
+    scan_objectives("match begin")
 end
 
 function Capture.on_ap(_, alliancePoints, _playSound, difference)
@@ -305,9 +324,13 @@ function Capture.on_reward_track(_, rewardTrackType, _trackId, prevTier, newTier
     end
 end
 
-function Capture.on_kill(_, killedChar, killedDisp, _killedTeam, killerChar, killerDisp, _killerTeam)
+function Capture.on_kill(_, killedChar, killedDisp, killedTeam, killerChar, killerDisp, killerTeam, killType)
     if not active or not active.killfeed then return end
     local A = BGMeter.zenimax.api
+    BGMeter.Log.debug("bg kill: %s (t%s) killed %s (t%s) type=%s",
+        tostring(clean_name(killerDisp or killerChar)), tostring(killerTeam),
+        tostring(clean_name(killedDisp or killedChar)), tostring(killedTeam),
+        tostring(killType))
     local myDisp = safe(A.get_display_name)
     local myChar = safe(A.get_char_name)
     local kind = nil

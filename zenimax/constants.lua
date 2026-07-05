@@ -97,6 +97,29 @@ end
 
 C.OBJ_EVENT_INFLUENCE = OBJECTIVE_CONTROL_EVENT_AREA_INFLUENCE_CHANGED
 
+C.BG_STATE_LABEL = {}
+local function put_state(key, label)
+    if key ~= nil then C.BG_STATE_LABEL[key] = label end
+end
+put_state(BATTLEGROUND_STATE_NONE,      "none")
+put_state(BATTLEGROUND_STATE_PREROUND,  "preround")
+put_state(BATTLEGROUND_STATE_STARTING,  "starting")
+put_state(BATTLEGROUND_STATE_RUNNING,   "running")
+put_state(BATTLEGROUND_STATE_POSTROUND, "postround")
+put_state(BATTLEGROUND_STATE_FINISHED,  "finished")
+
+C.GAME_TYPE_LABEL = {}
+local function put_gt(key, label)
+    if key ~= nil then C.GAME_TYPE_LABEL[key] = label end
+end
+put_gt(BATTLEGROUND_GAME_TYPE_NONE,             "none")
+put_gt(BATTLEGROUND_GAME_TYPE_DEATHMATCH,       "deathmatch")
+put_gt(BATTLEGROUND_GAME_TYPE_DOMINATION,       "domination")
+put_gt(BATTLEGROUND_GAME_TYPE_CRAZY_KING,       "crazy_king")
+put_gt(BATTLEGROUND_GAME_TYPE_KING_OF_THE_HILL, "king_of_the_hill")
+put_gt(BATTLEGROUND_GAME_TYPE_CAPTURE_THE_FLAG, "capture_the_flag")
+put_gt(BATTLEGROUND_GAME_TYPE_MURDERBALL,       "murderball")
+
 C.OBJ_EVENT_LABEL = {}
 put(C.OBJ_EVENT_LABEL, OBJECTIVE_CONTROL_EVENT_NONE,                   "none")
 put(C.OBJ_EVENT_LABEL, OBJECTIVE_CONTROL_EVENT_CAPTURED,               "captured")

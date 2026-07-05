@@ -7,7 +7,7 @@ Log.DEBUG = false
 local PREFIX = "|cE34234[bgmeter]|r "
 
 local ring = {}
-local RING_CAP = 300
+local RING_CAP = 600
 local ring_n = 0
 
 local function remember(tag, msg)
