@@ -410,6 +410,12 @@ end
 
 local MEDAL_PERROW, MEDAL_STEP, MEDAL_CAP = 7, 24, 14
 
+local function hit_proxy(target)
+    local h = BGMeter.zenimax.ui.create_control(nil, target:GetParent(), CT_CONTROL)
+    h:SetAnchorFill(target)
+    return h
+end
+
 local medal_card = nil
 
 local function build_medal_card()
@@ -616,16 +622,21 @@ local function build_haul(win)
     p.standSub:SetDimensions(INNER, 18)
     p.standSub:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
-    W.tip_static(p.ap.icon, "Alliance Points earned this match")
-    W.tip_static(p.xp.icon, "Experience earned this match")
-    W.tip_static(p.cp.icon, "Champion Points earned this match")
-    W.tip_dynamic(p.vetIcon)
+    W.tip_static(hit_proxy(p.ap.icon), "Alliance Points earned this match")
+    W.tip_static(hit_proxy(p.xp.icon), "Experience earned this match")
+    W.tip_static(hit_proxy(p.cp.icon), "Champion Points earned this match")
+    p.vetIconHit = hit_proxy(p.vetIcon)
+    W.tip_dynamic(p.vetIconHit)
     W.tip_dynamic(p.standRank)
+    p.medalHits = {}
     for i = 1, #p.medalIcons do
         local mi = p.medalIcons[i]
-        mi:SetMouseEnabled(true)
-        mi:SetHandler("OnMouseEnter", function() show_medal_card(mi) end)
-        mi:SetHandler("OnMouseExit", hide_medal_card)
+        local hit = hit_proxy(mi)
+        hit:SetMouseEnabled(true)
+        hit:SetHidden(true)
+        hit:SetHandler("OnMouseEnter", function() show_medal_card(mi) end)
+        hit:SetHandler("OnMouseExit", hide_medal_card)
+        p.medalHits[i] = hit
     end
     return p
 end
@@ -1237,7 +1248,7 @@ local function render_haul(m, animate)
     local p, h = W.haul, m.haul
     local rec = m.records or {}
     local vet = h.vetEnd or h.vetStart
-    local vetControls = { p.vetIcon, p.vetTitle, p.vetTier, p.track.container, p.vetDelta, p.season }
+    local vetControls = { p.vetIcon, p.vetIconHit, p.vetTitle, p.vetTier, p.track.container, p.vetDelta, p.season }
 
     if not Prefs.get("show_veterancy") then
         hide_all(vetControls, true)
@@ -1265,7 +1276,7 @@ local function render_haul(m, animate)
         set_text(p.season, vet.seasonName or "")
         local endsTxt = (vet.secondsLeft and vet.secondsLeft > 0)
             and ("\nseason ends in " .. F.countdown(vet.secondsLeft)) or ""
-        W.tips[p.vetIcon] = string.format("%s%s\n%s%s",
+        W.tips[p.vetIconHit] = string.format("%s%s\n%s%s",
             vet.rankTitle or ("Veteran Rank " .. tostring(vet.rank)),
             vet.tier and ("  ·  Tier " .. vet.tier) or "",
             vet.seasonName or "Veterancy season", endsTxt)
@@ -1274,7 +1285,7 @@ local function render_haul(m, animate)
         p.vetIcon:SetHidden(true)
         set_text(p.vetTitle, "Veterancy"); set_text(p.vetTier, "(no season data)")
         Bar.set_hidden(p.track, true); set_text(p.vetDelta, ""); set_text(p.season, "")
-        W.tips[p.vetIcon] = nil
+        W.tips[p.vetIconHit] = nil
     end
 
     set_count(p.ap.val, h.apGained, "+", animate)
@@ -1289,9 +1300,11 @@ local function render_haul(m, animate)
     hide_medal_card()
     for i = 1, #p.medalIcons do
         local mi, badge, id = p.medalIcons[i], p.medalBadges[i], ids[i]
+        local hit = p.medalHits[i]
         local info = id and Icons.medal_info(id) or nil
         if info and info.icon then
             mi:SetTexture(info.icon); mi:SetHidden(false)
+            if hit then hit:SetHidden(false) end
             local n = counts[id] or 1
             mi.bgmMedalId = id
             mi.bgmMedalCount = n
@@ -1303,6 +1316,7 @@ local function render_haul(m, animate)
             end
         else
             mi:SetHidden(true); badge:SetHidden(true)
+            if hit then hit:SetHidden(true) end
             mi.bgmMedalId = nil
             mi.bgmMedalCount = nil
         end
