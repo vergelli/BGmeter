@@ -57,7 +57,8 @@ local PIP_ART    = "EsoUI/Art/Battlegrounds/battleground_round_%s.dds"
 local PIP_EMPTY  = "EsoUI/Art/Battlegrounds/battleground_round_empty.dds"
 
 local MAP_ART = {
-    ["temple"] = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
+    ["temple"]           = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
+    ["castle courtyard"] = "esoui/art/loadingscreens/loadscreen_battleground_castle_courtyard_01.dds",
 }
 
 local TEAM_KEY
@@ -905,10 +906,8 @@ local function map_art_candidates(name)
     local function guess(slug)
         add(string.format("esoui/art/loadingscreens/loadscreen_battleground_%s_01.dds", slug))
     end
-    if #words > 0 then
-        guess(table.concat(words, "_"))
-        guess(words[#words])
-        guess(words[1])
+    for k = #words, 1, -1 do
+        guess(table.concat(words, "_", 1, k))
     end
     return out
 end
