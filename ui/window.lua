@@ -483,6 +483,7 @@ local function build_haul(win)
     p.medalLabel:SetAnchor(TOPLEFT, p.cp.icon, BOTTOMLEFT, 0, 12)
     p.medalLabel:SetDimensions(INNER, 18)
     p.medalIcons = {}
+    p.medalBadges = {}
     for i = 1, MEDAL_CAP do
         local col = (i - 1) % MEDAL_PERROW
         local rowN = math.floor((i - 1) / MEDAL_PERROW)
@@ -491,6 +492,14 @@ local function build_haul(win)
         mi:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, col * MEDAL_STEP, 6 + rowN * MEDAL_STEP)
         mi:SetHidden(true)
         p.medalIcons[i] = mi
+
+        local badge = P.label(p.container, S.FONT.small, K.COLOR.gold)
+        badge:SetAnchor(BOTTOMRIGHT, mi, BOTTOMRIGHT, 3, 3)
+        badge:SetDimensions(20, 12)
+        badge:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+        badge:SetDrawLevel(5)
+        badge:SetHidden(true)
+        p.medalBadges[i] = badge
     end
     p.medalMore = P.label(p.container, S.FONT.small, K.COLOR.medal)
     p.medalMore:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 6 + 2 * MEDAL_STEP)
@@ -1168,14 +1177,33 @@ local function render_haul(m, animate)
 
     local lr = BGMeter.Match.local_row(m)
     local ids = lr and lr.medalIds or {}
+    local counts = lr and lr.medalCounts or {}
     for i = 1, #p.medalIcons do
-        local mi, id = p.medalIcons[i], ids[i]
+        local mi, badge, id = p.medalIcons[i], p.medalBadges[i], ids[i]
         local tex = id and Icons.medal(id) or nil
         if tex then
             mi:SetTexture(tex); mi:SetHidden(false)
-            local ok, nm, _ic, cond = pcall(GetMedalInfo, id)
-            W.tips[mi] = ok and ((nm or "Medal") .. (cond and ("\n" .. cond) or "")) or nil
-        else mi:SetHidden(true); W.tips[mi] = nil end
+            local n = counts[id] or 1
+            if n > 1 then
+                set_text(badge, "x" .. n)
+                badge:SetHidden(false)
+            else
+                badge:SetHidden(true)
+            end
+            local ok, nm, _ic, cond, reward = pcall(GetMedalInfo, id)
+            if ok then
+                local lines = { (nm and nm ~= "" and nm or "Medal") .. (n > 1 and ("  |cf2cc55x" .. n .. "|r") or "") }
+                if cond and cond ~= "" then lines[#lines + 1] = "|c9a9a9a" .. cond .. "|r" end
+                if reward and reward > 0 then
+                    lines[#lines + 1] = string.format("|cf2cc55+%s score%s|r", F.commas(reward), n > 1 and " each" or "")
+                end
+                W.tips[mi] = table.concat(lines, "\n")
+            else
+                W.tips[mi] = nil
+            end
+        else
+            mi:SetHidden(true); badge:SetHidden(true); W.tips[mi] = nil
+        end
     end
     set_text(p.medalMore, (#ids > #p.medalIcons) and ("+" .. (#ids - #p.medalIcons)) or "")
 

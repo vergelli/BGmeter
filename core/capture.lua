@@ -35,16 +35,17 @@ end
 
 local function count_entry_medals(i, round)
     local A = BGMeter.zenimax.api
-    local count, last, ids = 0, nil, {}
+    local count, last, ids, counts = 0, nil, {}, {}
     for _ = 1, 64 do
         local id = safe(A.get_next_entry_medal, i, round, last)
         if not id then break end
         local n = safe(A.get_entry_medal_count, i, id, round) or 1
         count = count + n
         ids[#ids + 1] = id
+        counts[id] = n
         last = id
     end
-    return count, ids
+    return count, ids, counts
 end
 
 function Capture.read_battle(m)
@@ -71,7 +72,7 @@ function Capture.read_battle(m)
         row.deaths      = read_score(i, C.SCORE_TRACKER_TYPE_DEATH, round)
         row.assists     = read_score(i, C.SCORE_TRACKER_TYPE_ASSISTS, round)
         row.score       = read_score(i, C.SCORE_TRACKER_TYPE_SCORE, round)
-        row.medals, row.medalIds = count_entry_medals(i, round)
+        row.medals, row.medalIds, row.medalCounts = count_entry_medals(i, round)
         m.battle[#m.battle + 1] = row
     end
     return m
