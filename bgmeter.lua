@@ -182,38 +182,6 @@ local function cmd_ap()
     if Ava.probe then Log.say("  earn some AP now -- each gain prints its reason code") end
 end
 
-local function cmd_objdump()
-    local F = BGMeter.Format
-    local CZ = BGMeter.zenimax.constants
-    local m = BGMeter.History.most_recent()
-    local ob = m and m.objectives
-    if not ob or not ob.t or #ob.t == 0 then
-        BGMeter.Log.say("no objective data in last match")
-        return
-    end
-    local lines = {}
-    local function add(s) lines[#lines + 1] = s end
-    add(string.format("bgmeter objective dump -- %s (%s)", tostring(m.name), tostring(m.result)))
-    add(string.format("gameType=%s  localTeam=%s  rounds=%s  events=%d",
-        tostring(CZ.GAME_TYPE_LABEL[m.gameType] or m.gameType),
-        tostring(m.localTeam), tostring(m.numRounds), #ob.t))
-    for _, o in ipairs(ob.list) do
-        add(string.format("[%s] %s (%s:%s)", tostring(o.letter), tostring(o.name),
-            tostring(o.keepId), tostring(o.objectiveId)))
-    end
-    add("")
-    for i = 1, #ob.t do
-        local o = ob.list[ob.o[i]]
-        add(string.format("%s r%s [%s] %s st=%s own=%s",
-            F.duration(ob.t[i] or 0), tostring(ob.r and ob.r[i] or "?"),
-            o and tostring(o.letter) or "?",
-            tostring(CZ.OBJ_EVENT_LABEL[ob.ev[i]] or (ob.ev[i] == -1 and "initial" or ob.ev[i])),
-            tostring(CZ.OBJ_STATE_LABEL[ob.st[i]] or ob.st[i]),
-            tostring(ob.own[i])))
-    end
-    BGMeter.UI.export.show_text(table.concat(lines, "\n"))
-end
-
 local function cmd_report()
     local A = BGMeter.zenimax.api
     local F = BGMeter.Format
@@ -324,12 +292,7 @@ local function cmd_report()
             for k, v in pairs(counts) do parts[#parts + 1] = string.format("%s=%d", k, v) end
             table.sort(parts)
             add("  events by type: %s", table.concat(parts, "  "))
-            local first = math.max(1, #ob.t - 39)
-            if first > 1 then
-                add("  (showing last %d of %d -- /bgmeter objdump for the full log)",
-                    #ob.t - first + 1, #ob.t)
-            end
-            for i = first, #ob.t do
+            for i = 1, #ob.t do
                 local o = ob.list[ob.o[i]]
                 add("  %s r%s [%s] %s st=%s own=%s",
                     F.duration(ob.t[i] or 0), tostring(ob.r and ob.r[i] or "?"),
@@ -392,8 +355,6 @@ local function on_slash(args)
         BGMeter.UI.window.toggle_layers_debug()
     elseif args == "report" then
         cmd_report()
-    elseif args == "objdump" then
-        cmd_objdump()
     elseif args == "clear" then
         BGMeter.History.clear()
         Log.say("history cleared")
@@ -401,7 +362,7 @@ local function on_slash(args)
         Log.DEBUG = not Log.DEBUG
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
     else
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|report|objdump|demo|demo2|ap|dump|clear|debug|layers]")
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|report|demo|demo2|ap|dump|clear|debug|layers]")
     end
 end
 
