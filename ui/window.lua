@@ -59,7 +59,6 @@ local PIP_EMPTY  = "EsoUI/Art/Battlegrounds/battleground_round_empty.dds"
 local MAP_ART = {
     ["temple"] = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
 }
-local MAP_ART_ALPHA = 0.24
 
 local TEAM_KEY
 
@@ -111,14 +110,14 @@ local function anim_on(want) return want and Prefs.get("animate") end
 local function set_count(label, value, prefix, animate)
     value = value or 0; prefix = prefix or ""
     if anim_on(animate) and value ~= 0 then
-        Anim.value(0, value, 520, function(v) set_text(label, prefix .. F.commas(math.floor(v + 0.5))) end)
+        Anim.value(0, value, K.ANIM.count_ms, function(v) set_text(label, prefix .. F.commas(math.floor(v + 0.5))) end)
     else
         set_text(label, prefix .. F.commas(value))
     end
 end
 
 local function set_bar(bar, pct, color, width, animate)
-    if anim_on(animate) then Anim.value(0, pct, 450, function(v) Bar.set(bar, v, color, width) end)
+    if anim_on(animate) then Anim.value(0, pct, K.ANIM.bar_ms, function(v) Bar.set(bar, v, color, width) end)
     else Bar.set(bar, pct, color, width) end
 end
 
@@ -126,7 +125,7 @@ end
 -- bests so a record visibly jumps when the window opens.
 local function pop(control)
     if not control or not Prefs.get("animate") then return end
-    Anim.start(460, function(t)
+    Anim.start(K.ANIM.pop_ms, function(t)
         control:SetScale(1 + math.sin(t * math.pi) * 0.22)
     end, function() control:SetScale(1) end)
 end
@@ -315,7 +314,7 @@ local function build_battle(win)
     b.chart:SetHeight(L.chart_h)
     b.chart:SetHidden(true)
 
-    b.chartBg = P.rect(b.chart, { 1, 1, 1, 0.04 })
+    b.chartBg = P.rect(b.chart, { 1, 1, 1, K.ALPHA.chart_bg })
     b.chartBg:SetAnchorFill(b.chart)
 
     b.chartTitle = P.label(b.chart, S.FONT.small, K.COLOR.text_dim)
@@ -395,7 +394,7 @@ function W._make_row(parent)
         row.cells[col.key] = lbl
     end
 
-    row.container:SetHandler("OnMouseEnter", function() P.set_rect_color(row.highlight, { 1, 1, 1, 0.16 }) end)
+    row.container:SetHandler("OnMouseEnter", function() P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover }) end)
     row.container:SetHandler("OnMouseExit", function() P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 }) end)
     return row
 end
@@ -723,21 +722,21 @@ local function build()
     W.bgMap = P.icon(win)
     W.bgMap:SetAnchor(TOPLEFT, win, TOPLEFT, 2, 2)
     W.bgMap:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -2, -2)
-    W.bgMap:SetColor(1, 1, 1, MAP_ART_ALPHA)
+    W.bgMap:SetColor(1, 1, 1, K.ALPHA.map_art)
     W.bgMap:SetHidden(true)
 
     W.bgArtL = P.icon(win, SCOREBG_L)
     W.bgArtL:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin - 6, L.header_h - 4)
     W.bgArtL:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.haul_w + L.gap + L.margin - 6), -10)
-    W.bgArtL:SetColor(1, 1, 1, 0.22)
+    W.bgArtL:SetColor(1, 1, 1, K.ALPHA.score_art)
 
     W.bgArtR = P.icon(win, SCOREBG_R)
     W.bgArtR:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin - 6), L.header_h - 4)
     W.bgArtR:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.margin - 6), -10)
     W.bgArtR:SetWidth(L.haul_w + 12)
-    W.bgArtR:SetColor(1, 1, 1, 0.22)
+    W.bgArtR:SetColor(1, 1, 1, K.ALPHA.score_art)
 
-    W.footerBd = P.rect(win, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], 0.60 })
+    W.footerBd = P.rect(win, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], K.ALPHA.footer_band })
     W.footerBd:SetAnchor(TOPLEFT, win, BOTTOMLEFT, 8, -(L.footer_h - 4))
     W.footerBd:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -8, -8)
 
@@ -858,7 +857,7 @@ local function render_header(m)
     local function set_banner(text, col, glowCol)
         set_text(W.header.banner, text); S.color(W.header.banner, col)
         if glow then
-            if glowCol then glow:SetColor(glowCol[1], glowCol[2], glowCol[3], 0.45); glow:SetHidden(false)
+            if glowCol then glow:SetColor(glowCol[1], glowCol[2], glowCol[3], K.ALPHA.banner_glow); glow:SetHidden(false)
             else glow:SetHidden(true) end
         end
     end
@@ -870,8 +869,6 @@ local function render_header(m)
     layout_chips(m)
 end
 
-local DYN_MIN_CAP = 940
-
 local function apply_dynamic_min_width(m)
     if not W.measure then return end
     local maxw = 0
@@ -882,7 +879,7 @@ local function apply_dynamic_min_width(m)
     end
     if maxw <= 0 then return end
     local needed = math.ceil(maxw) + 26 + NAME_X + NAME_RIGHT + 2 * L.margin + L.haul_w + L.gap
-    local dyn = math.max(L.min_w, math.min(needed, DYN_MIN_CAP))
+    local dyn = math.max(L.min_w, math.min(needed, L.dyn_min_cap))
     if dyn ~= W.dyn_min then
         W.dyn_min = dyn
         W.win:SetDimensionConstraints(dyn, L.min_h, L.max_w, L.max_h)
@@ -950,7 +947,7 @@ local function render_battle(m, animate)
 
         if prow.team then
             local tc = S.team_color(prow.team)
-            P.set_rect_color(row.teamStrip, { tc[1], tc[2], tc[3], 0.85 })
+            P.set_rect_color(row.teamStrip, { tc[1], tc[2], tc[3], K.ALPHA.team_strip })
         else
             P.set_rect_color(row.teamStrip, { 0, 0, 0, 0 })
         end
@@ -965,12 +962,12 @@ local function render_battle(m, animate)
 
         local pct = (maxVal > 0) and ((prow[barKey] or 0) / maxVal) or 0
         local bc = prow.isLocal and K.COLOR.you or barBase
-        set_bar(row.bar, pct, { bc[1], bc[2], bc[3], 0.20 }, listW - BAR_X - BAR_RIGHT, animate)
+        set_bar(row.bar, pct, { bc[1], bc[2], bc[3], K.ALPHA.bar_fill }, listW - BAR_X - BAR_RIGHT, animate)
 
         local hl = { 0, 0, 0, 0 }
-        if awards.mvp == prow then hl = { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.08 } end
-        if prow.isLocal then hl = { K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 0.07 } end
-        if selected_row == prow then hl = { 1, 1, 1, 0.13 } end
+        if awards.mvp == prow then hl = { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], K.ALPHA.row_mvp } end
+        if prow.isLocal then hl = { K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], K.ALPHA.row_you } end
+        if selected_row == prow then hl = { 1, 1, 1, K.ALPHA.row_selected } end
         row.baseHL = hl
         P.set_rect_color(row.highlight, hl)
         row.container:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then W.select(prow) end end)
@@ -1341,12 +1338,12 @@ function W.toggle_layers_debug()
         Log.say("run |cFFFFFF/bgmeter layers|r again to restore")
     else
         apply_visual_prefs()
-        W.bgMap:SetColor(1, 1, 1, MAP_ART_ALPHA)
-        W.bgArtL:SetColor(1, 1, 1, 0.22)
-        W.bgArtR:SetColor(1, 1, 1, 0.22)
+        W.bgMap:SetColor(1, 1, 1, K.ALPHA.map_art)
+        W.bgArtL:SetColor(1, 1, 1, K.ALPHA.score_art)
+        W.bgArtR:SetColor(1, 1, 1, K.ALPHA.score_art)
         P.set_rect_color(W.haul.bd, K.COLOR.panel)
-        P.set_rect_color(W.battle.chartBg, { 1, 1, 1, 0.04 })
-        P.set_rect_color(W.footerBd, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], 0.60 })
+        P.set_rect_color(W.battle.chartBg, { 1, 1, 1, K.ALPHA.chart_bg })
+        P.set_rect_color(W.footerBd, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], K.ALPHA.footer_band })
         Log.say("layer debug OFF")
     end
 end
@@ -1416,7 +1413,7 @@ function W.show_match(index)
     apply_visibility()
     if W.win:IsHidden() then return end
     W.render(true)
-    if Prefs.get("animate") then W.win:SetAlpha(0); Anim.value(0, 1, 220, function(v) W.win:SetAlpha(v) end)
+    if Prefs.get("animate") then W.win:SetAlpha(0); Anim.value(0, 1, K.ANIM.window_fade_ms, function(v) W.win:SetAlpha(v) end)
     else W.win:SetAlpha(1) end
     W._persist_hidden(false)
 end

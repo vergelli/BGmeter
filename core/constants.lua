@@ -58,6 +58,28 @@ K.LAYOUT = {
     resize_h   = 8,
     chart_h    = 96,
     pad        = 16,
+    dyn_min_cap = 940,
+}
+
+K.ALPHA = {
+    map_art      = 0.24,
+    score_art    = 0.22,
+    footer_band  = 0.60,
+    chart_bg     = 0.04,
+    banner_glow  = 0.45,
+    bar_fill     = 0.20,
+    team_strip   = 0.85,
+    row_hover    = 0.16,
+    row_selected = 0.13,
+    row_mvp      = 0.08,
+    row_you      = 0.07,
+}
+
+K.ANIM = {
+    window_fade_ms = 220,
+    bar_ms         = 450,
+    count_ms       = 520,
+    pop_ms         = 460,
 }
 
 BGMeter.Constants = K
