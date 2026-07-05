@@ -737,6 +737,10 @@ local function build()
     W.bgArtR:SetWidth(L.haul_w + 12)
     W.bgArtR:SetColor(1, 1, 1, 0.22)
 
+    W.footerBd = P.rect(win, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], 0.60 })
+    W.footerBd:SetAnchor(TOPLEFT, win, BOTTOMLEFT, 8, -(L.footer_h - 4))
+    W.footerBd:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -8, -8)
+
     P.frame(win):SetAnchorFill(win)
 
     local strip = P.rect(win, K.COLOR.accent)
@@ -1319,12 +1323,13 @@ function W.toggle_layers_debug()
     layers_debug = not layers_debug
     local Log = BGMeter.Log
     if layers_debug then
-        P.set_rect_color(W.bg, { 1, 0, 1, 0.30 })
+        P.set_rect_color(W.bg, { 1, 0, 1, 0.85 })
         W.bgMap:SetColor(0, 1, 0, 0.50)
         W.bgArtL:SetColor(1, 0, 0, 0.70)
         W.bgArtR:SetColor(1, 0.55, 0, 0.70)
         P.set_rect_color(W.haul.bd, { 0, 0.4, 1, 0.70 })
         P.set_rect_color(W.battle.chartBg, { 1, 1, 0, 0.50 })
+        P.set_rect_color(W.footerBd, { 0, 1, 1, 0.70 })
         Log.say("layer debug ON:")
         Log.say("  |cff00ffMAGENTA|r = base window rect (W.bg)")
         Log.say("  |c00ff00GREEN|r = map loading screen (bgMap)")
@@ -1332,6 +1337,7 @@ function W.toggle_layers_debug()
         Log.say("  |cff8c00ORANGE|r = scoreboardBG right art")
         Log.say("  |c0066ffBLUE|r = haul panel backdrop")
         Log.say("  |cffff00YELLOW|r = timeline chart strip")
+        Log.say("  |c00ffffCYAN|r = footer band (new)")
         Log.say("run |cFFFFFF/bgmeter layers|r again to restore")
     else
         apply_visual_prefs()
@@ -1340,6 +1346,7 @@ function W.toggle_layers_debug()
         W.bgArtR:SetColor(1, 1, 1, 0.22)
         P.set_rect_color(W.haul.bd, K.COLOR.panel)
         P.set_rect_color(W.battle.chartBg, { 1, 1, 1, 0.04 })
+        P.set_rect_color(W.footerBd, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], 0.60 })
         Log.say("layer debug OFF")
     end
 end
