@@ -776,23 +776,57 @@ end
 
 -- ── render ────────────────────────────────────────────────────────────────
 
+local function map_art_candidates(name)
+    local out, seen = {}, {}
+    local function add(path)
+        if path and not seen[path] then seen[path] = true; out[#out + 1] = path end
+    end
+    local lower = name:lower()
+    for key, path in pairs(MAP_ART) do
+        if lower:find(key, 1, true) then add(path) end
+    end
+    local words = {}
+    for w in lower:gmatch("[a-z]+") do words[#words + 1] = w end
+    local function guess(slug)
+        add(string.format("esoui/art/loadingscreens/loadscreen_battleground_%s_01.dds", slug))
+    end
+    if #words > 0 then
+        guess(table.concat(words, "_"))
+        guess(words[#words])
+        guess(words[1])
+    end
+    return out
+end
+
 local function apply_map_art(m)
     local art = W.bgMap
     if not art then return end
-    local name = (m and m.name or ""):lower()
-    local tex = nil
-    for key, path in pairs(MAP_ART) do
-        if name:find(key, 1, true) then tex = path; break end
-    end
-    if not tex then art:SetHidden(true); return end
-    art:SetTexture(tex)
-    art:SetHidden(false)
-    if type(zo_callLater) == "function" then
+    local name = (m and m.name) or ""
+    if name == "" then art:SetHidden(true); return end
+    local cands = map_art_candidates(name)
+    if #cands == 0 then art:SetHidden(true); return end
+
+    W.map_token = (W.map_token or 0) + 1
+    local token = W.map_token
+    local idx = 0
+    local function try_next()
+        if token ~= W.map_token then return end
+        idx = idx + 1
+        if idx > #cands then art:SetHidden(true); return end
+        art:SetTexture(cands[idx])
+        art:SetHidden(false)
+        if type(zo_callLater) ~= "function" then return end
         zo_callLater(function()
+            if token ~= W.map_token then return end
             local ok, loaded = pcall(function() return art:IsTextureLoaded() end)
-            if ok and loaded == false then art:SetHidden(true) end
-        end, 500)
+            if ok and loaded == false then
+                try_next()
+            else
+                BGMeter.Log.debug("map art resolved: %s", cands[idx])
+            end
+        end, 400)
     end
+    try_next()
 end
 
 local function render_header(m)
