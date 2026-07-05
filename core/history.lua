@@ -26,6 +26,7 @@ function History.push(match)
     for i = HEAVY_KEEP + 1, #data.matches do
         data.matches[i].timeline = nil
         data.matches[i].killfeed = nil
+        data.matches[i].objectives = nil
     end
     BGMeter.Log.debug("history push -> %d stored", #data.matches)
 end

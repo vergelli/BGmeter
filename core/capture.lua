@@ -8,6 +8,9 @@ local SAMPLE_MS   = 5000
 
 local active = nil
 local baseline = nil
+local obj_lookup = {}
+
+local MAX_OBJ_EVENTS = 600
 
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
@@ -137,6 +140,85 @@ local function read_result(localTeam)
     return C.RESULT_LABEL[r]
 end
 
+local function obj_key(keepId, objectiveId)
+    return tostring(keepId) .. ":" .. tostring(objectiveId)
+end
+
+local function register_objective(keepId, objectiveId, ctx, name)
+    if not active or not active.objectives then return nil end
+    local key = obj_key(keepId, objectiveId)
+    local idx = obj_lookup[key]
+    if idx then
+        local cleaned = clean_name(name)
+        if cleaned then active.objectives.list[idx].name = cleaned end
+        return idx
+    end
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local list = active.objectives.list
+    idx = #list + 1
+    local desig = safe(A.get_objective_designation, keepId, objectiveId, ctx)
+    list[idx] = {
+        keepId = keepId,
+        objectiveId = objectiveId,
+        ctx = ctx,
+        letter = (desig ~= nil and C.OBJ_LETTER[desig]) or tostring(idx),
+        name = clean_name(name),
+    }
+    obj_lookup[key] = idx
+    return idx
+end
+
+local function record_obj_event(idx, controlEvent, controlState, owner)
+    local A = BGMeter.zenimax.api
+    local ob = active.objectives
+    if #ob.t >= MAX_OBJ_EVENTS then return end
+    local i = #ob.t + 1
+    ob.t[i]   = (safe(A.now_ms) or 0) - (active.startMs or 0)
+    ob.r[i]   = current_round()
+    ob.o[i]   = idx
+    ob.ev[i]  = controlEvent or -1
+    ob.st[i]  = controlState or -1
+    ob.own[i] = owner or -1
+end
+
+local function scan_objectives()
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local n = safe(A.get_num_objectives) or 0
+    for i = 1, n do
+        local keepId, objectiveId, ctx = safe(A.get_objective_ids, i)
+        if keepId and objectiveId then
+            local isBg = safe(A.is_bg_objective, keepId, objectiveId, ctx)
+            local otype = safe(A.get_objective_type, keepId, objectiveId, ctx)
+            if isBg and otype == C.OBJECTIVE_CAPTURE_AREA then
+                local name = safe(A.get_objective_info, keepId, objectiveId, ctx)
+                local idx = register_objective(keepId, objectiveId, ctx, name)
+                if idx then
+                    local st = safe(A.get_objective_control_state, keepId, objectiveId, ctx)
+                    local owner = safe(A.get_capture_area_owner, keepId, objectiveId, ctx)
+                    record_obj_event(idx, -1, st, owner)
+                end
+            end
+        end
+    end
+    BGMeter.Log.debug("objective scan: %d total, %d capture areas registered",
+        n, active and #active.objectives.list or 0)
+end
+
+function Capture.on_objective(_, keepId, objectiveId, ctx, name, controlEvent, controlState, owner)
+    if not active or not active.objectives then return end
+    local idx = register_objective(keepId, objectiveId, ctx, name)
+    if not idx then return end
+    record_obj_event(idx, controlEvent, controlState, owner)
+    local C = BGMeter.zenimax.constants
+    BGMeter.Log.debug("obj %s ev=%s st=%s own=%s",
+        tostring(active.objectives.list[idx].letter),
+        tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
+        tostring(C.OBJ_STATE_LABEL[controlState] or controlState),
+        tostring(owner))
+end
+
 local function sample_scores()
     if not active or not active.timeline then return end
     local A = BGMeter.zenimax.api
@@ -172,6 +254,9 @@ function Capture.begin()
     active.localTeam = safe(A.get_local_team)
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
     active.killfeed  = {}
+    active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
+    obj_lookup = {}
+    scan_objectives()
 
     baseline = {
         ap  = safe(A.get_alliance_points) or 0,

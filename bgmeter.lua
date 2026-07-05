@@ -237,6 +237,26 @@ local function cmd_report()
     end
     add("")
 
+    local CZ = BGMeter.zenimax.constants
+    add("--- objectives probe (live) ---")
+    local nObj = safe(A.get_num_objectives) or 0
+    add("numObjectives=%d", nObj)
+    for i = 1, nObj do
+        local ok, keepId, objectiveId, ctx = pcall(A.get_objective_ids, i)
+        if ok and keepId and safe(A.is_bg_objective, keepId, objectiveId, ctx) then
+            local otype = safe(A.get_objective_type, keepId, objectiveId, ctx)
+            local name  = safe(A.get_objective_info, keepId, objectiveId, ctx)
+            local desig = safe(A.get_objective_designation, keepId, objectiveId, ctx)
+            local st    = safe(A.get_objective_control_state, keepId, objectiveId, ctx)
+            local owner = safe(A.get_capture_area_owner, keepId, objectiveId, ctx)
+            add("  [%s] %s  type=%s st=%s own=%s ids=%s:%s",
+                tostring(desig ~= nil and CZ.OBJ_LETTER[desig] or "?"), tostring(name),
+                tostring(otype), tostring(CZ.OBJ_STATE_LABEL[st] or st),
+                tostring(owner), tostring(keepId), tostring(objectiveId))
+        end
+    end
+    add("")
+
     add("--- last stored match ---")
     local m = BGMeter.History.most_recent()
     if m then
@@ -248,6 +268,38 @@ local function cmd_report()
             tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
             m.timeline and m.timeline.t and #m.timeline.t or 0,
             m.killfeed and #m.killfeed or 0)
+        local ob = m.objectives
+        if ob and ob.t and #ob.t > 0 then
+            add("objectives: %d tracked, %d events", #ob.list, #ob.t)
+            for _, o in ipairs(ob.list) do
+                add("  [%s] %s (%s:%s)", tostring(o.letter), tostring(o.name),
+                    tostring(o.keepId), tostring(o.objectiveId))
+            end
+            local counts = {}
+            for i = 1, #ob.ev do
+                local lbl = CZ.OBJ_EVENT_LABEL[ob.ev[i]]
+                    or (ob.ev[i] == -1 and "initial" or tostring(ob.ev[i]))
+                counts[lbl] = (counts[lbl] or 0) + 1
+            end
+            local parts = {}
+            for k, v in pairs(counts) do parts[#parts + 1] = string.format("%s=%d", k, v) end
+            table.sort(parts)
+            add("  events by type: %s", table.concat(parts, "  "))
+            local first = math.max(1, #ob.t - 24)
+            if first > 1 then add("  (showing last %d of %d)", #ob.t - first + 1, #ob.t) end
+            for i = first, #ob.t do
+                local o = ob.list[ob.o[i]]
+                add("  %s r%s [%s] %s st=%s own=%s",
+                    F.duration(ob.t[i] or 0), tostring(ob.r and ob.r[i] or "?"),
+                    o and tostring(o.letter) or "?",
+                    tostring(CZ.OBJ_EVENT_LABEL[ob.ev[i]]
+                        or (ob.ev[i] == -1 and "initial" or ob.ev[i])),
+                    tostring(CZ.OBJ_STATE_LABEL[ob.st[i]] or ob.st[i]),
+                    tostring(ob.own[i]))
+            end
+        else
+            add("objectives: (none captured)")
+        end
     else
         add("(none)")
     end

@@ -35,6 +35,15 @@ A.get_team_score     = GetCurrentBattlegroundScore
 A.get_team_icon      = GetBattlegroundTeamIcon
 A.get_team_name      = GetBattlegroundTeamName
 
+A.get_num_objectives          = GetNumObjectives
+A.get_objective_ids           = GetObjectiveIdsForIndex
+A.is_bg_objective             = IsBattlegroundObjective
+A.get_objective_info          = GetObjectiveInfo
+A.get_objective_type          = GetObjectiveType
+A.get_objective_designation   = GetObjectiveDesignation
+A.get_objective_control_state = GetObjectiveControlState
+A.get_capture_area_owner      = GetCaptureAreaObjectiveOwner
+
 -- ── Scoreboard ────────────────────────────────────────────────────────────
 A.get_num_entries          = GetNumScoreboardEntries                -- (roundIndex?) -> n
 A.get_local_entry_index    = GetScoreboardLocalPlayerEntryIndex     -- (roundIndex?) -> idx
