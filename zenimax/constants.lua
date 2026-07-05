@@ -95,6 +95,8 @@ local function put(map, key, label)
     if key ~= nil then map[key] = label end
 end
 
+C.OBJ_EVENT_INFLUENCE = OBJECTIVE_CONTROL_EVENT_AREA_INFLUENCE_CHANGED
+
 C.OBJ_EVENT_LABEL = {}
 put(C.OBJ_EVENT_LABEL, OBJECTIVE_CONTROL_EVENT_NONE,                   "none")
 put(C.OBJ_EVENT_LABEL, OBJECTIVE_CONTROL_EVENT_CAPTURED,               "captured")

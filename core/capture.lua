@@ -9,6 +9,7 @@ local SAMPLE_MS   = 5000
 local active = nil
 local baseline = nil
 local obj_lookup = {}
+local obj_last = {}
 
 local MAX_OBJ_EVENTS = 600
 
@@ -171,8 +172,15 @@ end
 
 local function record_obj_event(idx, controlEvent, controlState, owner)
     local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
     local ob = active.objectives
     if #ob.t >= MAX_OBJ_EVENTS then return end
+    local last = obj_last[idx]
+    if controlEvent == C.OBJ_EVENT_INFLUENCE and last
+        and last.st == controlState and last.own == owner then
+        return
+    end
+    obj_last[idx] = { st = controlState, own = owner }
     local i = #ob.t + 1
     ob.t[i]   = (safe(A.now_ms) or 0) - (active.startMs or 0)
     ob.r[i]   = current_round()
@@ -256,6 +264,7 @@ function Capture.begin()
     active.killfeed  = {}
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
     obj_lookup = {}
+    obj_last = {}
     scan_objectives()
 
     baseline = {

@@ -261,9 +261,13 @@ local function cmd_report()
     local m = BGMeter.History.most_recent()
     if m then
         local lr = BGMeter.Match.local_row(m)
-        add("name=%s  result=%s  rounds=%s  teams=%d  rows=%d",
+        local tids = {}
+        if m.teams then
+            for _, t in ipairs(m.teams) do tids[#tids + 1] = tostring(t.team) end
+        end
+        add("name=%s  result=%s  rounds=%s  teams=%d (ids: %s)  rows=%d",
             tostring(m.name), tostring(m.result), tostring(m.numRounds),
-            m.teams and #m.teams or 0, #m.battle)
+            m.teams and #m.teams or 0, table.concat(tids, ","), #m.battle)
         add("local: medals=%s  medalIds=%d  timeline=%d samples  killfeed=%d",
             tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
             m.timeline and m.timeline.t and #m.timeline.t or 0,
