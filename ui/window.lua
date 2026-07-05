@@ -794,7 +794,7 @@ local function map_art_candidates(name)
     local function add(path)
         if path and not seen[path] then seen[path] = true; out[#out + 1] = path end
     end
-    local lower = name:lower()
+    local lower = name:lower():gsub("%^.*$", "")
     for key, path in pairs(MAP_ART) do
         if lower:find(key, 1, true) then add(path) end
     end
@@ -811,6 +811,9 @@ local function map_art_candidates(name)
     return out
 end
 
+local MAP_ART_CHECKS = 3
+local MAP_ART_CHECK_MS = 350
+
 local function apply_map_art(m)
     local art = W.bgMap
     if not art then return end
@@ -821,23 +824,35 @@ local function apply_map_art(m)
 
     W.map_token = (W.map_token or 0) + 1
     local token = W.map_token
-    local idx = 0
+    local idx, tries = 0, 0
+    local check
     local function try_next()
         if token ~= W.map_token then return end
         idx = idx + 1
-        if idx > #cands then art:SetHidden(true); return end
+        tries = 0
+        if idx > #cands then
+            art:SetHidden(true)
+            BGMeter.Log.debug("map art: no candidate loaded for '%s' (%d tried)", name, #cands)
+            return
+        end
         art:SetTexture(cands[idx])
         art:SetHidden(false)
         if type(zo_callLater) ~= "function" then return end
-        zo_callLater(function()
-            if token ~= W.map_token then return end
-            local ok, loaded = pcall(function() return art:IsTextureLoaded() end)
-            if ok and loaded == false then
-                try_next()
+        zo_callLater(check, MAP_ART_CHECK_MS)
+    end
+    check = function()
+        if token ~= W.map_token then return end
+        local ok, loaded = pcall(function() return art:IsTextureLoaded() end)
+        if ok and loaded == false then
+            tries = tries + 1
+            if tries < MAP_ART_CHECKS then
+                zo_callLater(check, MAP_ART_CHECK_MS)
             else
-                BGMeter.Log.debug("map art resolved: %s", cands[idx])
+                try_next()
             end
-        end, 400)
+        else
+            BGMeter.Log.debug("map art resolved: %s", cands[idx])
+        end
     end
     try_next()
 end

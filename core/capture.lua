@@ -33,18 +33,43 @@ local function read_score(i, stype, round)
     return v or 0
 end
 
+local function clean_name(raw)
+    if not raw or raw == "" then return nil end
+    if type(zo_strformat) == "function" then
+        local ok, f = pcall(zo_strformat, "<<1>>", raw)
+        if ok and f and f ~= "" then return f end
+    end
+    return (raw:gsub("%^.*$", ""))
+end
+
 local function count_entry_medals(i, round)
     local A = BGMeter.zenimax.api
     local count, last, ids, counts = 0, nil, {}, {}
+
+    safe(A.gen_cumulative_medals, i, round)
     for _ = 1, 64 do
-        local id = safe(A.get_next_entry_medal, i, round, last)
+        local id = safe(A.get_next_cumulative_medal, last)
         if not id then break end
-        local n = safe(A.get_entry_medal_count, i, id, round) or 1
+        local n = safe(A.get_cumulative_medal_count, id) or 1
         count = count + n
         ids[#ids + 1] = id
         counts[id] = n
         last = id
     end
+
+    if count == 0 then
+        last = nil
+        for _ = 1, 64 do
+            local id = safe(A.get_next_entry_medal, i, round, last)
+            if not id then break end
+            local n = safe(A.get_entry_medal_count, i, id, round) or 1
+            count = count + n
+            ids[#ids + 1] = id
+            counts[id] = n
+            last = id
+        end
+    end
+
     return count, ids, counts
 end
 
@@ -142,7 +167,7 @@ function Capture.begin()
     active = Match.new()
     active.startMs   = safe(A.now_ms) or 0
     active.bgId      = safe(A.get_bg_id)
-    active.name      = active.bgId and safe(A.get_bg_name, active.bgId) or nil
+    active.name      = clean_name(active.bgId and safe(A.get_bg_name, active.bgId) or nil)
     active.gameType  = safe(A.get_bg_game_type)
     active.localTeam = safe(A.get_local_team)
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
@@ -250,7 +275,7 @@ function Capture.snapshot_now()
     local Vet = BGMeter.Veterancy
     local m = Match.new()
     m.bgId     = safe(A.get_bg_id)
-    m.name     = m.bgId and safe(A.get_bg_name, m.bgId) or nil
+    m.name     = clean_name(m.bgId and safe(A.get_bg_name, m.bgId) or nil)
     m.gameType = safe(A.get_bg_game_type)
     m.localTeam = safe(A.get_local_team)
     m.result   = read_result(m.localTeam)

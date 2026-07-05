@@ -49,6 +49,9 @@ A.get_entry_cumulative     = GetBattlegroundCumulativeScoreForScoreboardEntryByT
 A.get_next_entry_medal     = GetNextScoreboardEntryMedalId          -- (i, round?, lastMedalId?) -> nextId|nil
 A.get_entry_medal_count    = GetScoreboardEntryNumEarnedMedalsById  -- (i, medalId, round?) -> n
 A.get_medal_info           = GetMedalInfo                           -- (medalId) -> name, icon, condition, scoreReward
+A.gen_cumulative_medals    = GenerateCumulativeMedalInfoForScoreboardEntry
+A.get_next_cumulative_medal = GetNextBattlegroundCumulativeMedalId
+A.get_cumulative_medal_count = GetBattlegroundCumulativeNumEarnedMedalsById
 
 -- ── Progression: AP / XP / Champion ───────────────────────────────────────
 A.get_currency       = GetCurrencyAmount                            -- (CurrencyType, CurrencyLocation) -> int
