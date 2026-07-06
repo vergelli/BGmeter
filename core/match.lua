@@ -231,4 +231,114 @@ function Match.flag_stats(lanes)
     return { per = out, first = first }
 end
 
+function Match.lead_stats(tl)
+    if not tl or not tl.t or #tl.t < 2 then return nil end
+    local series = { tl.s1, tl.s2, tl.s3 }
+    local teams = tl.teams or {}
+    local changes = 0
+    local leader = nil
+    local maxLead = { team = nil, lead = 0, t = 0 }
+    for i = 1, #tl.t do
+        local best, second, bestTeam = 0, 0, nil
+        for s = 1, 3 do
+            local team = teams[s]
+            local v = (series[s] and series[s][i]) or 0
+            if team and v > best then
+                second = best
+                best, bestTeam = v, team
+            elseif team and v > second then
+                second = v
+            end
+        end
+        local lead = best - second
+        if bestTeam and lead > 0 then
+            if leader and bestTeam ~= leader then changes = changes + 1 end
+            leader = bestTeam
+            if lead > maxLead.lead then
+                maxLead = { team = bestTeam, lead = lead, t = tl.t[i] }
+            end
+        end
+    end
+    if not maxLead.team then return nil end
+    return { changes = changes, maxTeam = maxLead.team, maxLead = maxLead.lead,
+             maxAt = maxLead.t, finalLeader = leader }
+end
+
+function Match.bloodiest_minute(killfeed, windowMs)
+    if not killfeed or #killfeed == 0 then return nil end
+    windowMs = windowMs or 60000
+    local best = { count = 0, t0 = 0, t1 = 0 }
+    local j = 1
+    for i = 1, #killfeed do
+        while (killfeed[i].t or 0) - (killfeed[j].t or 0) > windowMs do j = j + 1 end
+        local count = i - j + 1
+        if count > best.count then
+            best = { count = count, t0 = killfeed[j].t or 0, t1 = killfeed[i].t or 0 }
+        end
+    end
+    if best.count < 3 then return nil end
+    return best
+end
+
+function Match.duels(m)
+    local kf = m.killfeed
+    if not kf or #kf == 0 then return nil end
+    local killers, victims, kteam, vteam = {}, {}, {}, {}
+    for _, k in ipairs(kf) do
+        if k.kind == "death" and k.kn then
+            killers[k.kn] = (killers[k.kn] or 0) + 1
+            kteam[k.kn] = k.kt
+        elseif k.kind == "kill" and k.dn then
+            victims[k.dn] = (victims[k.dn] or 0) + 1
+            vteam[k.dn] = k.dt
+        end
+    end
+    local function top(map)
+        local name, n = nil, 0
+        for k, v in pairs(map) do
+            if v > n or (v == n and name and k < name) then name, n = k, v end
+        end
+        return name, n
+    end
+    local nname, nn = top(killers)
+    local pname, pn = top(victims)
+    if not nname and not pname then return nil end
+    return {
+        nemesis = nname and { name = nname, count = nn, team = kteam[nname] } or nil,
+        prey    = pname and { name = pname, count = pn, team = vteam[pname] } or nil,
+    }
+end
+
+function Match.kill_streaks(killfeed, windowMs)
+    if not killfeed or #killfeed == 0 then return nil end
+    windowMs = windowMs or 12000
+    local runs, open = {}, {}
+    for _, k in ipairs(killfeed) do
+        if k.kn then
+            local o = open[k.kn]
+            if o and (k.t or 0) - o.last <= windowMs then
+                o.n = o.n + 1
+                o.last = k.t or 0
+            else
+                if o and o.n >= 2 then runs[#runs + 1] = o end
+                open[k.kn] = { name = k.kn, team = k.kt, n = 1, t = k.t or 0, last = k.t or 0 }
+            end
+        end
+    end
+    for _, o in pairs(open) do
+        if o.n >= 2 then runs[#runs + 1] = o end
+    end
+    if #runs == 0 then return nil end
+    table.sort(runs, function(a, b) return a.t < b.t end)
+    return runs
+end
+
+function Match.first_blood(killfeed)
+    if not killfeed then return nil end
+    for _, k in ipairs(killfeed) do
+        if k.kn and k.dn then return k end
+    end
+    return nil
+end
+
 BGMeter.Match = Match

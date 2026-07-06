@@ -110,9 +110,23 @@ local function cmd_demo(two_teams)
     end
 
     m.killfeed = {}
-    for i = 1, 9 do
-        m.killfeed[i] = { t = i * 85000, kind = (i % 3 == 0) and "death" or "kill" }
+    local function pushk(t, kind, kn, kt, dn, dt)
+        m.killfeed[#m.killfeed + 1] = { t = t, kind = kind, kn = kn, kt = kt, dn = dn, dt = dt }
     end
+    local ME, ENEMY = teams[1], teams[2]
+    pushk(42000,  "kill",  "Velladocuments", ME,    "@FrostCaller",   ENEMY)
+    pushk(85000,  nil,     "@StormLord",     ENEMY, "Dro-mathra",     ME)
+    pushk(91000,  nil,     "@StormLord",     ENEMY, "@HealBot",       ME)
+    pushk(98000,  nil,     "@StormLord",     ENEMY, "Lyra Heartwood", ME)
+    pushk(130000, "death", "@StormLord",     ENEMY, "Velladocuments", ME)
+    pushk(180000, "kill",  "Velladocuments", ME,    "@FrostCaller",   ENEMY)
+    pushk(260000, "death", "@StormLord",     ENEMY, "Velladocuments", ME)
+    pushk(420000, nil,     "Brakka gro-Mug", ME,    "Shadowmend",     ENEMY)
+    pushk(425000, nil,     "@FrostCaller",   ENEMY, "Brakka gro-Mug", ME)
+    pushk(432000, "kill",  "Velladocuments", ME,    "@FrostCaller",   ENEMY)
+    pushk(438000, nil,     "Dro-mathra",     ME,    "@StormLord",     ENEMY)
+    pushk(510000, "death", "@StormLord",     ENEMY, "Velladocuments", ME)
+    pushk(600000, "kill",  "Velladocuments", ME,    "@FrostCaller",   ENEMY)
 
     do
         local CZ = BGMeter.zenimax.constants

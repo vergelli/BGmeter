@@ -327,10 +327,11 @@ end
 function Capture.on_kill(_, killedChar, killedDisp, killedTeam, killerChar, killerDisp, killerTeam, killType)
     if not active or not active.killfeed then return end
     local A = BGMeter.zenimax.api
+    local killer = clean_name(killerDisp or killerChar)
+    local killed = clean_name(killedDisp or killedChar)
     BGMeter.Log.debug("bg kill: %s (t%s) killed %s (t%s) type=%s",
-        tostring(clean_name(killerDisp or killerChar)), tostring(killerTeam),
-        tostring(clean_name(killedDisp or killedChar)), tostring(killedTeam),
-        tostring(killType))
+        tostring(killer), tostring(killerTeam),
+        tostring(killed), tostring(killedTeam), tostring(killType))
     local myDisp = safe(A.get_display_name)
     local myChar = safe(A.get_char_name)
     local kind = nil
@@ -339,9 +340,13 @@ function Capture.on_kill(_, killedChar, killedDisp, killedTeam, killerChar, kill
     elseif (killedDisp and killedDisp == myDisp) or (killedChar and killedChar == myChar) then
         kind = "death"
     end
-    if not kind then return end
     local t = (safe(A.now_ms) or 0) - (active.startMs or 0)
-    active.killfeed[#active.killfeed + 1] = { t = t, kind = kind }
+    active.killfeed[#active.killfeed + 1] = {
+        t = t, kind = kind,
+        kn = killer, dn = killed,
+        kt = killerTeam, dt = killedTeam,
+        ty = killType,
+    }
 end
 
 function Capture.finalize()

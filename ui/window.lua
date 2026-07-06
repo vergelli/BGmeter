@@ -342,6 +342,9 @@ local function build_battle(win)
         b.lines_ok = false
     end
 
+    b.bloodiest = P.rect(b.chart, { 0.95, 0.80, 0.35, 0.07 })
+    b.bloodiest:SetHidden(true)
+
     b.cursor = P.rect(b.chart, { 1, 1, 1, 0.30 })
     b.cursor:SetDimensions(1, L.chart_h - 4)
     b.cursor:SetHidden(true)
@@ -368,6 +371,11 @@ local function build_battle(win)
         function(r) r:SetHidden(true); r:ClearAnchors() end)
 
     b.ribbon_letters = {}
+    b.lane_pins = {}
+
+    b.pin_pool = BGMeter.Plot.pool.new(
+        function() return P.icon(b.ribbon, "") end,
+        function(ic) ic:SetHidden(true); ic:ClearAnchors() end)
 
     b.ribbon:SetMouseEnabled(true)
     b.ribbon:SetHandler("OnMouseEnter", function() W._chart_hover_start() end)
@@ -396,6 +404,31 @@ local function build_battle(win)
     b.occ_pool = BGMeter.Plot.pool.new(
         function() return P.rect(b.occ, { 1, 1, 1, 1 }) end,
         function(r) r:SetHidden(true); r:ClearAnchors() end)
+
+    b.mom = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
+    b.mom:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, 0)
+    b.mom:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, 0)
+    b.mom:SetHeight(0)
+    b.mom:SetHidden(true)
+
+    b.momBg = P.rect(b.mom, { 1, 1, 1, K.ALPHA.chart_bg })
+    b.momBg:SetAnchorFill(b.mom)
+
+    b.momTitle = P.label(b.mom, S.FONT.small, K.COLOR.text_dim)
+    b.momTitle:SetText("MOMENTUM")
+    b.momTitle:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 2)
+
+    b.momStats = P.label(b.mom, S.FONT.small, K.COLOR.text_dim)
+    b.momStats:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 30)
+    b.momStats:SetAnchor(TOPRIGHT, b.mom, TOPRIGHT, -4, 30)
+
+    b.mom_pool = BGMeter.Plot.pool.new(
+        function() return P.rect(b.mom, { 1, 1, 1, 1 }) end,
+        function(r) r:SetHidden(true); r:ClearAnchors() end)
+
+    b.mom:SetMouseEnabled(true)
+    b.mom:SetHandler("OnMouseEnter", function() W._chart_hover_start() end)
+    b.mom:SetHandler("OnMouseExit", function() W._chart_hover_stop() end)
 
     return b
 end
@@ -1173,6 +1206,31 @@ local function neutral_color()
     return { 0.55, 0.55, 0.60 }
 end
 
+local function flag_pin(gt, letter, team)
+    local key = S.team_art_key(team)
+    local mobile = (gt == "crazy_king" or gt == "king_of_the_hill")
+    if letter and letter:match("^[ABCD]$") then
+        if mobile then
+            return string.format("EsoUI/Art/MapPins/battlegrounds_mobileCapturePoint_pin_%s_%s.dds", key, letter)
+        end
+        return string.format("EsoUI/Art/MapPins/battlegrounds_multiCapturePoint_%s_pin_%s.dds", letter, key)
+    end
+    if mobile then
+        return string.format("EsoUI/Art/MapPins/battlegrounds_mobileCapturePoint_pin_%s.dds", key)
+    end
+    return string.format("EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_%s.dds", key)
+end
+
+local function lane_pin(b, i)
+    local ic = b.lane_pins[i]
+    if not ic then
+        ic = P.icon(b.ribbon, "")
+        ic:SetDimensions(16, 16)
+        b.lane_pins[i] = ic
+    end
+    return ic
+end
+
 local function render_occupation(b, occ, neutralPct, stats, w)
     b.occ:SetHeight(L.occ_h)
     b.occ:SetHidden(false)
@@ -1223,7 +1281,7 @@ local function render_occupation(b, occ, neutralPct, stats, w)
     b.occStats:SetText(table.concat(sp, "    "))
 end
 
-local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off)
+local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
     b.ribbon:ClearAnchors()
     b.ribbon:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -y_off)
     b.ribbon:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -y_off)
@@ -1249,26 +1307,117 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off)
             end
         end
         for _, tick in ipairs(lane.ticks) do
-            local r = b.ribbon_pool:acquire()
-            r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, rx(tick.t), y - 1)
-            r:SetDimensions(2, L.lane_h + 2)
             if tick.kind == "def" then
+                local r = b.ribbon_pool:acquire()
+                r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, rx(tick.t), y - 1)
+                r:SetDimensions(2, L.lane_h + 2)
                 P.set_rect_color(r, K.COLOR.gold)
+                r:SetHidden(false)
             else
-                local tc = S.team_color(tick.own)
-                P.set_rect_color(r, { tc[1], tc[2], tc[3], 1 })
+                local ic = b.pin_pool:acquire()
+                ic:SetTexture(flag_pin(gt, lane.letter, tick.own))
+                ic:SetDimensions(16, 16)
+                ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, rx(tick.t), y + math.floor(L.lane_h / 2))
+                ic:SetHidden(false)
             end
-            r:SetHidden(false)
         end
+        local is_letter = lane.letter and lane.letter:match("^[ABCD]$") ~= nil
         local lbl = ribbon_letter(b, li)
-        lbl:SetText(lane.letter)
-        lbl:ClearAnchors()
-        lbl:SetAnchor(TOPRIGHT, b.ribbon, TOPLEFT, -4, y - 2)
-        lbl:SetHidden(false)
+        local pin = lane_pin(b, li)
+        if is_letter then
+            pin:SetTexture(flag_pin(gt, lane.letter, 0))
+            pin:ClearAnchors()
+            pin:SetAnchor(TOPRIGHT, b.ribbon, TOPLEFT, -2, y - 3)
+            pin:SetHidden(false)
+            lbl:SetHidden(true)
+        else
+            lbl:SetText(lane.letter)
+            lbl:ClearAnchors()
+            lbl:SetAnchor(TOPRIGHT, b.ribbon, TOPLEFT, -4, y - 2)
+            lbl:SetHidden(false)
+            pin:SetHidden(true)
+        end
     end
     for i = #lanes + 1, #b.ribbon_letters do
         b.ribbon_letters[i]:SetHidden(true)
     end
+    for i = #lanes + 1, #b.lane_pins do
+        b.lane_pins[i]:SetHidden(true)
+    end
+end
+
+local function render_momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
+    b.mom:ClearAnchors()
+    b.mom:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -mom_off)
+    b.mom:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -mom_off)
+    b.mom:SetHeight(mom_h)
+    b.mom:SetHidden(false)
+
+    local series = { tl.s1, tl.s2, tl.s3 }
+    local teams = tl.teams or {}
+    local maxLead = math.max(1, (lead and lead.maxLead) or 1)
+    local function mx(t) return math.floor((t / tspan) * (w - 6) + 0.5) end
+    for i = 2, n do
+        local best, second, bestTeam = 0, 0, nil
+        for s = 1, 3 do
+            local team = teams[s]
+            local v = (series[s] and series[s][i]) or 0
+            if team and v > best then
+                second = best
+                best, bestTeam = v, team
+            elseif team and v > second then
+                second = v
+            end
+        end
+        local margin = best - second
+        local x0, x1 = mx(tl.t[i - 1] or 0), mx(tl.t[i] or 0)
+        if x1 > x0 then
+            local r = b.mom_pool:acquire()
+            r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 15)
+            r:SetDimensions(x1 - x0, 10)
+            if bestTeam and margin > 0 then
+                local tc = S.team_color(bestTeam)
+                local a = 0.15 + 0.60 * math.min(1, margin / maxLead)
+                P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
+            else
+                local nc = neutral_color()
+                P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
+            end
+            r:SetHidden(false)
+        end
+    end
+
+    if not tdm_line then
+        b.momStats:SetText("")
+        return
+    end
+    local Match = BGMeter.Match
+    local sp = {}
+    if lead then
+        local tc = S.team_color(lead.maxTeam)
+        sp[#sp + 1] = string.format("|c%smax lead %s +%d|r", hexc(tc), team_name(lead.maxTeam), lead.maxLead)
+        sp[#sp + 1] = string.format("lead changes %d", lead.changes)
+    end
+    local bm = Match.bloodiest_minute(m.killfeed)
+    if bm then
+        sp[#sp + 1] = string.format("|c%sbloodiest %s-%s (%d kills)|r",
+            hexc(K.COLOR.gold), F.duration(bm.t0), F.duration(bm.t1), bm.count)
+    end
+    local fb = Match.first_blood(m.killfeed)
+    if fb then
+        local tc = S.team_color(fb.kt)
+        sp[#sp + 1] = string.format("|c%sfirst blood %s|r @ %s", hexc(tc), tostring(fb.kn), F.duration(fb.t))
+    end
+    local runs = Match.kill_streaks(m.killfeed)
+    if runs then
+        local best = runs[1]
+        for _, r in ipairs(runs) do
+            if r.n > best.n then best = r end
+        end
+        local tc = S.team_color(best.team)
+        sp[#sp + 1] = string.format("best streak |c%s%s x%d|r", hexc(tc), tostring(best.name), best.n)
+    end
+    b.momStats:SetText(table.concat(sp, "    "))
 end
 
 local function render_timeline(m)
@@ -1276,10 +1425,15 @@ local function render_timeline(m)
     b.dot_pool:release_all()
     if b.line_pool then b.line_pool:release_all() end
     b.ribbon_pool:release_all()
+    b.pin_pool:release_all()
     for _, lbl in ipairs(b.ribbon_letters) do lbl:SetHidden(true) end
+    for _, ic in ipairs(b.lane_pins) do ic:SetHidden(true) end
     b.ribbon:SetHidden(true)
     b.occ_pool:release_all()
     b.occ:SetHidden(true)
+    b.mom_pool:release_all()
+    b.mom:SetHidden(true)
+    b.bloodiest:SetHidden(true)
     chart_state = nil
     if not timeline_ok(m) then
         b.chart:SetHidden(true)
@@ -1289,6 +1443,7 @@ local function render_timeline(m)
     local tl = m.timeline
     local n = #tl.t
     local tspan = math.max(1, tl.t[n] or 1)
+    local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
 
     local lanes = BGMeter.Match.flag_lanes(m, tspan)
     local occ, neutralPct, fstats
@@ -1299,21 +1454,35 @@ local function render_timeline(m)
     if occ and #occ == 0 then occ = nil end
     local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0
     local occ_h = occ and L.occ_h or 0
+    local lead = BGMeter.Match.lead_stats(tl)
+    local tdm_line = (not lanes) and lead ~= nil
+    local mom_h = lead and (tdm_line and 46 or 28) or 0
 
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
-    if occ_h > 0 and cont_h - rows_h < L.chart_h + ribbon_h + occ_h + 8 then
+    local function fits(extra) return cont_h - rows_h >= L.chart_h + extra + 8 end
+    if lanes and mom_h > 0 and not fits(mom_h + ribbon_h + occ_h) then
+        mom_h, tdm_line = 0, false
+    end
+    if occ_h > 0 and not fits(mom_h + ribbon_h + occ_h) then
         occ, occ_h = nil, 0
     end
-    if ribbon_h > 0 and cont_h - rows_h < L.chart_h + ribbon_h + 8 then
+    if ribbon_h > 0 and not fits(mom_h + ribbon_h + occ_h) then
         lanes, ribbon_h = nil, 0
     end
-    if cont_h - rows_h < L.chart_h + 8 then
+    if mom_h > 0 and tdm_line and not fits(mom_h + ribbon_h + occ_h) then
+        mom_h, tdm_line = 28, false
+    end
+    if mom_h > 0 and not fits(mom_h + ribbon_h + occ_h) then
+        mom_h, tdm_line = 0, false
+    end
+    if not fits(0) then
         b.chart:SetHidden(true)
         return
     end
     local rib_off = (occ_h > 0) and (occ_h + 2) or 0
-    local chart_off = (ribbon_h > 0) and (rib_off + ribbon_h + 2) or rib_off
+    local mom_off = rib_off + ((ribbon_h > 0) and (ribbon_h + 2) or 0)
+    local chart_off = mom_off + ((mom_h > 0) and (mom_h + 2) or 0)
     b.chart:SetHidden(false)
     b.chart:ClearAnchors()
     b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -chart_off)
@@ -1364,24 +1533,47 @@ local function render_timeline(m)
         end
     end
 
+    local bm = BGMeter.Match.bloodiest_minute(m.killfeed)
+    if bm then
+        local x0 = math.floor((math.min(bm.t0, tspan) / tspan) * (w - 6) + 0.5)
+        local x1 = math.floor((math.min(bm.t1, tspan) / tspan) * (w - 6) + 0.5)
+        b.bloodiest:ClearAnchors()
+        b.bloodiest:SetAnchor(TOPLEFT, b.chart, TOPLEFT, x0, 2)
+        b.bloodiest:SetDimensions(math.max(2, x1 - x0), h - 4)
+        b.bloodiest:SetHidden(false)
+    end
+
     if m.killfeed then
         for _, k in ipairs(m.killfeed) do
-            local mark = b.dot_pool:acquire()
-            local x = math.floor((math.min(k.t or 0, tspan) / tspan) * (w - 6) + 0.5)
-            mark:ClearAnchors()
-            mark:SetAnchor(BOTTOMLEFT, b.chart, BOTTOMLEFT, x, -2)
-            mark:SetDimensions(2, 8)
-            if k.kind == "kill" then P.set_rect_color(mark, K.COLOR.gold)
-            else P.set_rect_color(mark, K.COLOR.accent) end
-            mark:SetHidden(false)
+            local color, height = nil, 8
+            if k.kind == "kill" then
+                color = K.COLOR.gold
+            elseif k.kind == "death" then
+                color = K.COLOR.accent
+            elseif k.kt then
+                local tc = S.team_color(k.kt)
+                color, height = { tc[1], tc[2], tc[3], 0.65 }, 5
+            end
+            if color then
+                local mark = b.dot_pool:acquire()
+                local x = math.floor((math.min(k.t or 0, tspan) / tspan) * (w - 6) + 0.5)
+                mark:ClearAnchors()
+                mark:SetAnchor(BOTTOMLEFT, b.chart, BOTTOMLEFT, x, -2)
+                mark:SetDimensions(2, height)
+                P.set_rect_color(mark, color)
+                mark:SetHidden(false)
+            end
         end
     end
 
     if lanes then
-        render_ribbon(b, lanes, ribbon_h, tspan, w, rib_off)
+        render_ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt)
     end
     if occ then
         render_occupation(b, occ, neutralPct, fstats, w)
+    end
+    if mom_h > 0 then
+        render_momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
     end
 
     chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes }
@@ -1454,6 +1646,51 @@ function W._chart_hover_stop()
     BGMeter.zenimax.events.unregister_update("BGMeterChartHover")
     if W.battle and W.battle.cursor then W.battle.cursor:SetHidden(true) end
     if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+end
+
+local function ensure_duel_icons(b)
+    if b.nemesisIcon then return end
+    b.nemesisIcon = P.icon(b.container, "EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
+    b.nemesisIcon:SetDimensions(18, 18)
+    b.nemesisIcon:SetAnchor(LEFT, b.headers.name, RIGHT, 12, -1)
+    S.color(b.nemesisIcon, K.COLOR.accent)
+    b.nemesisIcon:SetHidden(true)
+    b.nemesisHit = hit_proxy(b.nemesisIcon)
+    W.tip_static(b.nemesisHit, "")
+
+    b.preyIcon = P.icon(b.container, "EsoUI/Art/HUD/HUD_Countdown_Badge_Dueling.dds")
+    b.preyIcon:SetDimensions(18, 18)
+    b.preyIcon:SetAnchor(LEFT, b.nemesisIcon, RIGHT, 8, 0)
+    S.color(b.preyIcon, K.COLOR.gold)
+    b.preyIcon:SetHidden(true)
+    b.preyHit = hit_proxy(b.preyIcon)
+    W.tip_static(b.preyHit, "")
+end
+
+local function render_duels(m)
+    local b = W.battle
+    ensure_duel_icons(b)
+    local d = m and BGMeter.Match.duels(m)
+    if d and d.nemesis then
+        b.nemesisIcon:SetHidden(false)
+        b.nemesisHit:SetHidden(false)
+        W.tips[b.nemesisHit] = string.format("Nemesis: %s\nKilled you %d time%s this match",
+            d.nemesis.name, d.nemesis.count, d.nemesis.count == 1 and "" or "s")
+    else
+        b.nemesisIcon:SetHidden(true)
+        b.nemesisHit:SetHidden(true)
+        W.tips[b.nemesisHit] = nil
+    end
+    if d and d.prey then
+        b.preyIcon:SetHidden(false)
+        b.preyHit:SetHidden(false)
+        W.tips[b.preyHit] = string.format("Prey: %s\nYou killed them %d time%s this match",
+            d.prey.name, d.prey.count, d.prey.count == 1 and "" or "s")
+    else
+        b.preyIcon:SetHidden(true)
+        b.preyHit:SetHidden(true)
+        W.tips[b.preyHit] = nil
+    end
 end
 
 local function render_haul(m, animate)
@@ -1606,15 +1843,20 @@ function W.render(animate)
         W.battle.dot_pool:release_all()
         W.battle.chart:SetHidden(true)
         W.battle.ribbon_pool:release_all()
+        W.battle.pin_pool:release_all()
         W.battle.ribbon:SetHidden(true)
         W.battle.occ_pool:release_all()
         W.battle.occ:SetHidden(true)
+        W.battle.mom_pool:release_all()
+        W.battle.mom:SetHidden(true)
+        render_duels(nil)
         set_text(W.detail, "")
         return
     end
     render_header(m)
     render_battle(m, animate)
     render_timeline(m)
+    render_duels(m)
     render_haul(m, animate)
     W.render_detail(m)
 end
@@ -1625,9 +1867,25 @@ function W.render_detail(m)
         local ic = team_icon(r.team)
         local prefix = ic and (F.icon(ic, 16) .. " ") or ""
         local taken = (r.taken and r.taken > 0) and string.format("  ·  %s taken", F.abbrev(r.taken)) or ""
-        set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d  ·  %d medals",
+        local eff = ""
+        if m and m.durationMs and m.durationMs > 0 then
+            local dpm = math.floor((r.damage or 0) / math.max(1, m.durationMs / 60000))
+            eff = string.format("  ·  %s dpm", F.abbrev(dpm))
+            if r.kills and r.kills > 0 then
+                eff = eff .. string.format("  ·  %s per kill", F.abbrev(math.floor((r.damage or 0) / r.kills)))
+            end
+            local teamDmg = 0
+            for _, row in ipairs(m.battle) do
+                if row.team == r.team then teamDmg = teamDmg + (row.damage or 0) end
+            end
+            if teamDmg > 0 then
+                eff = eff .. string.format("  ·  %d%% of team dmg",
+                    math.floor((r.damage or 0) / teamDmg * 100 + 0.5))
+            end
+        end
+        set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d  ·  %d medals%s",
             prefix, r.displayName or r.charName or "?", team_name(r.team),
-            F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, r.medals or 0))
+            F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, r.medals or 0, eff))
         S.color(W.detail, K.COLOR.text_dim)
     else
         local session = BGMeter.Session and BGMeter.Session.summary()
