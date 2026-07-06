@@ -1225,7 +1225,7 @@ local function lane_pin(b, i)
     local ic = b.lane_pins[i]
     if not ic then
         ic = P.icon(b.ribbon, "")
-        ic:SetDimensions(16, 16)
+        ic:SetDimensions(28, 28)
         b.lane_pins[i] = ic
     end
     return ic
@@ -1316,7 +1316,7 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             else
                 local ic = b.pin_pool:acquire()
                 ic:SetTexture(flag_pin(gt, lane.letter, tick.own))
-                ic:SetDimensions(16, 16)
+                ic:SetDimensions(L.pin_size, L.pin_size)
                 ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, rx(tick.t), y + math.floor(L.lane_h / 2))
                 ic:SetHidden(false)
             end
@@ -1327,7 +1327,7 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
         if is_letter then
             pin:SetTexture(flag_pin(gt, lane.letter, 0))
             pin:ClearAnchors()
-            pin:SetAnchor(TOPRIGHT, b.ribbon, TOPLEFT, -2, y - 3)
+            pin:SetAnchor(RIGHT, b.ribbon, TOPLEFT, -2, y + math.floor(L.lane_h / 2))
             pin:SetHidden(false)
             lbl:SetHidden(true)
         else

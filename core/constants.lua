@@ -59,9 +59,10 @@ K.LAYOUT = {
     chart_h    = 96,
     pad        = 16,
     dyn_min_cap = 940,
-    lane_h     = 10,
-    lane_gap   = 3,
-    ribbon_top = 16,
+    lane_h     = 12,
+    lane_gap   = 8,
+    ribbon_top = 20,
+    pin_size   = 32,
     occ_h      = 48,
 }
 
