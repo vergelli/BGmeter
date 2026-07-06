@@ -322,6 +322,8 @@ local function build_battle(win)
     b.chartTitle = P.label(b.chart, S.FONT.small, K.COLOR.text_dim)
     b.chartTitle:SetText("MATCH TIMELINE")
     b.chartTitle:SetAnchor(TOPLEFT, b.chart, TOPLEFT, 4, 2)
+    W.tip_static(b.chartTitle,
+        "Team score over time.\nBottom ticks: gold = your kills  ·  red = your deaths  ·  team color = other kills\nGold band = bloodiest minute of the match")
 
     b.dot_pool = BGMeter.Plot.pool.new(
         function()
@@ -365,6 +367,8 @@ local function build_battle(win)
     b.ribbonTitle = P.label(b.ribbon, S.FONT.small, K.COLOR.text_dim)
     b.ribbonTitle:SetText("FLAG CONTROL")
     b.ribbonTitle:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, 4, 2)
+    W.tip_static(b.ribbonTitle,
+        "Who held each flag over time (lane color = owning team).\nFlag pin = captured  ·  shield = attack defended\nHover any pin for the details")
 
     b.ribbon_pool = BGMeter.Plot.pool.new(
         function() return P.rect(b.ribbon, { 1, 1, 1, 1 }) end,
@@ -401,6 +405,8 @@ local function build_battle(win)
     b.occTitle = P.label(b.occ, S.FONT.small, K.COLOR.text_dim)
     b.occTitle:SetText("FLAG OCCUPATION")
     b.occTitle:SetAnchor(TOPLEFT, b.occ, TOPLEFT, 4, 2)
+    W.tip_static(b.occTitle,
+        "Share of total flag-hold time per team.\nBelow: captures, successful defenses, average hold per team, first capture")
 
     b.occLegend = P.label(b.occ, S.FONT.small, K.COLOR.text)
     b.occLegend:SetAnchor(TOPRIGHT, b.occ, TOPRIGHT, -4, 2)
@@ -425,6 +431,8 @@ local function build_battle(win)
     b.momTitle = P.label(b.mom, S.FONT.small, K.COLOR.text_dim)
     b.momTitle:SetText("MOMENTUM")
     b.momTitle:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 2)
+    W.tip_static(b.momTitle,
+        "Who was leading, and by how much.\nColor = leading team  ·  brighter = bigger lead")
 
     b.momStats = P.label(b.mom, S.FONT.small, K.COLOR.text_dim)
     b.momStats:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 30)
@@ -1594,7 +1602,7 @@ local function render_timeline(m)
         render_momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
     end
 
-    chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes }
+    chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes, kf = m.killfeed }
 end
 
 local function chart_hover_poll()
@@ -1647,6 +1655,29 @@ local function chart_hover_poll()
             else
                 parts[#parts + 1] = string.format("|c8c8c95flag %s  neutral|r", lane.letter)
             end
+        end
+    end
+
+    if st.kf then
+        local shown, extra = 0, 0
+        for _, k in ipairs(st.kf) do
+            if k.t and math.abs(k.t - want_t) <= 8000 then
+                if shown >= 4 then
+                    extra = extra + 1
+                elseif k.kn and k.dn then
+                    local tc = S.team_color(k.kt)
+                    parts[#parts + 1] = string.format("|c%s%s|r killed %s  @ %s",
+                        hexc(tc), k.kn, k.dn, F.duration(k.t))
+                    shown = shown + 1
+                elseif k.kind then
+                    parts[#parts + 1] = string.format("%s @ %s",
+                        k.kind == "kill" and "your kill" or "your death", F.duration(k.t))
+                    shown = shown + 1
+                end
+            end
+        end
+        if extra > 0 then
+            parts[#parts + 1] = string.format("+%d more kills here", extra)
         end
     end
 
