@@ -323,7 +323,7 @@ local function build_battle(win)
     b.chartTitle:SetText("MATCH TIMELINE")
     b.chartTitle:SetAnchor(TOPLEFT, b.chart, TOPLEFT, 4, 2)
     W.tip_static(b.chartTitle,
-        "Team score over time.\nBottom ticks: gold = your kills  ·  red = your deaths  ·  team color = other kills\nGold band = bloodiest minute of the match")
+        "Team score over time.\nGold skull = your kill  ·  red skull = your death  ·  team-color ticks = other kills\nGold band = bloodiest minute of the match")
 
     b.dot_pool = BGMeter.Plot.pool.new(
         function()
@@ -346,6 +346,14 @@ local function build_battle(win)
 
     b.bloodiest = P.rect(b.chart, { 0.95, 0.80, 0.35, 0.07 })
     b.bloodiest:SetHidden(true)
+
+    b.skull_pool = BGMeter.Plot.pool.new(
+        function()
+            local ic = P.icon(b.chart, "EsoUI/Art/TargetMarkers/Target_White_Skull_64.dds")
+            ic:SetDimensions(14, 14)
+            return ic
+        end,
+        function(ic) ic:SetHidden(true); ic:ClearAnchors() end)
 
     b.cursor = P.rect(b.chart, { 1, 1, 1, 0.30 })
     b.cursor:SetDimensions(1, L.chart_h - 4)
@@ -1449,6 +1457,7 @@ local function render_timeline(m)
     local b = W.battle
     b.dot_pool:release_all()
     if b.line_pool then b.line_pool:release_all() end
+    b.skull_pool:release_all()
     b.ribbon_pool:release_all()
     b.pin_pool:release_all()
     b.tick_hit_pool:release_all()
@@ -1571,22 +1580,20 @@ local function render_timeline(m)
 
     if m.killfeed then
         for _, k in ipairs(m.killfeed) do
-            local color, height = nil, 8
-            if k.kind == "kill" then
-                color = K.COLOR.gold
-            elseif k.kind == "death" then
-                color = K.COLOR.accent
+            local x = math.floor((math.min(k.t or 0, tspan) / tspan) * (w - 6) + 0.5)
+            if k.kind == "kill" or k.kind == "death" then
+                local ic = b.skull_pool:acquire()
+                local c = (k.kind == "kill") and K.COLOR.gold or K.COLOR.accent
+                ic:SetColor(c[1], c[2], c[3], 1)
+                ic:SetAnchor(BOTTOM, b.chart, BOTTOMLEFT, x, 5)
+                ic:SetHidden(false)
             elseif k.kt then
                 local tc = S.team_color(k.kt)
-                color, height = { tc[1], tc[2], tc[3], 0.65 }, 5
-            end
-            if color then
                 local mark = b.dot_pool:acquire()
-                local x = math.floor((math.min(k.t or 0, tspan) / tspan) * (w - 6) + 0.5)
                 mark:ClearAnchors()
                 mark:SetAnchor(BOTTOMLEFT, b.chart, BOTTOMLEFT, x, -2)
-                mark:SetDimensions(2, height)
-                P.set_rect_color(mark, color)
+                mark:SetDimensions(2, 5)
+                P.set_rect_color(mark, { tc[1], tc[2], tc[3], 0.65 })
                 mark:SetHidden(false)
             end
         end
@@ -1890,6 +1897,7 @@ function W.render(animate)
         set_text(W.header.counter, "0 / 0")
         W.battle.row_pool:release_all()
         W.battle.dot_pool:release_all()
+        W.battle.skull_pool:release_all()
         W.battle.chart:SetHidden(true)
         W.battle.ribbon_pool:release_all()
         W.battle.pin_pool:release_all()
