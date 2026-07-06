@@ -377,6 +377,14 @@ local function build_battle(win)
         function() return P.icon(b.ribbon, "") end,
         function(ic) ic:SetHidden(true); ic:ClearAnchors() end)
 
+    b.tick_hit_pool = BGMeter.Plot.pool.new(
+        function()
+            local h = BGMeter.zenimax.ui.create_control(nil, b.ribbon, CT_CONTROL)
+            W.tip_dynamic(h)
+            return h
+        end,
+        function(h) h:SetHidden(true); h:ClearAnchors(); W.tips[h] = nil end)
+
     b.ribbon:SetMouseEnabled(true)
     b.ribbon:SetHandler("OnMouseEnter", function() W._chart_hover_start() end)
     b.ribbon:SetHandler("OnMouseExit", function() W._chart_hover_stop() end)
@@ -1307,19 +1315,28 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             end
         end
         for _, tick in ipairs(lane.ticks) do
+            local ic = b.pin_pool:acquire()
+            local tip
             if tick.kind == "def" then
-                local r = b.ribbon_pool:acquire()
-                r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, rx(tick.t), y - 1)
-                r:SetDimensions(2, L.lane_h + 2)
-                P.set_rect_color(r, K.COLOR.gold)
-                r:SetHidden(false)
+                ic:SetTexture("EsoUI/Art/WorldMap/map_AVA_tabIcon_resourceDefense_up.dds")
+                ic:SetDimensions(L.pin_size - 6, L.pin_size - 6)
+                local tc = S.team_color(tick.own)
+                ic:SetColor(tc[1], tc[2], tc[3], 1)
+                tip = string.format("%s defended %s @ %s",
+                    team_name(tick.own), lane.letter, F.duration(tick.t))
             else
-                local ic = b.pin_pool:acquire()
                 ic:SetTexture(flag_pin(gt, lane.letter, tick.own))
                 ic:SetDimensions(L.pin_size, L.pin_size)
-                ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, rx(tick.t), y + math.floor(L.lane_h / 2))
-                ic:SetHidden(false)
+                ic:SetColor(1, 1, 1, 1)
+                tip = string.format("%s captured %s @ %s",
+                    team_name(tick.own), lane.letter, F.duration(tick.t))
             end
+            ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, rx(tick.t), y + math.floor(L.lane_h / 2))
+            ic:SetHidden(false)
+            local hit = b.tick_hit_pool:acquire()
+            hit:SetAnchorFill(ic)
+            hit:SetHidden(false)
+            W.tips[hit] = tip
         end
         local is_letter = lane.letter and lane.letter:match("^[ABCD]$") ~= nil
         local lbl = ribbon_letter(b, li)
@@ -1426,6 +1443,7 @@ local function render_timeline(m)
     if b.line_pool then b.line_pool:release_all() end
     b.ribbon_pool:release_all()
     b.pin_pool:release_all()
+    b.tick_hit_pool:release_all()
     for _, lbl in ipairs(b.ribbon_letters) do lbl:SetHidden(true) end
     for _, ic in ipairs(b.lane_pins) do ic:SetHidden(true) end
     b.ribbon:SetHidden(true)
@@ -1844,6 +1862,7 @@ function W.render(animate)
         W.battle.chart:SetHidden(true)
         W.battle.ribbon_pool:release_all()
         W.battle.pin_pool:release_all()
+        W.battle.tick_hit_pool:release_all()
         W.battle.ribbon:SetHidden(true)
         W.battle.occ_pool:release_all()
         W.battle.occ:SetHidden(true)
