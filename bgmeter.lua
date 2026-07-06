@@ -27,10 +27,11 @@ local function cmd_dump()
         tostring(m.name or "Battleground"), #m.battle, tostring(m.result or "—"))
     BGMeter.Match.sort(m, "damage", true)
     for i, r in ipairs(m.battle) do
-        Log.say("  %d. %s  dmg=%s heal=%s  %d/%d/%d  pts=%s  medals=%d%s",
+        Log.say("  %d. %s  dmg=%s heal=%s  %d/%d/%d  pts=%s  medals=%d  caps=%d def=%d carry=%d fkill=%d%s",
             i, tostring(r.displayName or r.charName or "?"),
             F.abbrev(r.damage), F.abbrev(r.healing),
             r.kills, r.deaths, r.assists, F.abbrev(r.score), r.medals or 0,
+            r.caps or 0, r.defPts or 0, r.carried or 0, r.carrierKills or 0,
             r.isLocal and "  <- you" or "")
     end
 
@@ -68,14 +69,14 @@ local function cmd_demo(two_teams)
     m.capturedAt = (type(A.get_timestamp) == "function") and A.get_timestamp() or 0
 
     local sample = {
-        { "Velladocuments",  412331, 38120,  9,  4, 12, 5, 3, true  },
-        { "@StormLord",      390887,  2010, 11,  6,  7, 4, 1, false },
-        { "Shadowmend",      301044, 95210,  5,  3, 15, 6, 2, false },
-        { "Brakka gro-Mug",  288190, 14002,  8,  5,  6, 3, 0, false },
-        { "Lyra Heartwood",  150220, 188400, 2,  2, 19, 7, 2, false },
-        { "@FrostCaller",    260110,  9100,  7,  7,  5, 2, 0, false },
-        { "Dro-mathra",      198320, 22110,  4,  8,  9, 1, 0, false },
-        { "@HealBot",         54000, 240300, 1,  1, 22, 8, 4, false },
+        { "Velladocuments",  412331, 38120,  9,  4, 12, 5, 3, true,  3, 2 },
+        { "@StormLord",      390887,  2010, 11,  6,  7, 4, 1, false, 2, 0 },
+        { "Shadowmend",      301044, 95210,  5,  3, 15, 6, 2, false, 1, 1 },
+        { "Brakka gro-Mug",  288190, 14002,  8,  5,  6, 3, 0, false, 2, 1 },
+        { "Lyra Heartwood",  150220, 188400, 2,  2, 19, 7, 2, false, 1, 0 },
+        { "@FrostCaller",    260110,  9100,  7,  7,  5, 2, 0, false, 0, 3 },
+        { "Dro-mathra",      198320, 22110,  4,  8,  9, 1, 0, false, 1, 0 },
+        { "@HealBot",         54000, 240300, 1,  1, 22, 8, 4, false, 0, 2 },
     }
     local C = BGMeter.zenimax.constants
     local teams = { C.BATTLEGROUND_TEAM_FIRE_DRAKES, C.BATTLEGROUND_TEAM_PIT_DAEMONS, C.BATTLEGROUND_TEAM_STORM_LORDS }
@@ -86,6 +87,7 @@ local function cmd_demo(two_teams)
         r.taken = math.floor(s[2] * 0.55)
         r.kills, r.deaths, r.assists, r.score, r.medals = s[4], s[5], s[6], s[7] * 1000, s[8]
         r.isLocal = s[9]
+        r.caps, r.defPts = s[10], s[11]
         r.team = teams[((i - 1) % nteams) + 1]
         m.battle[#m.battle + 1] = r
     end
@@ -331,6 +333,12 @@ local function cmd_report()
             tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
             m.timeline and m.timeline.t and #m.timeline.t or 0,
             m.killfeed and #m.killfeed or 0)
+        add("objective trackers per player (caps/def/carry/fkill):")
+        for _, r in ipairs(m.battle) do
+            add("  %s: %d/%d/%d/%d%s", tostring(r.displayName or r.charName or "?"),
+                r.caps or 0, r.defPts or 0, r.carried or 0, r.carrierKills or 0,
+                r.isLocal and "  <- you" or "")
+        end
         local ob = m.objectives
         if ob and ob.t and #ob.t > 0 then
             add("objectives: %d tracked, %d events", #ob.list, #ob.t)

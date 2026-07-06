@@ -69,6 +69,12 @@ function Acquisition.init()
     E.register(PREFIX .. "Vet",   C.EVENT_REWARD_TRACK_PROGRESS_GAINED, Capture.on_reward_track)
     E.register(PREFIX .. "Kill",  C.EVENT_BATTLEGROUND_KILL,          Capture.on_kill)
     E.register(PREFIX .. "Obj",   C.EVENT_CAPTURE_AREA_STATE_CHANGED, Capture.on_objective)
+    if C.EVENT_CAPTURE_FLAG_STATE_CHANGED then
+        E.register(PREFIX .. "Relic", C.EVENT_CAPTURE_FLAG_STATE_CHANGED, Capture.on_flag)
+    end
+    if C.EVENT_MURDERBALL_STATE_CHANGED then
+        E.register(PREFIX .. "Ball", C.EVENT_MURDERBALL_STATE_CHANGED, Capture.on_murderball)
+    end
     E.register(PREFIX .. "Board", C.EVENT_BATTLEGROUND_LEADERBOARD_DATA_RECEIVED, BGMeter.Standing.on_data)
 
     on_player_activated()

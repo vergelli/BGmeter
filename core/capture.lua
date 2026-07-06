@@ -101,6 +101,10 @@ function Capture.read_battle(m)
         row.deaths      = read_score(i, C.SCORE_TRACKER_TYPE_DEATH, round)
         row.assists     = read_score(i, C.SCORE_TRACKER_TYPE_ASSISTS, round)
         row.score       = read_score(i, C.SCORE_TRACKER_TYPE_SCORE, round)
+        row.caps        = read_score(i, C.SCORE_TRACKER_TYPE_FLAG_CAPTURED, round)
+        row.defPts      = read_score(i, C.SCORE_TRACKER_TYPE_CAPTURE_DEFENSE_POINTS, round)
+        row.carried     = read_score(i, C.SCORE_TRACKER_TYPE_FLAG_CARRIED_TIME, round)
+        row.carrierKills = read_score(i, C.SCORE_TRACKER_TYPE_KILLED_FLAG_CARRIER, round)
         row.medals, row.medalIds, row.medalCounts = count_entry_medals(i, round)
         m.battle[#m.battle + 1] = row
     end
@@ -233,6 +237,34 @@ function Capture.on_objective(_, keepId, objectiveId, ctx, name, controlEvent, c
         tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
         tostring(C.OBJ_STATE_LABEL[controlState] or controlState),
         tostring(owner))
+end
+
+local function obj_elapsed()
+    local A = BGMeter.zenimax.api
+    return (safe(A.now_ms) or 0) - ((active and active.startMs) or 0)
+end
+
+function Capture.on_flag(_, keepId, objectiveId, ctx, name, controlEvent, controlState, origOwner, holder, lastHolder, pinType)
+    if not active then return end
+    local C = BGMeter.zenimax.constants
+    BGMeter.Log.debug("relic t=%s %s ev=%s st=%s orig=%s hold=%s last=%s pin=%s ids=%s:%s",
+        BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
+        tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
+        tostring(C.OBJ_STATE_LABEL[controlState] or controlState),
+        tostring(origOwner), tostring(holder), tostring(lastHolder),
+        tostring(pinType), tostring(keepId), tostring(objectiveId))
+end
+
+function Capture.on_murderball(_, keepId, objectiveId, ctx, name, controlEvent, controlState, holder, lastHolder, holderRaw, holderDisp, lastRaw, lastDisp, pinType)
+    if not active then return end
+    local C = BGMeter.zenimax.constants
+    BGMeter.Log.debug("ball t=%s %s ev=%s st=%s hold=%s(%s) last=%s(%s) pin=%s ids=%s:%s",
+        BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
+        tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
+        tostring(C.OBJ_STATE_LABEL[controlState] or controlState),
+        tostring(holder), tostring(clean_name(holderDisp) or clean_name(holderRaw) or "?"),
+        tostring(lastHolder), tostring(clean_name(lastDisp) or clean_name(lastRaw) or "?"),
+        tostring(pinType), tostring(keepId), tostring(objectiveId))
 end
 
 local function sample_scores()

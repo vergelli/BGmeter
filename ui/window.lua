@@ -27,13 +27,25 @@ local C, K, L, F, P, S, Bar, Icons, Awards, Prefs, Anim, Sound
 -- when the window is resized. `right` = distance of the column's right edge from
 -- the row's right edge; `w` = column width.
 local COLS = {
-    { key = "damage",  right = 230, w = 56, label = "DMG"  },
-    { key = "healing", right = 170, w = 50, label = "HEAL" },
-    { key = "kills",   right = 122, w = 22, label = "K"    },
-    { key = "deaths",  right = 94,  w = 22, label = "D"    },
-    { key = "assists", right = 66,  w = 22, label = "A"    },
+    { key = "damage",  right = 230, w = 56, label = "DMG", shift = true },
+    { key = "healing", right = 170, w = 50, label = "HEAL", shift = true },
+    { key = "kills",   right = 122, w = 22, label = "K", shift = true },
+    { key = "deaths",  right = 94,  w = 22, label = "D", shift = true },
+    { key = "assists", right = 66,  w = 22, label = "A", shift = true },
+    { key = "caps",    right = 66,  w = 30, label = "CAP", flag = true },
     { key = "score",   right = 10,  w = 50, label = "PTS"  },
 }
+local CAPS_SHIFT = 36
+local caps_shown = false
+
+local function col_right(col)
+    if not col.flag and caps_shown and col.shift then return col.right + CAPS_SHIFT end
+    return col.right
+end
+
+local function col_hidden(col)
+    return (col.flag and not caps_shown) and true or false
+end
 local INDEX_X, ICON_X, NAME_X = 6, 24, 50
 local NAME_RIGHT = 296   -- name's right edge offset (clears the damage column)
 local BAR_X, BAR_RIGHT = 50, 6
@@ -294,10 +306,14 @@ local function build_battle(win)
         local lbl = P.label(b.container, S.FONT.small, K.COLOR.text_dim)
         lbl:SetText(col.label)
         -- single TOPRIGHT anchor (RIGHT+TOP together conflict and mis-stretch)
-        lbl:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -col.right, 0)
+        lbl:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -col_right(col), 0)
         lbl:SetDimensions(col.w, 16)
         lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+        lbl:SetHidden(col_hidden(col))
         make_clickable(lbl, function() W.sort_by(col.key) end)
+        if col.key == "caps" then
+            W.tip_static(lbl, "CAPTURES\nObjectives this player captured for their team\n(flags, capture points, relics). Click to sort.")
+        end
         b.headers[col.key] = lbl
     end
 
@@ -494,11 +510,13 @@ function W._make_row(parent)
 
     for _, col in ipairs(COLS) do
         local lbl = P.label(row.container, S.FONT.row, K.COLOR.text)
-        lbl:SetAnchor(RIGHT, row.container, RIGHT, -col.right, 0)
+        lbl:SetAnchor(RIGHT, row.container, RIGHT, -col_right(col), 0)
         lbl:SetDimensions(col.w, L.row_h)
         lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+        lbl:SetHidden(col_hidden(col))
         row.cells[col.key] = lbl
     end
+    row.capsLayout = false
 
     row.container:SetHandler("OnMouseEnter", function()
         if W._last_row_log ~= row then
@@ -1098,7 +1116,7 @@ local function apply_dynamic_min_width(m)
         if tw > maxw then maxw = tw end
     end
     if maxw <= 0 then return end
-    local needed = math.ceil(maxw) + 26 + NAME_X + NAME_RIGHT + 2 * L.margin + L.haul_w + L.gap
+    local needed = math.ceil(maxw) + 26 + NAME_X + NAME_RIGHT + (caps_shown and CAPS_SHIFT or 0) + 2 * L.margin + L.haul_w + L.gap
     local dyn = math.max(L.min_w, math.min(needed, L.dyn_min_cap))
     if dyn ~= W.dyn_min then
         W.dyn_min = dyn
@@ -1112,12 +1130,54 @@ local function apply_dynamic_min_width(m)
     end
 end
 
+local function caps_relevant(m)
+    if m.objectives and m.objectives.list and #m.objectives.list > 0 then return true end
+    for _, r in ipairs(m.battle) do
+        if (r.caps or 0) > 0 then return true end
+    end
+    return false
+end
+
+local function name_right()
+    return NAME_RIGHT + (caps_shown and CAPS_SHIFT or 0)
+end
+
+local function layout_headers(b)
+    for _, col in ipairs(COLS) do
+        local lbl = b.headers[col.key]
+        if lbl then
+            lbl:ClearAnchors()
+            lbl:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -col_right(col), 0)
+            lbl:SetHidden(col_hidden(col))
+        end
+    end
+end
+
+local function layout_row_cells(row)
+    for _, col in ipairs(COLS) do
+        local cell = row.cells[col.key]
+        cell:ClearAnchors()
+        cell:SetAnchor(RIGHT, row.container, RIGHT, -col_right(col), 0)
+        cell:SetHidden(col_hidden(col))
+    end
+    row.name:ClearAnchors()
+    row.name:SetAnchor(LEFT, row.container, LEFT, NAME_X, 0)
+    row.name:SetAnchor(RIGHT, row.container, RIGHT, -name_right(), 0)
+    row.capsLayout = caps_shown
+end
+
 local function render_battle(m, animate)
     local b = W.battle
     b.row_pool:release_all()
+    local want_caps = caps_relevant(m)
+    if want_caps ~= caps_shown then
+        caps_shown = want_caps
+        layout_headers(b)
+    end
     apply_dynamic_min_width(m)
 
     local key = Prefs.get("sort_key") or "damage"
+    if key == "caps" and not caps_shown then key = "damage" end
     if key == "name" then
         local desc = Prefs.get("sort_desc")
         table.sort(m.battle, function(a, z)
@@ -1151,6 +1211,7 @@ local function render_battle(m, animate)
     for i, prow in ipairs(m.battle) do
         local row = b.row_pool:acquire()
         row.prow = prow
+        if row.capsLayout ~= caps_shown then layout_row_cells(row) end
         row.container:SetHidden(false)
         row.container:ClearAnchors()
         row.container:SetAnchor(TOPLEFT, b.container, TOPLEFT, 0, y)
@@ -1943,9 +2004,10 @@ function W.render_detail(m)
                     math.floor((r.damage or 0) / teamDmg * 100 + 0.5))
             end
         end
-        set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d  ·  %d medals%s",
+        local capsTxt = (r.caps or 0) > 0 and string.format("  ·  %d caps", r.caps) or ""
+        set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d%s  ·  %d medals%s",
             prefix, r.displayName or r.charName or "?", team_name(r.team),
-            F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, r.medals or 0, eff))
+            F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, capsTxt, r.medals or 0, eff))
         S.color(W.detail, K.COLOR.text_dim)
     else
         local session = BGMeter.Session and BGMeter.Session.summary()

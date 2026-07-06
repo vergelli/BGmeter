@@ -64,6 +64,10 @@ function Match.new_row()
         deaths      = 0,
         assists     = 0,
         score       = 0,
+        caps        = 0,
+        defPts      = 0,
+        carried     = 0,
+        carrierKills = 0,
         lives       = nil,
         medals      = 0,
     }

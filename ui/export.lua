@@ -48,10 +48,15 @@ function E.build_text(m)
         add("")
     end
 
+    local showCaps = (m.objectives and m.objectives.list and #m.objectives.list > 0) or false
+    for _, r in ipairs(m.battle) do
+        if (r.caps or 0) > 0 then showCaps = true end
+    end
     add(pad("PLAYER", 24) .. pad("TEAM", 13) .. rpad("DMG", 9) .. rpad("HEAL", 9)
         .. rpad("TAKEN", 9) .. rpad("K", 4) .. rpad("D", 4) .. rpad("A", 4)
+        .. (showCaps and rpad("CAP", 5) or "")
         .. rpad("PTS", 8) .. rpad("MEDALS", 8))
-    add(string.rep("-", 92))
+    add(string.rep("-", showCaps and 97 or 92))
     BGMeter.Match.sort(m, "damage", true)
     for _, r in ipairs(m.battle) do
         local nm = (r.displayName or r.charName or "?")
@@ -59,6 +64,7 @@ function E.build_text(m)
         add(pad(nm, 24) .. pad(team_label(r.team), 13)
             .. rpad(r.damage or 0, 9) .. rpad(r.healing or 0, 9) .. rpad(r.taken or 0, 9)
             .. rpad(r.kills or 0, 4) .. rpad(r.deaths or 0, 4) .. rpad(r.assists or 0, 4)
+            .. (showCaps and rpad(r.caps or 0, 5) or "")
             .. rpad(r.score or 0, 8) .. rpad(r.medals or 0, 8))
     end
     add("")
