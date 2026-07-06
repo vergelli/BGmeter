@@ -1347,7 +1347,9 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
                 tip = string.format("%s captured %s @ %s",
                     team_name(tick.own), lane.letter, F.duration(tick.t))
             end
-            ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, rx(tick.t), y + math.floor(L.lane_h / 2))
+            local half = math.floor(L.pin_size / 2)
+            local tx = math.max(half, math.min(rx(tick.t), w - 6 - half))
+            ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, tx, y + math.floor(L.lane_h / 2))
             ic:SetHidden(false)
             local hit = b.tick_hit_pool:acquire()
             hit:SetAnchorFill(ic)
@@ -1360,7 +1362,7 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
         if is_letter then
             pin:SetTexture(flag_pin(gt, lane.letter, 0))
             pin:ClearAnchors()
-            pin:SetAnchor(RIGHT, b.ribbon, TOPLEFT, -2, y + math.floor(L.lane_h / 2))
+            pin:SetAnchor(LEFT, b.ribbon, TOPLEFT, 2, y + math.floor(L.lane_h / 2))
             pin:SetHidden(false)
             lbl:SetHidden(true)
         else
