@@ -89,6 +89,11 @@ end
 
 local function set_text(label, text) if label then label:SetText(text or "") end end
 
+local function one_line(lbl)
+    lbl:SetHeight(14)
+    if TEXT_WRAP_MODE_ELLIPSIS and lbl.SetWrapMode then lbl:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS) end
+end
+
 local function make_clickable(control, fn)
     control:SetMouseEnabled(true)
     control:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then fn() end end)
@@ -433,11 +438,15 @@ local function build_battle(win)
         "Share of total flag-hold time per team.\nBelow: captures, successful defenses, average hold per team, first capture")
 
     b.occLegend = P.label(b.occ, S.FONT.small, K.COLOR.text)
+    b.occLegend:SetAnchor(TOPLEFT, b.occTitle, TOPRIGHT, 10, 0)
     b.occLegend:SetAnchor(TOPRIGHT, b.occ, TOPRIGHT, -4, 2)
+    b.occLegend:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    one_line(b.occLegend)
 
     b.occStats = P.label(b.occ, S.FONT.small, K.COLOR.text_dim)
     b.occStats:SetAnchor(TOPLEFT, b.occ, TOPLEFT, 4, 32)
     b.occStats:SetAnchor(TOPRIGHT, b.occ, TOPRIGHT, -4, 32)
+    one_line(b.occStats)
 
     b.occ_pool = BGMeter.Plot.pool.new(
         function() return P.rect(b.occ, { 1, 1, 1, 1 }) end,
@@ -461,6 +470,7 @@ local function build_battle(win)
     b.momStats = P.label(b.mom, S.FONT.small, K.COLOR.text_dim)
     b.momStats:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 30)
     b.momStats:SetAnchor(TOPRIGHT, b.mom, TOPRIGHT, -4, 30)
+    one_line(b.momStats)
 
     b.mom_pool = BGMeter.Plot.pool.new(
         function() return P.rect(b.mom, { 1, 1, 1, 1 }) end,
