@@ -68,10 +68,10 @@ function E.build_text(m)
         local nm = (r.displayName or r.charName or "?")
         if r.isLocal then nm = nm .. " *" end
         add(pad(nm, 24) .. pad(team_label(r.team), 13)
-            .. rpad(r.damage or 0, 9) .. rpad(r.healing or 0, 9) .. rpad(r.taken or 0, 9)
-            .. rpad(r.kills or 0, 4) .. rpad(r.deaths or 0, 4) .. rpad(r.assists or 0, 4)
+            .. rpad((r.damage or 0) + 0, 9) .. rpad((r.healing or 0) + 0, 9) .. rpad((r.taken or 0) + 0, 9)
+            .. rpad((r.kills or 0) + 0, 4) .. rpad((r.deaths or 0) + 0, 4) .. rpad((r.assists or 0) + 0, 4)
             .. (showCaps and rpad(flagcell(r), 7) or "")
-            .. rpad(r.score or 0, 8) .. rpad(r.medals or 0, 8))
+            .. rpad((r.score or 0) + 0, 8) .. rpad((r.medals or 0) + 0, 8))
     end
     add("")
 

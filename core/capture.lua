@@ -34,7 +34,7 @@ local function read_score(i, stype, round)
     local A = BGMeter.zenimax.api
     local v = safe(A.get_entry_cumulative, i, stype, round)
     if v == nil then v = safe(A.get_entry_score, i, stype, round) end
-    return v or 0
+    return (v or 0) + 0
 end
 
 local function clean_name(raw)

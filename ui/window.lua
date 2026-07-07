@@ -1298,7 +1298,7 @@ local function render_battle(m, animate)
 
         for _, col in ipairs(COLS) do
             local ck = (col.key == "caps") and fkey or col.key
-            local cell, v = row.cells[col.key], prow[ck] or 0
+            local cell, v = row.cells[col.key], (prow[ck] or 0) + 0
             local txt
             if col.key == "damage" or col.key == "healing" or col.key == "score" then
                 txt = F.abbrev(v)
@@ -1966,7 +1966,9 @@ local function render_haul(m, animate)
     set_text(p.eff, string.format("%s AP/min  ·  %s AP/kill", F.commas(h.apPerMin), F.commas(h.apPerKill)))
 
     local standControls = { p.sep, p.standHeading, p.standRank, p.standSub }
-    if not Prefs.get("show_standing") or m.competitive == false then hide_all(standControls, true); return end
+    local casual = (m.competitive == false)
+        or (m.competitive == nil and m.teamSize == nil and #m.battle > 10)
+    if not Prefs.get("show_standing") or casual then hide_all(standControls, true); return end
     local effBottom = p.eff:GetBottom() or 0
     local sepTop = p.sep:GetTop() or 0
     if effBottom > 0 and sepTop > 0 and effBottom + 6 > sepTop then
