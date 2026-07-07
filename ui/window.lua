@@ -32,10 +32,10 @@ local COLS = {
     { key = "kills",   right = 122, w = 22, label = "K", shift = true },
     { key = "deaths",  right = 94,  w = 22, label = "D", shift = true },
     { key = "assists", right = 66,  w = 22, label = "A", shift = true },
-    { key = "caps",    right = 66,  w = 30, label = "CAP", flag = true },
+    { key = "caps",    right = 66,  w = 34, label = "CAP", flag = true },
     { key = "score",   right = 10,  w = 50, label = "PTS"  },
 }
-local CAPS_SHIFT = 36
+local CAPS_SHIFT = 40
 local caps_shown = false
 
 local function col_right(col)
@@ -69,8 +69,24 @@ local PIP_ART    = "EsoUI/Art/Battlegrounds/battleground_round_%s.dds"
 local PIP_EMPTY  = "EsoUI/Art/Battlegrounds/battleground_round_empty.dds"
 
 local MAP_ART = {
-    ["temple"]           = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
-    ["castle courtyard"] = "esoui/art/loadingscreens/loadscreen_battleground_castle_courtyard_01.dds",
+    ["temple"]            = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
+    ["castle courtyard"]  = "esoui/art/loadingscreens/loadscreen_battleground_castle_courtyard_01.dds",
+    ["city street"]       = "esoui/art/loadingscreens/loadscreen_battleground_city_streets_01.dds",
+    ["sewer"]             = "esoui/art/loadingscreens/loadscreen_battleground_sewer_01.dds",
+    ["desert"]            = "esoui/art/loadingscreens/loadscreen_battleground_alikr_desert_01.dds",
+    ["alik"]              = "esoui/art/loadingscreens/loadscreen_battleground_alikr_desert_01.dds",
+    ["coliseum"]          = "esoui/art/loadingscreens/loadscreen_battleground_arena_coliseum_01.dds",
+    ["colosseum"]         = "esoui/art/loadingscreens/loadscreen_battleground_arena_coliseum_01.dds",
+    ["forest"]            = "esoui/art/loadingscreens/loadscreen_battleground_bosmer_forest_01.dds",
+    ["grove"]             = "esoui/art/loadingscreens/loadscreen_battleground_bosmer_forest_01.dds",
+    ["ald carac"]         = "esoui/art/loadingscreens/loadscreen_battleground_ald_carac_01.dds",
+    ["arcane university"] = "esoui/art/loadingscreens/loadscreen_battleground_arcaneuniversity_01.dds",
+    ["deeping drome"]     = "esoui/art/loadingscreens/loadscreen_battleground_deepingdrome_01.dds",
+    ["eld angavar"]       = "esoui/art/loadingscreens/loadscreen_battleground_eld_angavar_01.dds",
+    ["foyada quarry"]     = "esoui/art/loadingscreens/loadscreen_battleground_foyadaquarry_01.dds",
+    ["istirus outpost"]   = "esoui/art/loadingscreens/loadscreen_battleground_istirusoutpost_01.dds",
+    ["mor khazgur"]       = "esoui/art/loadingscreens/loadscreen_battleground_morkhazgur_01.dds",
+    ["ularra"]            = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds",
 }
 
 local TEAM_KEY
@@ -315,9 +331,11 @@ local function build_battle(win)
         lbl:SetDimensions(col.w, 16)
         lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
         lbl:SetHidden(col_hidden(col))
-        make_clickable(lbl, function() W.sort_by(col.key) end)
         if col.key == "caps" then
-            W.tip_static(lbl, "CAPTURES\nObjectives this player captured for their team\n(flags, capture points, relics). Click to sort.")
+            make_clickable(lbl, function() W.sort_by(W.flagcol_key or "caps") end)
+            W.tip_dynamic(lbl)
+        else
+            make_clickable(lbl, function() W.sort_by(col.key) end)
         end
         b.headers[col.key] = lbl
     end
@@ -1040,6 +1058,8 @@ local function map_art_candidates(name)
     end
     for k = #words, 1, -1 do
         guess(table.concat(words, "_", 1, k))
+        guess(table.concat(words, "", 1, k))
+        guess(table.concat(words, "_", 1, k) .. "s")
     end
     return out
 end
@@ -1128,24 +1148,52 @@ local function apply_dynamic_min_width(m)
     if maxw <= 0 then return end
     local needed = math.ceil(maxw) + 26 + NAME_X + NAME_RIGHT + (caps_shown and CAPS_SHIFT or 0) + 2 * L.margin + L.haul_w + L.gap
     local dyn = math.max(L.min_w, math.min(needed, L.dyn_min_cap))
-    if dyn ~= W.dyn_min then
-        W.dyn_min = dyn
-        W.win:SetDimensionConstraints(dyn, L.min_h, L.max_w, L.max_h)
+
+    local extra
+    local nflags = m.objectives and m.objectives.list and #m.objectives.list or 0
+    if nflags > 0 then
+        local lanes = math.min(4, nflags)
+        extra = (L.occ_h + 2) + (L.ribbon_top + lanes * (L.lane_h + L.lane_gap) + 3 + 2) + (28 + 2)
+    else
+        extra = 46 + 2
     end
+    local needed_h = L.header_h + 24 + #m.battle * L.row_h + L.chart_h + extra + 8 + L.footer_h + 12
+    local dyn_h = math.max(L.min_h, math.min(needed_h, L.max_h))
+
+    if dyn ~= W.dyn_min or dyn_h ~= W.dyn_min_h then
+        W.dyn_min = dyn
+        W.dyn_min_h = dyn_h
+        W.win:SetDimensionConstraints(dyn, dyn_h, L.max_w, L.max_h)
+    end
+    local sv = BGMeter.zenimax.savedvars.get()
     if W.cur_w < dyn then
         W.cur_w = dyn
         W.win:SetWidth(dyn)
-        local sv = BGMeter.zenimax.savedvars.get()
         if sv then sv.window = sv.window or {}; sv.window.w = dyn end
+    end
+    if W.cur_h < dyn_h then
+        W.cur_h = dyn_h
+        W.win:SetHeight(dyn_h)
+        if sv then sv.window = sv.window or {}; sv.window.h = dyn_h end
     end
 end
 
 local function caps_relevant(m)
     if m.objectives and m.objectives.list and #m.objectives.list > 0 then return true end
     for _, r in ipairs(m.battle) do
-        if (r.caps or 0) > 0 then return true end
+        if (r.caps or 0) > 0 or (r.carried or 0) > 0 then return true end
     end
     return false
+end
+
+local function flag_col_spec(m)
+    local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
+    if gt == "murderball" then
+        return "carried", "HOLD",
+            "BALL POSSESSION\nTime this player spent holding a chaosball\n(the ball scores for their team while held). Click to sort."
+    end
+    return "caps", "CAP",
+        "CAPTURES\nObjectives this player captured for their team\n(flags, capture points, relics). Click to sort."
 end
 
 local function name_right()
@@ -1184,10 +1232,14 @@ local function render_battle(m, animate)
         caps_shown = want_caps
         layout_headers(b)
     end
+    local fkey, flabel, ftip = flag_col_spec(m)
+    W.flagcol_key = fkey
+    if b.headers.caps then W.tips[b.headers.caps] = ftip end
     apply_dynamic_min_width(m)
 
     local key = Prefs.get("sort_key") or "damage"
-    if key == "caps" and not caps_shown then key = "damage" end
+    if (key == "caps" or key == "carried") and not caps_shown then key = "damage" end
+    if key == "caps" or key == "carried" then key = fkey end
     if key == "name" then
         local desc = Prefs.get("sort_desc")
         table.sort(m.battle, function(a, z)
@@ -1203,7 +1255,8 @@ local function render_battle(m, animate)
     for ckey, lbl in pairs(b.headers) do
         local base = (ckey == "name") and "PLAYER" or ckey
         for _, col in ipairs(COLS) do if col.key == ckey then base = col.label end end
-        if ckey == key then
+        if ckey == "caps" then base = flabel end
+        if (ckey == "caps" and key == fkey) or ckey == key then
             S.color(lbl, K.COLOR.text)
             set_text(lbl, base .. " " .. F.icon(Prefs.get("sort_desc") and ICON_SORTDN or ICON_SORTUP, 16))
         else
@@ -1244,9 +1297,18 @@ local function render_battle(m, animate)
         end
 
         for _, col in ipairs(COLS) do
-            local cell, v = row.cells[col.key], prow[col.key] or 0
-            set_text(cell, (col.key == "damage" or col.key == "healing" or col.key == "score") and F.abbrev(v) or tostring(v))
-            if awards.leaders[col.key] == prow and v > 0 then S.color(cell, K.COLOR.gold)
+            local ck = (col.key == "caps") and fkey or col.key
+            local cell, v = row.cells[col.key], prow[ck] or 0
+            local txt
+            if col.key == "damage" or col.key == "healing" or col.key == "score" then
+                txt = F.abbrev(v)
+            elseif ck == "carried" then
+                txt = (v > 0) and F.duration(v * 1000) or "0"
+            else
+                txt = tostring(v)
+            end
+            set_text(cell, txt)
+            if awards.leaders[ck] == prow and v > 0 then S.color(cell, K.COLOR.gold)
             elseif v == 0 then S.color(cell, K.COLOR.text_dim)
             else S.color(cell, K.COLOR.text) end
         end
@@ -1904,7 +1966,7 @@ local function render_haul(m, animate)
     set_text(p.eff, string.format("%s AP/min  ·  %s AP/kill", F.commas(h.apPerMin), F.commas(h.apPerKill)))
 
     local standControls = { p.sep, p.standHeading, p.standRank, p.standSub }
-    if not Prefs.get("show_standing") then hide_all(standControls, true); return end
+    if not Prefs.get("show_standing") or m.competitive == false then hide_all(standControls, true); return end
     local effBottom = p.eff:GetBottom() or 0
     local sepTop = p.sep:GetTop() or 0
     if effBottom > 0 and sepTop > 0 and effBottom + 6 > sepTop then
@@ -2014,7 +2076,12 @@ function W.render_detail(m)
                     math.floor((r.damage or 0) / teamDmg * 100 + 0.5))
             end
         end
-        local capsTxt = (r.caps or 0) > 0 and string.format("  ·  %d caps", r.caps) or ""
+        local capsTxt = ""
+        if m and flag_col_spec(m) == "carried" then
+            if (r.carried or 0) > 0 then capsTxt = string.format("  ·  held %s", F.duration(r.carried * 1000)) end
+        elseif (r.caps or 0) > 0 then
+            capsTxt = string.format("  ·  %d caps", r.caps)
+        end
         set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d%s  ·  %d medals%s",
             prefix, r.displayName or r.charName or "?", team_name(r.team),
             F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, capsTxt, r.medals or 0, eff))

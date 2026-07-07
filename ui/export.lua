@@ -50,13 +50,19 @@ function E.build_text(m)
 
     local showCaps = (m.objectives and m.objectives.list and #m.objectives.list > 0) or false
     for _, r in ipairs(m.battle) do
-        if (r.caps or 0) > 0 then showCaps = true end
+        if (r.caps or 0) > 0 or (r.carried or 0) > 0 then showCaps = true end
+    end
+    local CZ = BGMeter.zenimax.constants
+    local hold = (CZ.GAME_TYPE_LABEL and CZ.GAME_TYPE_LABEL[m.gameType]) == "murderball"
+    local function flagcell(r)
+        if hold then return (r.carried or 0) > 0 and F.duration(r.carried * 1000) or "0" end
+        return r.caps or 0
     end
     add(pad("PLAYER", 24) .. pad("TEAM", 13) .. rpad("DMG", 9) .. rpad("HEAL", 9)
         .. rpad("TAKEN", 9) .. rpad("K", 4) .. rpad("D", 4) .. rpad("A", 4)
-        .. (showCaps and rpad("CAP", 5) or "")
+        .. (showCaps and rpad(hold and "HOLD" or "CAP", 7) or "")
         .. rpad("PTS", 8) .. rpad("MEDALS", 8))
-    add(string.rep("-", showCaps and 97 or 92))
+    add(string.rep("-", showCaps and 99 or 92))
     BGMeter.Match.sort(m, "damage", true)
     for _, r in ipairs(m.battle) do
         local nm = (r.displayName or r.charName or "?")
@@ -64,7 +70,7 @@ function E.build_text(m)
         add(pad(nm, 24) .. pad(team_label(r.team), 13)
             .. rpad(r.damage or 0, 9) .. rpad(r.healing or 0, 9) .. rpad(r.taken or 0, 9)
             .. rpad(r.kills or 0, 4) .. rpad(r.deaths or 0, 4) .. rpad(r.assists or 0, 4)
-            .. (showCaps and rpad(r.caps or 0, 5) or "")
+            .. (showCaps and rpad(flagcell(r), 7) or "")
             .. rpad(r.score or 0, 8) .. rpad(r.medals or 0, 8))
     end
     add("")

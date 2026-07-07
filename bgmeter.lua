@@ -326,9 +326,10 @@ local function cmd_report()
         add("name=%s  result=%s  rounds=%s  teams=%d (ids: %s)  rows=%d",
             tostring(m.name), tostring(m.result), tostring(m.numRounds),
             m.teams and #m.teams or 0, table.concat(tids, ","), #m.battle)
-        add("gameType=%s  duration=%s  localTeam=%s",
+        add("gameType=%s  duration=%s  localTeam=%s  teamSize=%s  competitive=%s",
             tostring(CZ.GAME_TYPE_LABEL[m.gameType] or m.gameType),
-            F.duration(m.durationMs or 0), tostring(m.localTeam))
+            F.duration(m.durationMs or 0), tostring(m.localTeam),
+            tostring(m.teamSize), tostring(m.competitive))
         add("local: medals=%s  medalIds=%d  timeline=%d samples  killfeed=%d",
             tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
             m.timeline and m.timeline.t and #m.timeline.t or 0,

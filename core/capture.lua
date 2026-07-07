@@ -306,6 +306,8 @@ function Capture.begin()
     active.name      = clean_name(active.bgId and safe(A.get_bg_name, active.bgId) or nil)
     active.gameType  = safe(A.get_bg_game_type)
     active.localTeam = safe(A.get_local_team)
+    active.teamSize  = active.bgId and safe(A.get_bg_team_size, active.bgId) or nil
+    if active.teamSize then active.competitive = (active.teamSize == 4) end
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
     active.killfeed  = {}
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
@@ -323,11 +325,11 @@ function Capture.begin()
     sample_scores()
 
     local C = BGMeter.zenimax.constants
-    BGMeter.Log.debug("match begin: bg=%s id=%s gameType=%s rounds=%s localTeam=%s ap0=%d",
+    BGMeter.Log.debug("match begin: bg=%s id=%s gameType=%s rounds=%s localTeam=%s teamSize=%s competitive=%s ap0=%d",
         tostring(active.name), tostring(active.bgId),
         tostring(C.GAME_TYPE_LABEL[active.gameType] or active.gameType),
         tostring(active.bgId and safe(A.get_num_rounds, active.bgId)),
-        tostring(active.localTeam), baseline.ap)
+        tostring(active.localTeam), tostring(active.teamSize), tostring(active.competitive), baseline.ap)
     scan_objectives("match begin")
 end
 
@@ -437,6 +439,8 @@ function Capture.snapshot_now()
     m.name     = clean_name(m.bgId and safe(A.get_bg_name, m.bgId) or nil)
     m.gameType = safe(A.get_bg_game_type)
     m.localTeam = safe(A.get_local_team)
+    m.teamSize = m.bgId and safe(A.get_bg_team_size, m.bgId) or nil
+    if m.teamSize then m.competitive = (m.teamSize == 4) end
     m.result   = read_result(m.localTeam)
     Capture.read_battle(m)
     read_teams(m)

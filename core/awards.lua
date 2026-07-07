@@ -8,7 +8,7 @@ local BGMeter = BGMeter
 
 local Awards = {}
 
-local LEADER_FIELDS = { "damage", "healing", "kills", "assists", "caps" }
+local LEADER_FIELDS = { "damage", "healing", "kills", "assists", "caps", "carried" }
 
 -- Returns { leaders = { field -> prow }, mvp = prow }.
 -- MVP is a weighted blend so a pure healer or a kill-heavy player can still win,
