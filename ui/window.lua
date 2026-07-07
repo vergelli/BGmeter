@@ -749,7 +749,7 @@ local function build_haul(win)
 
     -- efficiency, anchored below a reserved two-row medal grid
     p.eff = P.label(p.container, S.FONT.small, K.COLOR.accent)
-    p.eff:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 8 + 2 * MEDAL_STEP)
+    p.eff:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 30 + 2 * MEDAL_STEP)
     p.eff:SetDimensions(INNER, 16)
     p.eff:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
