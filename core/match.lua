@@ -122,7 +122,7 @@ function Match.flag_lanes(m, tspan)
     local CZ = BGMeter.zenimax.constants
     local lanes = {}
     for li = 1, math.min(#ob.list, 4) do
-        lanes[li] = { letter = tostring(ob.list[li].letter), segs = {}, ticks = {}, cur = nil, t0 = 0 }
+        lanes[li] = { letter = tostring(ob.list[li].letter), name = ob.list[li].name, segs = {}, ticks = {}, cur = nil, t0 = 0 }
     end
     local function close(lane, t1)
         if lane.cur ~= nil and t1 > lane.t0 then
@@ -207,7 +207,7 @@ function Match.flag_stats(lanes)
                 if tick.kind == "cap" then
                     bk.caps = bk.caps + 1
                     if not first or tick.t < first.t then
-                        first = { team = tick.own, t = tick.t, letter = lane.letter }
+                        first = { team = tick.own, t = tick.t, letter = lane.letter, name = lane.name }
                     end
                 else
                     bk.defs = bk.defs + 1

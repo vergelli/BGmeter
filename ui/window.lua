@@ -1437,10 +1437,14 @@ local function render_occupation(b, occ, neutralPct, stats, w)
         if stats.first then
             local tc = S.team_color(stats.first.team)
             sp[#sp + 1] = string.format("|c%sfirst %s @ %s|r",
-                hexc(tc), tostring(stats.first.letter), F.duration(stats.first.t))
+                hexc(tc), tostring(stats.first.name or stats.first.letter), F.duration(stats.first.t))
         end
     end
     b.occStats:SetText(table.concat(sp, "    "))
+end
+
+local function lane_label(lane)
+    return lane.name or ("flag " .. tostring(lane.letter))
 end
 
 local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
@@ -1477,13 +1481,13 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
                 local tc = S.team_color(tick.own)
                 ic:SetColor(tc[1], tc[2], tc[3], 1)
                 tip = string.format("%s defended %s @ %s",
-                    team_name(tick.own), lane.letter, F.duration(tick.t))
+                    team_name(tick.own), lane_label(lane), F.duration(tick.t))
             else
                 ic:SetTexture(flag_pin(gt, lane.letter, tick.own))
                 ic:SetDimensions(L.pin_size, L.pin_size)
                 ic:SetColor(1, 1, 1, 1)
                 tip = string.format("%s captured %s @ %s",
-                    team_name(tick.own), lane.letter, F.duration(tick.t))
+                    team_name(tick.own), lane_label(lane), F.duration(tick.t))
             end
             local half = math.floor(L.pin_size / 2)
             local tx = math.max(half, math.min(rx(tick.t), w - 6 - half))
@@ -1797,10 +1801,10 @@ local function chart_hover_poll()
             end
             if own ~= 0 then
                 local tc = S.team_color(own)
-                parts[#parts + 1] = string.format("|c%sflag %s  %s|r",
-                    hexc(tc), lane.letter, team_name(own))
+                parts[#parts + 1] = string.format("|c%s%s  %s|r",
+                    hexc(tc), lane_label(lane), team_name(own))
             else
-                parts[#parts + 1] = string.format("|c8c8c95flag %s  neutral|r", lane.letter)
+                parts[#parts + 1] = string.format("|c8c8c95%s  neutral|r", lane_label(lane))
             end
         end
     end
@@ -2088,6 +2092,9 @@ function W.render_detail(m)
             if (r.carried or 0) > 0 then capsTxt = string.format("  ·  held %s", F.duration(r.carried * 1000)) end
         elseif (r.caps or 0) > 0 then
             capsTxt = string.format("  ·  %d caps", r.caps)
+        end
+        if (r.defPts or 0) > 0 then
+            capsTxt = capsTxt .. string.format("  ·  %d def", r.defPts)
         end
         set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d%s  ·  %d medals%s",
             prefix, r.displayName or r.charName or "?", team_name(r.team),
