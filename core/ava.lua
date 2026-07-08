@@ -7,9 +7,8 @@
 -- and snapshots your veterancy at the start so the haul reads as "this session".
 --
 -- The veterancy reward-track itself is AvA-wide (the same season track in BGs
--- and Cyrodiil), so the Vanguard HUD reads BGMeter.Veterancy.snapshot() live;
--- this module owns the AP-by-source attribution and the observer fan-out that
--- drives the HUD's fill animation + "+AP" toast.
+-- and Cyrodiil); this module owns the AP-by-source attribution and an observer
+-- fan-out any consumer can subscribe to.
 --
 -- Everything is pcall-guarded and zero-alloc on the hot path is NOT a concern
 -- here (AP events fire a few times a second at most), so clarity wins.

@@ -814,11 +814,6 @@ local SETTINGS_SECTIONS = {
         { kind = "toggle", key = "show_awards",    label = "MVP / column leaders" },
         { kind = "toggle", key = "show_timeline",  label = "Match timeline chart" },
     } },
-    { title = "VANGUARD BAR", rows = {
-        { kind = "toggle", key = "show_vanguard",  label = "Show the HUD bar" },
-        { kind = "toggle", key = "vanguard_dock",  label = "Dock to the XP bar" },
-        { kind = "toggle", key = "vanguard_fade",  label = "Auto-fade when idle" },
-    } },
 }
 
 local function text_button(parent, label)
@@ -828,13 +823,6 @@ local function text_button(parent, label)
 end
 
 local function on_pref_changed(key)
-    if BGMeter.UI.vanguard then
-        if key == "show_vanguard" then
-            if Prefs.get("show_vanguard") then BGMeter.UI.vanguard.show() else BGMeter.UI.vanguard.hide() end
-        elseif key == "vanguard_dock" or key == "vanguard_fade" then
-            BGMeter.UI.vanguard.sync()
-        end
-    end
     Sound.play("nav")
     W.render(false)
 end

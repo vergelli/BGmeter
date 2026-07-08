@@ -194,17 +194,7 @@ local function cmd_demo(two_teams)
     BGMeter.UI.window.show_match(1)
     BGMeter.Sound.play("win")
 
-    -- Showcase the Vanguard HUD bar with a synthetic AP-by-source split so it
-    -- can be seen without queueing for Cyrodiil.
-    local Ava = BGMeter.Ava
-    Ava.session.active = true
-    Ava.session.ap = 18450
-    Ava.session.xp = 92000
-    Ava.session.startMs = (BGMeter.zenimax.api.now_ms and BGMeter.zenimax.api.now_ms() or 0) - 3300000
-    Ava.session.sources = { kills = 9200, offense = 4800, defense = 2600, rez = 1100, bg = 0, other = 750 }
-    BGMeter.UI.vanguard.preview(m.haul.vetEnd)
-
-    BGMeter.Log.say("demo match injected -- window + vanguard bar shown")
+    BGMeter.Log.say("demo match injected -- window shown")
 end
 
 -- ── /bgmeter ap  (the AvA AP-source probe) ─────────────────────────────────
@@ -403,14 +393,6 @@ local function on_slash(args)
         cmd_dump()
     elseif args == "ap" then
         cmd_ap()
-    elseif args == "bar" then
-        BGMeter.UI.vanguard.toggle()
-    elseif args == "bar lock" or args == "lock" then
-        BGMeter.UI.vanguard.toggle_lock()
-    elseif args == "dock" or args == "bar dock" then
-        BGMeter.UI.vanguard.toggle_dock()
-    elseif args == "fade" or args == "bar fade" then
-        BGMeter.UI.vanguard.toggle_fade()
     elseif args == "demo" then
         cmd_demo(false)
     elseif args == "demo2" or args == "demo 2" then
@@ -435,7 +417,7 @@ local function on_slash(args)
         BGMeter.Mock.run(args:match("^mock%s*(.*)$"))
     else
         local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>" or ""
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
     end
 end
 
@@ -446,7 +428,6 @@ local function on_addon_loaded()
     BGMeter.Pipeline.acquisition.init()
     BGMeter.Ava.init()
     BGMeter.UI.window.init()
-    BGMeter.UI.vanguard.init()
 
     SLASH_COMMANDS[K.SLASH] = on_slash
 

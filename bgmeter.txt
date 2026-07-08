@@ -53,6 +53,5 @@ pipeline/presentation.lua
 ui/templates.xml
 ui/export.lua
 ui/window.lua
-ui/vanguard.lua
 
 bgmeter.lua

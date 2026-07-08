@@ -10,8 +10,7 @@ local Prefs = {}
 local FALLBACK = {
     max_history = 50, auto_open_mode = "exit", sounds = true, animate = true,
     show_haul = true, show_veterancy = true, show_standing = true,
-    show_awards = true, show_timeline = true, show_vanguard = false,
-    vanguard_dock = false, vanguard_fade = true, opacity = 0.97,
+    show_awards = true, show_timeline = true, opacity = 0.97,
     sort_key = "damage", sort_desc = true,
 }
 
@@ -20,6 +19,7 @@ local function migrate(p)
         p.auto_open_mode = p.auto_open and "exit" or "off"
         p.auto_open = nil
     end
+    p.show_vanguard, p.vanguard_dock, p.vanguard_fade = nil, nil, nil
     return p
 end
 

@@ -18,7 +18,6 @@ local DEFAULTS = {
         damage = 0, healing = 0, kills = 0, ap = 0, bestRank = 0,
     },
     window   = { x = 0, y = 0, w = 0, h = 0, hidden = true, scale = 1.0 },
-    vanguard = { x = 0, y = 0, w = 0, locked = false },  -- the AvA/veterancy HUD bar (w=0 -> default)
     prefs    = {
         max_history    = 50,
         auto_open_mode = "exit",
@@ -29,9 +28,6 @@ local DEFAULTS = {
         show_standing  = true,
         show_awards    = true,
         show_timeline  = true,
-        show_vanguard  = false,
-        vanguard_dock  = false,
-        vanguard_fade  = true,
         opacity        = 0.97,
         sort_key       = "damage",
         sort_desc      = true,
@@ -43,6 +39,7 @@ function M.init(saved_var_name, version)
     -- Account-wide + per-server: the `profile` argument (GetWorldName) is the
     -- documented way to split EU/NA/PTS so histories never bleed across servers.
     local sv = ZO_SavedVars:NewAccountWide(saved_var_name, version, nil, DEFAULTS, GetWorldName())
+    sv.vanguard = nil
     M.data = sv
     return sv
 end
