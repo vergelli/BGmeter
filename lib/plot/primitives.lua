@@ -31,6 +31,7 @@ function P.rect(parent, color, name)
     local c = ui().create_control(name or uniq("BGMeterRect"), parent, CT_TEXTURE)
     c:SetTexture(FILL)
     c:SetTextureCoords(0, 1, 0, 0.05)
+    if c.SetPixelRoundingEnabled then c:SetPixelRoundingEnabled(false) end
     local col = color or { 1, 1, 1, 1 }
     c:SetColor(col[1], col[2], col[3], col[4] or 1)
     return c
@@ -81,6 +82,7 @@ function P.line(parent, color, thickness)
         return ui().create_from_virtual(uniq("BGMeterLine"), parent, "BGMeterLineTemplate")
     end)
     if not ok or not c then return nil end
+    if c.SetPixelRoundingEnabled then c:SetPixelRoundingEnabled(false) end
     if c.SetThickness then c:SetThickness(thickness or 2) end
     local col = color or { 1, 1, 1, 1 }
     c:SetColor(col[1], col[2], col[3], col[4] or 1)
