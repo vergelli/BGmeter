@@ -18,6 +18,7 @@ locales/$(language).lua
 
 core/constants.lua
 observability/log.lua
+observability/diag.lua
 
 zenimax/constants.lua
 zenimax/api.lua

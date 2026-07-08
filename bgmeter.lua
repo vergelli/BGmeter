@@ -370,6 +370,11 @@ local function cmd_report()
     end
     add("")
 
+    if BGMeter.Diag and BGMeter.Diag.on then
+        for _, l in ipairs(BGMeter.Diag.lines()) do lines[#lines + 1] = l end
+        add("")
+    end
+
     add("--- log tail (%d lines, [d]=debug [s]=say [e]=error) ---", #BGMeter.Log.lines())
     for _, l in ipairs(BGMeter.Log.lines()) do
         lines[#lines + 1] = l
@@ -415,8 +420,15 @@ local function on_slash(args)
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
     elseif args:find("^mock") == 1 and K.dev_tools() and BGMeter.Mock then
         BGMeter.Mock.run(args:match("^mock%s*(.*)$"))
+    elseif args == "perf" and BGMeter.Diag and BGMeter.Diag.on then
+        BGMeter.UI.export.show_text(table.concat(BGMeter.Diag.lines(), "\n"))
+    elseif args == "perf reset" and BGMeter.Diag and BGMeter.Diag.on then
+        BGMeter.Diag.reset()
+        Log.say("perf counters reset")
+    elseif args:find("^gcprobe") == 1 and BGMeter.Diag and BGMeter.Diag.on then
+        BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
     else
-        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>" or ""
+        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]" or ""
         Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
     end
 end
@@ -424,6 +436,8 @@ end
 -- ── bootstrap ─────────────────────────────────────────────────────────────
 local function on_addon_loaded()
     BGMeter.zenimax.savedvars.init(K.SAVED_VARS, 1)
+
+    if K.dev_tools() and BGMeter.Diag then BGMeter.Diag.install() end
 
     BGMeter.Pipeline.acquisition.init()
     BGMeter.Ava.init()
