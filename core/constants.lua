@@ -13,6 +13,13 @@ K.VERSION    = "0.1.0"          -- lockstep: manifest ## Version + ## AddOnVersi
 K.SAVED_VARS = "BGMeterSavedVars"
 K.SLASH      = "/bgmeter"
 
+K.DEBUG = true
+K.MODE  = "DEBUG"
+
+function K.dev_tools()
+    return K.DEBUG == true and K.MODE == "DEBUG"
+end
+
 -- ── Palette ───────────────────────────────────────────────────────────────
 -- Non-intrusive, dark, with a battle (warm) / haul (gold) split.
 K.COLOR = {

@@ -431,8 +431,11 @@ local function on_slash(args)
     elseif args == "debug" then
         Log.DEBUG = not Log.DEBUG
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
+    elseif args:find("^mock") == 1 and K.dev_tools() and BGMeter.Mock then
+        BGMeter.Mock.run(args:match("^mock%s*(.*)$"))
     else
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|report|demo|demo2|ap|dump|clear|debug|layers]")
+        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>" or ""
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|bar|dock|fade|lock|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
     end
 end
 

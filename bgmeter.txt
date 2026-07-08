@@ -39,6 +39,7 @@ core/awards.lua
 core/records.lua
 core/session.lua
 core/ava.lua
+core/mock.lua
 
 lib/anim.lua
 lib/plot/style.lua
