@@ -81,6 +81,7 @@ local MAP_ART = {
     ["colosseum"]         = "esoui/art/loadingscreens/loadscreen_battleground_arena_coliseum_01.dds",
     ["forest"]            = "esoui/art/loadingscreens/loadscreen_battleground_bosmer_forest_01.dds",
     ["grove"]             = "esoui/art/loadingscreens/loadscreen_battleground_bosmer_forest_01.dds",
+    ["wood elf"]          = "esoui/art/loadingscreens/loadscreen_battleground_bosmer_forest_01.dds",
     ["ald carac"]         = "esoui/art/loadingscreens/loadscreen_battleground_ald_carac_01.dds",
     ["arcane university"] = "esoui/art/loadingscreens/loadscreen_battleground_arcaneuniversity_01.dds",
     ["deeping drome"]     = "esoui/art/loadingscreens/loadscreen_battleground_deepingdrome_01.dds",
@@ -1044,10 +1045,15 @@ end
 
 -- ── render ────────────────────────────────────────────────────────────────
 
-local function map_art_candidates(name)
+local function map_art_candidates(m, name)
     local out, seen = {}, {}
     local function add(path)
-        if path and not seen[path] then seen[path] = true; out[#out + 1] = path end
+        if path and path ~= "" and not seen[path] then seen[path] = true; out[#out + 1] = path end
+    end
+    local A = BGMeter.zenimax.api
+    if m and m.bgId and type(A.get_bg_art) == "function" then
+        local ok, official = pcall(A.get_bg_art, m.bgId)
+        if ok then add(official) end
     end
     local lower = name:lower():gsub("%^.*$", "")
     for key, path in pairs(MAP_ART) do
@@ -1074,7 +1080,7 @@ local function apply_map_art(m)
     if not art then return end
     local name = (m and m.name) or ""
     if name == "" then art:SetHidden(true); return end
-    local cands = map_art_candidates(name)
+    local cands = map_art_candidates(m, name)
     if #cands == 0 then art:SetHidden(true); return end
 
     W.map_token = (W.map_token or 0) + 1
