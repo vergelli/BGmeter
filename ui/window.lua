@@ -1156,6 +1156,7 @@ local function apply_dynamic_min_width(m)
 
     local extra
     local nflags = m.objectives and m.objectives.list and #m.objectives.list or 0
+    if nflags == 0 and m.relics and m.relics.list then nflags = #m.relics.list end
     if nflags > 0 then
         local lanes = math.min(4, nflags)
         extra = (L.occ_h + 2) + (L.ribbon_top + lanes * (L.lane_h + L.lane_gap) + 3 + 2) + (28 + 2)
@@ -1429,8 +1430,11 @@ local function render_occupation(b, occ, neutralPct, stats, w)
         P.set_rect_color(r, { nc[1], nc[2], nc[3], K.ALPHA.ribbon_neutral })
         r:SetHidden(false)
         if neutralPct and neutralPct >= 0.005 then
-            parts[#parts + 1] = string.format("|c8c8c95neutral %d%%|r",
-                math.floor(neutralPct * 100 + 0.5))
+            local nl = "neutral"
+            if stats and stats.mode == "relic" then nl = "at base"
+            elseif stats and stats.mode == "ball" then nl = "loose" end
+            parts[#parts + 1] = string.format("|c8c8c95%s %d%%|r",
+                nl, math.floor(neutralPct * 100 + 0.5))
         end
     end
     b.occLegend:SetText(table.concat(parts, "  ·  "))
@@ -1439,13 +1443,22 @@ local function render_occupation(b, occ, neutralPct, stats, w)
     if stats then
         for _, e in ipairs(stats.per) do
             local tc = S.team_color(e.team)
-            sp[#sp + 1] = string.format("|c%s%s  %d caps · %d defs · avg hold %s|r",
-                hexc(tc), team_name(e.team), e.caps, e.defs, F.duration(e.avgHoldMs))
+            if stats.mode == "relic" then
+                sp[#sp + 1] = string.format("|c%s%s  %d/%d runs scored · avg run %s|r",
+                    hexc(tc), team_name(e.team), e.caps, e.holds or 0, F.duration(e.avgHoldMs))
+            elseif stats.mode == "ball" then
+                sp[#sp + 1] = string.format("|c%s%s  held %s · avg %s|r",
+                    hexc(tc), team_name(e.team), F.duration(e.holdMs), F.duration(e.avgHoldMs))
+            else
+                sp[#sp + 1] = string.format("|c%s%s  %d caps · %d defs · avg hold %s|r",
+                    hexc(tc), team_name(e.team), e.caps, e.defs, F.duration(e.avgHoldMs))
+            end
         end
         if stats.first then
             local tc = S.team_color(stats.first.team)
-            sp[#sp + 1] = string.format("|c%sfirst %s @ %s|r",
-                hexc(tc), tostring(stats.first.name or stats.first.letter), F.duration(stats.first.t))
+            sp[#sp + 1] = string.format("|c%s%s %s @ %s|r",
+                hexc(tc), (stats.mode == "relic") and "first goal" or "first",
+                tostring(stats.first.name or stats.first.letter), F.duration(stats.first.t))
         end
     end
     b.occStats:SetText(table.concat(sp, "    "))
@@ -1483,19 +1496,22 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
         for _, tick in ipairs(lane.ticks) do
             local ic = b.pin_pool:acquire()
             local tip
+            local ctf = (gt == "capture_the_flag")
             if tick.kind == "def" then
                 ic:SetTexture("EsoUI/Art/WorldMap/map_AVA_tabIcon_resourceDefense_up.dds")
                 ic:SetDimensions(L.pin_size - 6, L.pin_size - 6)
                 local tc = S.team_color(tick.own)
                 ic:SetColor(tc[1], tc[2], tc[3], 1)
-                tip = string.format("%s defended %s @ %s",
-                    team_name(tick.own), lane_label(lane), F.duration(tick.t))
+                tip = string.format("%s %s %s @ %s",
+                    team_name(tick.own), ctf and "returned" or "defended",
+                    lane_label(lane), F.duration(tick.t))
             else
                 ic:SetTexture(flag_pin(gt, lane.letter, tick.own))
                 ic:SetDimensions(L.pin_size, L.pin_size)
                 ic:SetColor(1, 1, 1, 1)
-                tip = string.format("%s captured %s @ %s",
-                    team_name(tick.own), lane_label(lane), F.duration(tick.t))
+                tip = string.format("%s %s %s @ %s",
+                    team_name(tick.own), ctf and "scored" or "captured",
+                    lane_label(lane), F.duration(tick.t))
             end
             local half = math.floor(L.pin_size / 2)
             local tx = math.max(half, math.min(rx(tick.t), w - 6 - half))
@@ -1633,10 +1649,23 @@ local function render_timeline(m)
     local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
 
     local lanes = BGMeter.Match.flag_lanes(m, tspan)
+    local relicMode = false
+    if not lanes and BGMeter.Match.relic_lanes then
+        lanes = BGMeter.Match.relic_lanes(m, tspan)
+        relicMode = lanes ~= nil
+    end
     local occ, neutralPct, fstats
     if lanes then
         occ, neutralPct = BGMeter.Match.flag_occupation(lanes, tspan)
         fstats = BGMeter.Match.flag_stats(lanes)
+        if fstats then fstats.mode = relicMode and (gt == "murderball" and "ball" or "relic") or nil end
+        if relicMode and occ then
+            local held = 0
+            for _, e in ipairs(occ) do held = held + e.pct end
+            neutralPct = math.max(0, 1 - held)
+        end
+        b.ribbonTitle:SetText(relicMode and (gt == "murderball" and "BALL POSSESSION" or "RELIC RUNS") or "FLAG CONTROL")
+        b.occTitle:SetText(relicMode and "POSSESSION" or "FLAG OCCUPATION")
     end
     if occ and #occ == 0 then occ = nil end
     local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0

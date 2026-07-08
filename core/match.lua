@@ -235,6 +235,54 @@ function Match.flag_stats(lanes)
     return { per = out, first = first }
 end
 
+function Match.relic_lanes(m, tspan)
+    local rl = m.relics
+    if not rl or not rl.t or #rl.t == 0 or not rl.list or #rl.list == 0 then return nil end
+    local CZ = BGMeter.zenimax.constants
+    local LETTERS = { "A", "B", "C", "D" }
+    local lanes = {}
+    for li = 1, math.min(#rl.list, 4) do
+        lanes[li] = {
+            letter = LETTERS[li], name = rl.list[li].name, home = rl.list[li].home,
+            segs = {}, ticks = {}, cur = 0, t0 = 0,
+        }
+    end
+    local function close(lane, t1)
+        if lane.cur and lane.cur ~= 0 and t1 > lane.t0 then
+            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur }
+        end
+    end
+    for i = 1, #rl.t do
+        local lane = lanes[rl.o[i]]
+        if lane then
+            local t = math.min(math.max(rl.t[i] or 0, 0), tspan)
+            local evl = CZ.OBJ_EVENT_LABEL[rl.ev[i]] or "?"
+            if evl == "flag_taken" then
+                close(lane, t)
+                lane.cur, lane.t0 = rl.hold[i] or 0, t
+            elseif evl == "flag_dropped" or evl == "flag_spawned" then
+                close(lane, t)
+                lane.cur = 0
+            elseif evl == "captured" then
+                close(lane, t)
+                lane.cur = 0
+                lane.ticks[#lane.ticks + 1] = { t = t, own = rl.last[i] or 0, kind = "cap" }
+            elseif evl == "flag_returned" or evl == "flag_timer_return" then
+                close(lane, t)
+                lane.cur = 0
+                if lane.home and lane.home ~= 0 then
+                    lane.ticks[#lane.ticks + 1] = { t = t, own = lane.home, kind = "def" }
+                end
+            end
+        end
+    end
+    for _, lane in ipairs(lanes) do
+        close(lane, tspan)
+        lane.cur = nil
+    end
+    return lanes
+end
+
 function Match.lead_stats(tl)
     if not tl or not tl.t or #tl.t < 2 then return nil end
     local series = { tl.s1, tl.s2, tl.s3 }

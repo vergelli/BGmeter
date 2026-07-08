@@ -97,6 +97,35 @@ local function make_objectives(m, flags, script)
     m.objectives = ob
 end
 
+local function make_relics(m, list, script)
+    local CZ = BGMeter.zenimax.constants
+    local rl = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {} }
+    for i, e in ipairs(list) do
+        rl.list[i] = { keepId = 0, objectiveId = 520 + i, name = e.name, home = e.home }
+    end
+    table.sort(script, function(a, z) return a[1] < z[1] end)
+    for _, e in ipairs(script) do
+        local i = #rl.t + 1
+        rl.t[i], rl.r[i], rl.o[i] = e[1], 1, e[2]
+        rl.ev[i] = rev(CZ.OBJ_EVENT_LABEL, e[3]) or -1
+        rl.hold[i], rl.last[i] = e[4] or 0, e[5] or 0
+    end
+    m.relics = rl
+end
+
+local function relic_run(script, o, tTake, holdSec, team, outcome)
+    script[#script + 1] = { tTake * 1000, o, "flag_taken", team, 0 }
+    local tEnd = (tTake + holdSec) * 1000
+    if outcome == "goal" then
+        script[#script + 1] = { tEnd, o, "captured", 0, team }
+        script[#script + 1] = { tEnd + 20000, o, "flag_spawned", 0, team }
+    else
+        script[#script + 1] = { tEnd, o, "flag_dropped", 0, team }
+        script[#script + 1] = { tEnd + 5000, o, "flag_returned", 0, team }
+        script[#script + 1] = { tEnd + 5000, o, "flag_spawned", 0, team }
+    end
+end
+
 local function flag_cycle(script, o, t0, own1, own2)
     local s = function(dt, ev, own) script[#script + 1] = { t0 + dt, o, ev, own } end
     s(0,      "neutral",            0)
@@ -263,6 +292,24 @@ function BUILDERS.murderball()
     end)
     make_timeline(m, teams, 10 * 60000, 1, 500, 377)
     make_killfeed(m, 10 * 60000, teams)
+    local balls = { { name = "Chaosball" }, { name = "Chaosball" }, { name = "Chaosball" } }
+    local script = {}
+    for o = 1, 3 do
+        local t = 22000 + o * 4000
+        script[#script + 1] = { t - 3000, o, "flag_spawned", 0, 0 }
+        local ti = (o % 2 == 0) and 2 or 1
+        while t < 560000 do
+            local hold = jit(o * 100 + t, 18, 65) * 1000
+            local tm = teams[ti]
+            script[#script + 1] = { t, o, "flag_taken", tm, 0 }
+            script[#script + 1] = { t + hold, o, "flag_dropped", 0, tm }
+            local loose = jit(o * 200 + t, 4, 22) * 1000
+            script[#script + 1] = { t + hold + loose, o, "flag_timer_return", 0, tm }
+            t = t + hold + loose + jit(o * 300 + t, 3, 14) * 1000
+            ti = 3 - ti
+        end
+    end
+    make_relics(m, balls, script)
     finish(m, "chaosball")
 end
 
@@ -288,6 +335,22 @@ function BUILDERS.capture_the_flag()
     end)
     make_timeline(m, teams, math.floor(14.6 * 60000), 1, 200, 500, 100)
     make_killfeed(m, math.floor(14.6 * 60000), teams)
+    local relics = {
+        { name = "Fire Drakes Relic", home = teams[1] },
+        { name = "Pit Daemons Relic", home = teams[2] },
+    }
+    local script = {}
+    relic_run(script, 1, 109, 279, teams[2], "stopped")
+    relic_run(script, 1, 401, 50,  teams[2], "goal")
+    relic_run(script, 1, 487, 103, teams[2], "goal")
+    relic_run(script, 1, 615, 21,  teams[2], "goal")
+    relic_run(script, 1, 661, 25,  teams[2], "goal")
+    relic_run(script, 1, 862, 15,  teams[2], "goal")
+    relic_run(script, 2, 117, 260, teams[1], "stopped")
+    relic_run(script, 2, 460, 45,  teams[1], "goal")
+    relic_run(script, 2, 700, 30,  teams[1], "goal")
+    relic_run(script, 2, 800, 30,  teams[1], "stopped")
+    make_relics(m, relics, script)
     finish(m, "capture the relic")
 end
 

@@ -10,6 +10,7 @@ local active = nil
 local baseline = nil
 local obj_lookup = {}
 local obj_last = {}
+local relic_lookup = {}
 
 local MAX_OBJ_EVENTS = 600
 
@@ -244,9 +245,33 @@ local function obj_elapsed()
     return (safe(A.now_ms) or 0) - ((active and active.startMs) or 0)
 end
 
+local MAX_RELIC_EVENTS = 400
+
+local function record_relic_event(keepId, objectiveId, name, home, controlEvent, hold, last)
+    local rl = active.relics
+    if not rl or #rl.t >= MAX_RELIC_EVENTS then return end
+    local key = obj_key(keepId, objectiveId)
+    local idx = relic_lookup[key]
+    if not idx then
+        idx = #rl.list + 1
+        rl.list[idx] = { keepId = keepId, objectiveId = objectiveId, name = clean_name(name), home = home }
+        relic_lookup[key] = idx
+    elseif home and home ~= 0 and not rl.list[idx].home then
+        rl.list[idx].home = home
+    end
+    local i = #rl.t + 1
+    rl.t[i]    = obj_elapsed()
+    rl.r[i]    = current_round()
+    rl.o[i]    = idx
+    rl.ev[i]   = controlEvent or -1
+    rl.hold[i] = hold or 0
+    rl.last[i] = last or 0
+end
+
 function Capture.on_flag(_, keepId, objectiveId, ctx, name, controlEvent, controlState, origOwner, holder, lastHolder, pinType)
     if not active then return end
     local C = BGMeter.zenimax.constants
+    record_relic_event(keepId, objectiveId, name, origOwner, controlEvent, holder, lastHolder)
     BGMeter.Log.debug("relic t=%s %s ev=%s st=%s orig=%s hold=%s last=%s pin=%s ids=%s:%s",
         BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
         tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
@@ -258,6 +283,7 @@ end
 function Capture.on_murderball(_, keepId, objectiveId, ctx, name, controlEvent, controlState, holder, lastHolder, holderRaw, holderDisp, lastRaw, lastDisp, pinType)
     if not active then return end
     local C = BGMeter.zenimax.constants
+    record_relic_event(keepId, objectiveId, name, nil, controlEvent, holder, lastHolder)
     BGMeter.Log.debug("ball t=%s %s ev=%s st=%s hold=%s(%s) last=%s(%s) pin=%s ids=%s:%s",
         BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
         tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
@@ -311,8 +337,10 @@ function Capture.begin()
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
     active.killfeed  = {}
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
+    active.relics = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {} }
     obj_lookup = {}
     obj_last = {}
+    relic_lookup = {}
 
     baseline = {
         ap  = safe(A.get_alliance_points) or 0,
