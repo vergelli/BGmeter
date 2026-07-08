@@ -810,7 +810,7 @@ local SETTINGS_SECTIONS = {
     { title = "RESULT WINDOW", rows = {
         { kind = "toggle", key = "show_haul",      label = "Haul panel" },
         { kind = "toggle", key = "show_veterancy", label = "Veterancy track" },
-        { kind = "toggle", key = "show_standing",  label = "Competitive standing" },
+        { kind = "toggle", key = "show_standing",  label = "Standing / session panel" },
         { kind = "toggle", key = "show_awards",    label = "MVP / column leaders" },
         { kind = "toggle", key = "show_timeline",  label = "Match timeline chart" },
     } },
@@ -2015,14 +2015,33 @@ local function render_haul(m, animate)
     local standControls = { p.sep, p.standHeading, p.standRank, p.standSub }
     local casual = (m.competitive == false)
         or (m.competitive == nil and m.teamSize == nil and #m.battle > 10)
-    if not Prefs.get("show_standing") or casual then hide_all(standControls, true); return end
+    if not Prefs.get("show_standing") then hide_all(standControls, true); return end
     local effBottom = p.eff:GetBottom() or 0
     local sepTop = p.sep:GetTop() or 0
     if effBottom > 0 and sepTop > 0 and effBottom + 6 > sepTop then
         hide_all(standControls, true)
         return
     end
+
+    if casual then
+        local sess = BGMeter.Session
+        if not sess or sess.matches == 0 then hide_all(standControls, true); return end
+        hide_all(standControls, false)
+        p.standHeading:SetText("SESSION")
+        set_text(p.standRank, string.format("%dW - %dL", sess.wins, sess.losses))
+        local col = K.COLOR.text
+        if sess.wins > sess.losses then col = K.COLOR.heal
+        elseif sess.losses > sess.wins then col = K.COLOR.accent end
+        S.color(p.standRank, col)
+        set_text(p.standSub, string.format("%s AP  ·  %d %s tonight",
+            F.commas(sess.ap), sess.matches, sess.matches == 1 and "match" or "matches"))
+        W.tips[p.standRank] = string.format(
+            "This play session (since login)\n%d wins, %d losses\n%s AP  ·  %s XP earned",
+            sess.wins, sess.losses, F.commas(sess.ap), F.commas(sess.xp))
+        return
+    end
     hide_all(standControls, false)
+    p.standHeading:SetText("COMPETITIVE STANDING")
 
     -- The big rank font lacks the movement glyphs, so the indicator lives on the
     -- small sub-line as a real inline arrow texture (unicode ▲/▼ box out in

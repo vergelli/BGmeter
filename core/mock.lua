@@ -166,6 +166,7 @@ local function finish(m, mode)
     if m.competitive then
         m.standing = { rank = 214, prevRank = 221, rankDelta = 7, score = 5350, prevScore = 5105, scoreDelta = 245, mmr = 1580, impacts = true }
     end
+    BGMeter.Session.record(m)
     BGMeter.History.push(m)
     BGMeter.UI.window.show_match(1)
     if m.result == "WIN" then BGMeter.Sound.play("win") end
