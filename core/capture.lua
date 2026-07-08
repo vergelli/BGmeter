@@ -246,10 +246,51 @@ local function obj_elapsed()
 end
 
 local MAX_RELIC_EVENTS = 400
+local caps_snap = {}
+
+local function snap_caps()
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local round = current_round()
+    local n = safe(A.get_num_entries, round) or 0
+    for i = 1, n do
+        local charName, disp = safe(A.get_entry_info, i, round)
+        local nm = clean_name(disp or charName)
+        if nm then
+            caps_snap[nm] = read_score(i, C.SCORE_TRACKER_TYPE_FLAG_CAPTURED, round)
+        end
+    end
+end
+
+local function scan_goal(rl, evIdx, team)
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local round = current_round()
+    local n = safe(A.get_num_entries, round) or 0
+    local bestName, bestDelta = nil, 0
+    for i = 1, n do
+        local charName, disp, eteam = safe(A.get_entry_info, i, round)
+        local nm = clean_name(disp or charName)
+        if nm then
+            local caps = read_score(i, C.SCORE_TRACKER_TYPE_FLAG_CAPTURED, round)
+            local d = caps - (caps_snap[nm] or 0)
+            caps_snap[nm] = caps
+            if d > bestDelta and (not team or team == 0 or eteam == team) then
+                bestName, bestDelta = nm, d
+            end
+        end
+    end
+    if bestName then
+        rl.who[evIdx] = bestName
+        BGMeter.Log.debug("goal attribution: %s (+%d caps) -> relic event %d", bestName, bestDelta, evIdx)
+    else
+        BGMeter.Log.debug("goal attribution: no caps delta visible for relic event %d", evIdx)
+    end
+end
 
 local function record_relic_event(keepId, objectiveId, name, home, controlEvent, hold, last)
     local rl = active.relics
-    if not rl or #rl.t >= MAX_RELIC_EVENTS then return end
+    if not rl or #rl.t >= MAX_RELIC_EVENTS then return nil end
     local key = obj_key(keepId, objectiveId)
     local idx = relic_lookup[key]
     if not idx then
@@ -266,12 +307,22 @@ local function record_relic_event(keepId, objectiveId, name, home, controlEvent,
     rl.ev[i]   = controlEvent or -1
     rl.hold[i] = hold or 0
     rl.last[i] = last or 0
+    return i
 end
 
 function Capture.on_flag(_, keepId, objectiveId, ctx, name, controlEvent, controlState, origOwner, holder, lastHolder, pinType)
     if not active then return end
     local C = BGMeter.zenimax.constants
-    record_relic_event(keepId, objectiveId, name, origOwner, controlEvent, holder, lastHolder)
+    local ei = record_relic_event(keepId, objectiveId, name, origOwner, controlEvent, holder, lastHolder)
+    local evl = C.OBJ_EVENT_LABEL[controlEvent]
+    if evl == "flag_taken" then
+        snap_caps()
+    elseif evl == "captured" and ei then
+        local rl = active.relics
+        local team = lastHolder
+        local function attribute() scan_goal(rl, ei, team) end
+        if type(zo_callLater) == "function" then zo_callLater(attribute, 800) else attribute() end
+    end
     BGMeter.Log.debug("relic t=%s %s ev=%s st=%s orig=%s hold=%s last=%s pin=%s ids=%s:%s",
         BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
         tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
@@ -337,10 +388,11 @@ function Capture.begin()
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
     active.killfeed  = {}
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
-    active.relics = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {} }
+    active.relics = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {}, who = {} }
     obj_lookup = {}
     obj_last = {}
     relic_lookup = {}
+    caps_snap = {}
 
     baseline = {
         ap  = safe(A.get_alliance_points) or 0,

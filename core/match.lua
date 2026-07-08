@@ -326,7 +326,8 @@ function Match.relic_lanes(m, tspan)
             elseif evl == "captured" then
                 close(lane, t)
                 lane.cur = 0
-                lane.ticks[#lane.ticks + 1] = { t = t, own = rl.last[i] or 0, kind = "cap" }
+                lane.ticks[#lane.ticks + 1] = { t = t, own = rl.last[i] or 0, kind = "cap",
+                                                who = rl.who and rl.who[i] or nil }
             elseif evl == "flag_returned" or evl == "flag_timer_return" then
                 close(lane, t)
                 lane.cur = 0

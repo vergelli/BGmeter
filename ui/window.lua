@@ -1487,20 +1487,31 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             local ctf = (gt == "capture_the_flag")
             local tlabel = tick.name or lane_label(lane)
             if tick.kind == "def" then
-                ic:SetTexture("EsoUI/Art/WorldMap/map_AVA_tabIcon_resourceDefense_up.dds")
-                ic:SetDimensions(L.pin_size - 6, L.pin_size - 6)
                 local tc = S.team_color(tick.own)
+                if ctf then
+                    ic:SetTexture("EsoUI/Art/Buttons/closeButton_up.dds")
+                    ic:SetDimensions(L.pin_size - 10, L.pin_size - 10)
+                else
+                    ic:SetTexture("EsoUI/Art/WorldMap/map_AVA_tabIcon_resourceDefense_up.dds")
+                    ic:SetDimensions(L.pin_size - 6, L.pin_size - 6)
+                end
                 ic:SetColor(tc[1], tc[2], tc[3], 1)
                 tip = string.format("%s %s %s @ %s",
                     team_name(tick.own), ctf and "returned" or "defended",
                     tlabel, F.duration(tick.t))
+            elseif ctf then
+                ic:SetTexture("EsoUI/Art/Collections/Favorite_StarOnly.dds")
+                ic:SetDimensions(L.pin_size, L.pin_size)
+                local tc = S.team_color(tick.own)
+                ic:SetColor(tc[1], tc[2], tc[3], 1)
+                tip = string.format("%s scored %s @ %s",
+                    tick.who or team_name(tick.own), tlabel, F.duration(tick.t))
             else
                 ic:SetTexture(flag_pin(gt, tick.letter or lane.letter, tick.own))
                 ic:SetDimensions(L.pin_size, L.pin_size)
                 ic:SetColor(1, 1, 1, 1)
-                tip = string.format("%s %s %s @ %s",
-                    team_name(tick.own), ctf and "scored" or "captured",
-                    tlabel, F.duration(tick.t))
+                tip = string.format("%s captured %s @ %s",
+                    team_name(tick.own), tlabel, F.duration(tick.t))
             end
             local half = math.floor(L.pin_size / 2)
             local tx = math.max(half, math.min(rx(tick.t), w - 6 - half))

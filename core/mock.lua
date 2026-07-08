@@ -99,7 +99,7 @@ end
 
 local function make_relics(m, list, script)
     local CZ = BGMeter.zenimax.constants
-    local rl = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {} }
+    local rl = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {}, who = {} }
     for i, e in ipairs(list) do
         rl.list[i] = { keepId = 0, objectiveId = 520 + i, name = e.name, home = e.home }
     end
@@ -109,15 +109,16 @@ local function make_relics(m, list, script)
         rl.t[i], rl.r[i], rl.o[i] = e[1], 1, e[2]
         rl.ev[i] = rev(CZ.OBJ_EVENT_LABEL, e[3]) or -1
         rl.hold[i], rl.last[i] = e[4] or 0, e[5] or 0
+        rl.who[i] = e[6]
     end
     m.relics = rl
 end
 
-local function relic_run(script, o, tTake, holdSec, team, outcome)
+local function relic_run(script, o, tTake, holdSec, team, outcome, who)
     script[#script + 1] = { tTake * 1000, o, "flag_taken", team, 0 }
     local tEnd = (tTake + holdSec) * 1000
     if outcome == "goal" then
-        script[#script + 1] = { tEnd, o, "captured", 0, team }
+        script[#script + 1] = { tEnd, o, "captured", 0, team, who }
         script[#script + 1] = { tEnd + 20000, o, "flag_spawned", 0, team }
     else
         script[#script + 1] = { tEnd, o, "flag_dropped", 0, team }
@@ -341,14 +342,14 @@ function BUILDERS.capture_the_flag()
     }
     local script = {}
     relic_run(script, 1, 109, 279, teams[2], "stopped")
-    relic_run(script, 1, 401, 50,  teams[2], "goal")
-    relic_run(script, 1, 487, 103, teams[2], "goal")
-    relic_run(script, 1, 615, 21,  teams[2], "goal")
-    relic_run(script, 1, 661, 25,  teams[2], "goal")
-    relic_run(script, 1, 862, 15,  teams[2], "goal")
+    relic_run(script, 1, 401, 50,  teams[2], "goal", "@StormLord")
+    relic_run(script, 1, 487, 103, teams[2], "goal", "@StormLord")
+    relic_run(script, 1, 615, 21,  teams[2], "goal", "Brakka gro-Mug")
+    relic_run(script, 1, 661, 25,  teams[2], "goal", "@FrostCaller")
+    relic_run(script, 1, 862, 15,  teams[2], "goal", "@StormLord")
     relic_run(script, 2, 117, 260, teams[1], "stopped")
-    relic_run(script, 2, 460, 45,  teams[1], "goal")
-    relic_run(script, 2, 700, 30,  teams[1], "goal")
+    relic_run(script, 2, 460, 45,  teams[1], "goal", "@NightAxe")
+    relic_run(script, 2, 700, 30,  teams[1], "goal", "@BogBlossom")
     relic_run(script, 2, 800, 30,  teams[1], "stopped")
     make_relics(m, relics, script)
     finish(m, "capture the relic")
