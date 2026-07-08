@@ -91,6 +91,7 @@ local MAP_ART = {
     ["mor khazgur"]       = "esoui/art/loadingscreens/loadscreen_battleground_morkhazgur_01.dds",
     ["ularra"]            = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds",
 }
+local MAP_ART_FALLBACK = "esoui/art/battlegrounds/gamepad/gp_battlegrounds_scoretracker.dds"
 
 local TEAM_KEY
 
@@ -1069,6 +1070,7 @@ local function map_art_candidates(m, name)
         guess(table.concat(words, "", 1, k))
         guess(table.concat(words, "_", 1, k) .. "s")
     end
+    add(MAP_ART_FALLBACK)
     return out
 end
 
