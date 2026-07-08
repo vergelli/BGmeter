@@ -1485,6 +1485,7 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             local ic = b.pin_pool:acquire()
             local tip
             local ctf = (gt == "capture_the_flag")
+            local tlabel = tick.name or lane_label(lane)
             if tick.kind == "def" then
                 ic:SetTexture("EsoUI/Art/WorldMap/map_AVA_tabIcon_resourceDefense_up.dds")
                 ic:SetDimensions(L.pin_size - 6, L.pin_size - 6)
@@ -1492,14 +1493,14 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
                 ic:SetColor(tc[1], tc[2], tc[3], 1)
                 tip = string.format("%s %s %s @ %s",
                     team_name(tick.own), ctf and "returned" or "defended",
-                    lane_label(lane), F.duration(tick.t))
+                    tlabel, F.duration(tick.t))
             else
-                ic:SetTexture(flag_pin(gt, lane.letter, tick.own))
+                ic:SetTexture(flag_pin(gt, tick.letter or lane.letter, tick.own))
                 ic:SetDimensions(L.pin_size, L.pin_size)
                 ic:SetColor(1, 1, 1, 1)
                 tip = string.format("%s %s %s @ %s",
                     team_name(tick.own), ctf and "scored" or "captured",
-                    lane_label(lane), F.duration(tick.t))
+                    tlabel, F.duration(tick.t))
             end
             local half = math.floor(L.pin_size / 2)
             local tx = math.max(half, math.min(rx(tick.t), w - 6 - half))
@@ -1817,19 +1818,20 @@ local function chart_hover_poll()
     end
     if st.lanes then
         for _, lane in ipairs(st.lanes) do
-            local own = 0
+            local own, hit = 0, nil
             for _, seg in ipairs(lane.segs) do
                 if want_t >= seg.t0 and want_t < seg.t1 then
-                    own = seg.own
+                    own, hit = seg.own, seg
                     break
                 end
             end
+            local label = (hit and hit.name) or lane_label(lane)
             if own ~= 0 then
                 local tc = S.team_color(own)
                 parts[#parts + 1] = string.format("|c%s%s  %s|r",
-                    hexc(tc), lane_label(lane), team_name(own))
-            else
-                parts[#parts + 1] = string.format("|c8c8c95%s  neutral|r", lane_label(lane))
+                    hexc(tc), label, team_name(own))
+            elseif hit or not lane.covered then
+                parts[#parts + 1] = string.format("|c8c8c95%s  neutral|r", label)
             end
         end
     end

@@ -120,54 +120,113 @@ function Match.flag_lanes(m, tspan)
     local ob = m.objectives
     if not ob or not ob.t or #ob.t == 0 or not ob.list or #ob.list == 0 then return nil end
     local CZ = BGMeter.zenimax.constants
-    local lanes = {}
-    for li = 1, math.min(#ob.list, 4) do
-        lanes[li] = { letter = tostring(ob.list[li].letter), name = ob.list[li].name, segs = {}, ticks = {}, cur = nil, t0 = 0 }
+    local packed = #ob.list > 4
+    local flows = {}
+    for li = 1, #ob.list do
+        flows[li] = { letter = tostring(ob.list[li].letter), name = ob.list[li].name,
+                      segs = {}, ticks = {}, cur = nil, t0 = 0, first = nil, dead = nil }
     end
-    local function close(lane, t1)
-        if lane.cur ~= nil and t1 > lane.t0 then
-            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur }
+    local function close(f, t1)
+        if f.cur ~= nil and t1 > f.t0 then
+            f.segs[#f.segs + 1] = { t0 = f.t0, t1 = t1, own = f.cur, name = packed and f.name or nil }
         end
     end
     for i = 1, #ob.t do
-        local lane = lanes[ob.o[i]]
-        if lane then
+        local f = flows[ob.o[i]]
+        if f and not f.dead then
             local t = math.min(math.max(ob.t[i] or 0, 0), tspan)
             local evl = CZ.OBJ_EVENT_LABEL[ob.ev[i]] or (ob.ev[i] == -1 and "initial") or "?"
             local own = ob.own[i] or 0
-            if lane.cur == nil then lane.cur, lane.t0 = 0, 0 end
+            if f.first == nil then f.first = t end
+            if f.cur == nil then f.cur, f.t0 = 0, packed and t or 0 end
             if evl == "initial" then
-                if own ~= lane.cur then
-                    close(lane, t)
-                    lane.cur, lane.t0 = own, t
+                if own ~= f.cur then
+                    close(f, t)
+                    f.cur, f.t0 = own, t
                 end
             elseif evl == "captured" or evl == "recaptured" then
-                if own ~= lane.cur then
-                    close(lane, t)
-                    lane.cur, lane.t0 = own, t
-                    lane.ticks[#lane.ticks + 1] = { t = t, own = own, kind = "cap" }
+                if own ~= f.cur then
+                    close(f, t)
+                    f.cur, f.t0 = own, t
+                    f.ticks[#f.ticks + 1] = { t = t, own = own, kind = "cap" }
                 else
-                    lane.ticks[#lane.ticks + 1] = { t = t, own = own, kind = "def" }
+                    f.ticks[#f.ticks + 1] = { t = t, own = own, kind = "def" }
                 end
             elseif evl == "neutral" then
-                if lane.cur ~= 0 then
-                    close(lane, t)
-                    lane.cur, lane.t0 = 0, t
+                if f.cur ~= 0 then
+                    close(f, t)
+                    f.cur, f.t0 = 0, t
                 end
+            elseif evl == "deactivated" then
+                close(f, t)
+                f.cur, f.dead = nil, t
             end
         end
     end
-    for _, lane in ipairs(lanes) do
-        if lane.cur == nil then lane.cur, lane.t0 = 0, 0 end
-        close(lane, tspan)
-        lane.cur = nil
+    for _, f in ipairs(flows) do
+        if not f.dead then
+            if f.cur == nil then
+                if packed and f.first == nil then
+                    f.dead = 0
+                else
+                    f.cur, f.t0 = 0, packed and (f.first or 0) or 0
+                end
+            end
+            if not f.dead then close(f, tspan) end
+        end
+        f.cur = nil
     end
+
+    if not packed then
+        local lanes = {}
+        for li = 1, math.min(#flows, 4) do lanes[li] = flows[li] end
+        return lanes
+    end
+
+    local order = {}
+    for li = 1, #flows do
+        local f = flows[li]
+        if f.first ~= nil then
+            f.w0 = f.first
+            f.w1 = f.dead or tspan
+            for _, tk in ipairs(f.ticks) do tk.name, tk.letter = f.name, f.letter end
+            order[#order + 1] = f
+        end
+    end
+    if #order == 0 then return nil end
+    table.sort(order, function(a, b) return a.w0 < b.w0 end)
+    local lanes = {}
+    for _, f in ipairs(order) do
+        local best = nil
+        for _, lane in ipairs(lanes) do
+            if lane.w1 <= f.w0 and (best == nil or lane.w1 > best.w1) then best = lane end
+        end
+        if not best and #lanes < 4 then
+            best = { letter = "~", name = nil, segs = {}, ticks = {}, covered = 0, w1 = 0 }
+            lanes[#lanes + 1] = best
+        end
+        if not best then
+            best = lanes[1]
+            for _, lane in ipairs(lanes) do
+                if lane.w1 < best.w1 then best = lane end
+            end
+        end
+        for _, s in ipairs(f.segs) do best.segs[#best.segs + 1] = s end
+        for _, tk in ipairs(f.ticks) do best.ticks[#best.ticks + 1] = tk end
+        best.covered = best.covered + math.max(0, f.w1 - f.w0)
+        if f.w1 > best.w1 then best.w1 = f.w1 end
+    end
+    for _, lane in ipairs(lanes) do lane.w1 = nil end
     return lanes
 end
 
 function Match.flag_occupation(lanes, tspan)
     if not lanes or #lanes == 0 or not tspan or tspan <= 0 then return nil end
-    local total = tspan * #lanes
+    local total = 0
+    for _, lane in ipairs(lanes) do
+        total = total + (lane.covered or tspan)
+    end
+    if total <= 0 then return nil end
     local by = {}
     local neutral = 0
     for _, lane in ipairs(lanes) do
@@ -207,7 +266,8 @@ function Match.flag_stats(lanes)
                 if tick.kind == "cap" then
                     bk.caps = bk.caps + 1
                     if not first or tick.t < first.t then
-                        first = { team = tick.own, t = tick.t, letter = lane.letter, name = lane.name }
+                        first = { team = tick.own, t = tick.t,
+                                  letter = tick.letter or lane.letter, name = tick.name or lane.name }
                     end
                 else
                     bk.defs = bk.defs + 1
