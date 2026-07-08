@@ -53,10 +53,13 @@ function E.build_text(m)
         if (r.caps or 0) > 0 or (r.carried or 0) > 0 then showCaps = true end
     end
     local CZ = BGMeter.zenimax.constants
-    local hold = (CZ.GAME_TYPE_LABEL and CZ.GAME_TYPE_LABEL[m.gameType]) == "murderball"
+    local gt = CZ.GAME_TYPE_LABEL and CZ.GAME_TYPE_LABEL[m.gameType] or nil
+    local hold = gt == "murderball"
     local function flagcell(r)
         if hold then return (r.carried or 0) > 0 and F.duration(r.carried * 1000) or "0" end
-        return r.caps or 0
+        local v = (r.caps or 0) + 0
+        if gt == "capture_the_flag" then v = math.floor(v / 100 + 0.5) end
+        return v
     end
     add(pad("PLAYER", 24) .. pad("TEAM", 13) .. rpad("DMG", 9) .. rpad("HEAL", 9)
         .. rpad("TAKEN", 9) .. rpad("K", 4) .. rpad("D", 4) .. rpad("A", 4)

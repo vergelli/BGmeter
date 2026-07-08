@@ -1201,6 +1201,12 @@ local function flag_col_spec(m)
         "CAPTURES\nObjectives this player captured for their team\n(flags, capture points, relics). Click to sort."
 end
 
+local function caps_count(m, v)
+    local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
+    if gt == "capture_the_flag" then return math.floor(v / 100 + 0.5) end
+    return v
+end
+
 local function name_right()
     return NAME_RIGHT + (caps_shown and CAPS_SHIFT or 0)
 end
@@ -1309,6 +1315,8 @@ local function render_battle(m, animate)
                 txt = F.abbrev(v)
             elseif ck == "carried" then
                 txt = (v > 0) and F.duration(v * 1000) or "0"
+            elseif ck == "caps" then
+                txt = tostring(caps_count(m, v))
             else
                 txt = tostring(v)
             end
@@ -2090,8 +2098,12 @@ function W.render_detail(m)
         local capsTxt = ""
         if m and flag_col_spec(m) == "carried" then
             if (r.carried or 0) > 0 then capsTxt = string.format("  ·  held %s", F.duration(r.carried * 1000)) end
-        elseif (r.caps or 0) > 0 then
-            capsTxt = string.format("  ·  %d caps", r.caps)
+        elseif m then
+            local n = caps_count(m, (r.caps or 0) + 0)
+            if n > 0 then capsTxt = string.format("  ·  %d caps", n) end
+            if (r.carried or 0) > 0 then
+                capsTxt = capsTxt .. string.format("  ·  held %s", F.duration(r.carried * 1000))
+            end
         end
         if (r.defPts or 0) > 0 then
             capsTxt = capsTxt .. string.format("  ·  %d def", r.defPts)
