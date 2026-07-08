@@ -330,6 +330,11 @@ local function cmd_report()
             tostring(CZ.GAME_TYPE_LABEL[m.gameType] or m.gameType),
             F.duration(m.durationMs or 0), tostring(m.localTeam),
             tostring(m.teamSize), tostring(m.competitive))
+        local Api = BGMeter.zenimax.api
+        if m.bgId and type(Api.get_bg_art) == "function" then
+            local ok, tex = pcall(Api.get_bg_art, m.bgId)
+            add("bgId=%s  infoTexture=%s", tostring(m.bgId), ok and tostring(tex) or "?")
+        end
         add("local: medals=%s  medalIds=%d  timeline=%d samples  killfeed=%d",
             tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
             m.timeline and m.timeline.t and #m.timeline.t or 0,

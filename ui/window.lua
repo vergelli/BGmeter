@@ -1051,11 +1051,6 @@ local function map_art_candidates(m, name)
     local function add(path)
         if path and path ~= "" and not seen[path] then seen[path] = true; out[#out + 1] = path end
     end
-    local A = BGMeter.zenimax.api
-    if m and m.bgId and type(A.get_bg_art) == "function" then
-        local ok, official = pcall(A.get_bg_art, m.bgId)
-        if ok then add(official) end
-    end
     local lower = name:lower():gsub("%^.*$", "")
     for key, path in pairs(MAP_ART) do
         if lower:find(key, 1, true) then add(path) end
