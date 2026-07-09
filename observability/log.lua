@@ -9,11 +9,12 @@ local PREFIX = "|cE34234[bgmeter]|r "
 local ring = {}
 local RING_CAP = 600
 local ring_n = 0
+local ring_head = 0
 
 local function remember(tag, msg)
     ring_n = ring_n + 1
-    ring[#ring + 1] = string.format("%04d %s %s", ring_n, tag, msg)
-    if #ring > RING_CAP then table.remove(ring, 1) end
+    ring_head = (ring_head % RING_CAP) + 1
+    ring[ring_head] = string.format("%04d %s %s", ring_n, tag, msg)
 end
 
 local function format_msg(fmt, ...)
@@ -48,7 +49,10 @@ end
 
 function Log.lines()
     local out = {}
-    for i = 1, #ring do out[i] = ring[i] end
+    local total = math.min(ring_n, RING_CAP)
+    for i = 1, total do
+        out[i] = ring[((ring_head - total + i - 1) % RING_CAP) + 1]
+    end
     return out
 end
 

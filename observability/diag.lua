@@ -164,14 +164,14 @@ function Diag.lines()
     local sorted = {}
     for i = 1, #plist do sorted[i] = plist[i] end
     table.sort(sorted, function(a, b) return a.kb > b.kb end)
-    add("probes (calls / alloc total / alloc-per-call / time total / worst call / gc-during):")
+    add("probes (calls / alloc total / avg-per-call / WORST call / time total / worst ms / gc-during):")
     local shown = 0
     for i = 1, #sorted do
         local p = sorted[i]
         if p.calls > 0 then
             shown = shown + 1
-            add("  %-24s %6d  %8.1f KB  %6.0f B  %5dms  %3dms  %d",
-                p.name, p.calls, p.kb, p.kb * 1024 / p.calls, p.ms, p.maxMs, p.gc)
+            add("  %-24s %6d  %8.1f KB  %6.0f B  %7.1f KB  %5dms  %3dms  %d",
+                p.name, p.calls, p.kb, p.kb * 1024 / p.calls, p.maxKb, p.ms, p.maxMs, p.gc)
         end
     end
     if shown == 0 then add("  (no probe has fired yet)") end

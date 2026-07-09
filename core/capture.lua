@@ -179,13 +179,18 @@ local function record_obj_event(idx, controlEvent, controlState, owner)
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     local ob = active.objectives
-    if #ob.t >= MAX_OBJ_EVENTS then return end
+    if #ob.t >= MAX_OBJ_EVENTS then return false end
     local last = obj_last[idx]
     if controlEvent == C.OBJ_EVENT_INFLUENCE and last
         and last.st == controlState and last.own == owner then
-        return
+        return false
     end
-    obj_last[idx] = { st = controlState, own = owner }
+    local slot = obj_last[idx]
+    if slot then
+        slot.st, slot.own = controlState, owner
+    else
+        obj_last[idx] = { st = controlState, own = owner }
+    end
     local i = #ob.t + 1
     ob.t[i]   = (safe(A.now_ms) or 0) - (active.startMs or 0)
     ob.r[i]   = current_round()
@@ -193,6 +198,7 @@ local function record_obj_event(idx, controlEvent, controlState, owner)
     ob.ev[i]  = controlEvent or -1
     ob.st[i]  = controlState or -1
     ob.own[i] = owner or -1
+    return true
 end
 
 local function scan_objectives(reason)
@@ -231,13 +237,14 @@ function Capture.on_objective(_, keepId, objectiveId, ctx, name, controlEvent, c
     if not active or not active.objectives then return end
     local idx = register_objective(keepId, objectiveId, ctx, name)
     if not idx then return end
-    record_obj_event(idx, controlEvent, controlState, owner)
-    local C = BGMeter.zenimax.constants
-    BGMeter.Log.debug("obj %s ev=%s st=%s own=%s",
-        tostring(active.objectives.list[idx].letter),
-        tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
-        tostring(C.OBJ_STATE_LABEL[controlState] or controlState),
-        tostring(owner))
+    if record_obj_event(idx, controlEvent, controlState, owner) then
+        local C = BGMeter.zenimax.constants
+        BGMeter.Log.debug("obj %s ev=%s st=%s own=%s",
+            tostring(active.objectives.list[idx].letter),
+            tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),
+            tostring(C.OBJ_STATE_LABEL[controlState] or controlState),
+            tostring(owner))
+    end
 end
 
 local function obj_elapsed()

@@ -1650,29 +1650,39 @@ function SEC.timeline(m)
     local tspan = math.max(1, tl.t[n] or 1)
     local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
 
-    local lanes = BGMeter.Match.flag_lanes(m, tspan)
-    local relicMode = false
-    if not lanes and BGMeter.Match.relic_lanes then
-        lanes = BGMeter.Match.relic_lanes(m, tspan)
-        relicMode = lanes ~= nil
-    end
-    local occ, neutralPct, fstats
-    if lanes then
-        occ, neutralPct = BGMeter.Match.flag_occupation(lanes, tspan)
-        fstats = BGMeter.Match.flag_stats(lanes)
-        if fstats then fstats.mode = relicMode and (gt == "murderball" and "ball" or "relic") or nil end
-        if relicMode and occ then
-            local held = 0
-            for _, e in ipairs(occ) do held = held + e.pct end
-            neutralPct = math.max(0, 1 - held)
+    local dc = W._derived
+    if not dc or dc.m ~= m or dc.tspan ~= tspan then
+        dc = { m = m, tspan = tspan }
+        dc.lanes = BGMeter.Match.flag_lanes(m, tspan)
+        dc.relicMode = false
+        if not dc.lanes and BGMeter.Match.relic_lanes then
+            dc.lanes = BGMeter.Match.relic_lanes(m, tspan)
+            dc.relicMode = dc.lanes ~= nil
         end
+        if dc.lanes then
+            dc.occ, dc.neutralPct = BGMeter.Match.flag_occupation(dc.lanes, tspan)
+            dc.fstats = BGMeter.Match.flag_stats(dc.lanes)
+            if dc.fstats then dc.fstats.mode = dc.relicMode and (gt == "murderball" and "ball" or "relic") or nil end
+            if dc.relicMode and dc.occ then
+                local held = 0
+                for _, e in ipairs(dc.occ) do held = held + e.pct end
+                dc.neutralPct = math.max(0, 1 - held)
+            end
+            if dc.occ and #dc.occ == 0 then dc.occ = nil end
+        end
+        dc.lead = BGMeter.Match.lead_stats(tl)
+        dc.bm = BGMeter.Match.bloodiest_minute(m.killfeed)
+        W._derived = dc
+    end
+    local lanes, relicMode = dc.lanes, dc.relicMode
+    local occ, neutralPct, fstats = dc.occ, dc.neutralPct, dc.fstats
+    local lead = dc.lead
+    if lanes then
         b.ribbonTitle:SetText(relicMode and (gt == "murderball" and "BALL POSSESSION" or "RELIC RUNS") or "FLAG CONTROL")
         b.occTitle:SetText(relicMode and "POSSESSION" or "FLAG OCCUPATION")
     end
-    if occ and #occ == 0 then occ = nil end
     local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0
     local occ_h = occ and L.occ_h or 0
-    local lead = BGMeter.Match.lead_stats(tl)
     local tdm_line = (not lanes) and lead ~= nil
     local mom_h = lead and (tdm_line and 46 or 28) or 0
 
@@ -1751,7 +1761,7 @@ function SEC.timeline(m)
         end
     end
 
-    local bm = BGMeter.Match.bloodiest_minute(m.killfeed)
+    local bm = dc.bm
     if bm then
         local x0 = math.floor((math.min(bm.t0, tspan) / tspan) * (w - 6) + 0.5)
         local x1 = math.floor((math.min(bm.t1, tspan) / tspan) * (w - 6) + 0.5)
