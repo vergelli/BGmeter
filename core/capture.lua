@@ -327,8 +327,16 @@ function Capture.on_flag(_, keepId, objectiveId, ctx, name, controlEvent, contro
     elseif evl == "captured" and ei then
         local rl = active.relics
         local team = lastHolder
-        local function attribute() scan_goal(rl, ei, team) end
-        if type(zo_callLater) == "function" then zo_callLater(attribute, 800) else attribute() end
+        local function attribute()
+            if rl.who[ei] == nil then scan_goal(rl, ei, team) end
+        end
+        if type(zo_callLater) == "function" then
+            zo_callLater(attribute, 800)
+            zo_callLater(attribute, 2500)
+            zo_callLater(attribute, 6000)
+        else
+            attribute()
+        end
     end
     BGMeter.Log.debug("relic t=%s %s ev=%s st=%s orig=%s hold=%s last=%s pin=%s ids=%s:%s",
         BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
