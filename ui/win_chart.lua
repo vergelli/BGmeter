@@ -180,10 +180,11 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             W.tips[hit] = tip
         end
         local is_letter = lane.letter and lane.letter:match("^[ABCD]$") ~= nil
+        local river = lane.letter == "~"
         local lbl = ribbon_letter(b, li)
         local pin = lane_pin(b, li)
-        if is_letter then
-            pin:SetTexture(flag_pin(gt, lane.letter, 0))
+        if is_letter or river then
+            pin:SetTexture(flag_pin(gt, river and nil or lane.letter, 0))
             pin:ClearAnchors()
             pin:SetAnchor(LEFT, b.ribbon, TOPLEFT, 2, y + math.floor(L.lane_h / 2))
             pin:SetHidden(false)
