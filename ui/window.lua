@@ -1103,7 +1103,9 @@ local function apply_map_art(m)
     try_next()
 end
 
-local function render_header(m)
+local SEC = {}
+
+function SEC.header(m)
     local total = BGMeter.History.count()
     local dur = (m.durationMs and m.durationMs > 0) and ("  ·  " .. F.duration(m.durationMs)) or ""
     local when = ""
@@ -1224,7 +1226,7 @@ local function layout_row_cells(row)
     row.capsLayout = caps_shown
 end
 
-local function render_battle(m, animate)
+function SEC.battle(m, animate)
     local b = W.battle
     b.row_pool:release_all()
     local want_caps = caps_relevant(m)
@@ -1390,7 +1392,7 @@ local function lane_pin(b, i)
     return ic
 end
 
-local function render_occupation(b, occ, neutralPct, stats, w)
+function SEC.occupation(b, occ, neutralPct, stats, w)
     b.occ:SetHeight(L.occ_h)
     b.occ:SetHidden(false)
     local bw = w - 6
@@ -1456,7 +1458,7 @@ local function lane_label(lane)
     return lane.name or ("flag " .. tostring(lane.letter))
 end
 
-local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
+function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
     b.ribbon:ClearAnchors()
     b.ribbon:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -y_off)
     b.ribbon:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -y_off)
@@ -1547,7 +1549,7 @@ local function render_ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
     end
 end
 
-local function render_momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
+function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
     b.mom:ClearAnchors()
     b.mom:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -mom_off)
     b.mom:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -mom_off)
@@ -1621,7 +1623,7 @@ local function render_momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_
     b.momStats:SetText(table.concat(sp, "    "))
 end
 
-local function render_timeline(m)
+function SEC.timeline(m)
     local b = W.battle
     b.dot_pool:release_all()
     if b.line_pool then b.line_pool:release_all() end
@@ -1781,13 +1783,13 @@ local function render_timeline(m)
     end
 
     if lanes then
-        render_ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt)
+        SEC.ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt)
     end
     if occ then
-        render_occupation(b, occ, neutralPct, fstats, w)
+        SEC.occupation(b, occ, neutralPct, fstats, w)
     end
     if mom_h > 0 then
-        render_momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
+        SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
     end
 
     chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes, kf = m.killfeed }
@@ -1905,7 +1907,7 @@ local function ensure_duel_icons(b)
     W.tip_static(b.preyHit, "")
 end
 
-local function render_duels(m)
+function SEC.duels(m)
     local b = W.battle
     ensure_duel_icons(b)
     local d = m and BGMeter.Match.duels(m)
@@ -1931,7 +1933,7 @@ local function render_duels(m)
     end
 end
 
-local function render_haul(m, animate)
+function SEC.haul(m, animate)
     local p, h = W.haul, m.haul
     local rec = m.records or {}
     local vet = h.vetEnd or h.vetStart
@@ -2110,15 +2112,15 @@ function W.render(animate)
         W.battle.occ:SetHidden(true)
         W.battle.mom_pool:release_all()
         W.battle.mom:SetHidden(true)
-        render_duels(nil)
+        SEC.duels(nil)
         set_text(W.detail, "")
         return
     end
-    render_header(m)
-    render_battle(m, animate)
-    render_timeline(m)
-    render_duels(m)
-    render_haul(m, animate)
+    SEC.header(m)
+    SEC.battle(m, animate)
+    SEC.timeline(m)
+    SEC.duels(m)
+    SEC.haul(m, animate)
     W.render_detail(m)
 end
 
@@ -2354,4 +2356,5 @@ function W.init()
     BGMeter.Log.debug("window ready")
 end
 
+W._sections = SEC
 BGMeter.UI.window = W

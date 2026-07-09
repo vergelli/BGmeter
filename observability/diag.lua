@@ -6,8 +6,11 @@ local Diag = { on = false }
 local now = GetGameTimeMilliseconds
 local gcc = collectgarbage
 
+local STALL_MS = 1000
+
 local probes, plist = {}, {}
-local frame = { n = 0, ms = 0, max = 0, maxAt = 0, b8 = 0, b16 = 0, b25 = 0, b33 = 0, bx = 0, last = 0 }
+local frame = { n = 0, ms = 0, max = 0, maxAt = 0, b8 = 0, b16 = 0, b25 = 0, b33 = 0, bx = 0, last = 0,
+                stalls = 0, stallMs = 0, stallMax = 0 }
 local heap = { cur = 0, min = math.huge, max = 0, alloc = 0, cycles = 0, last = 0 }
 local gp = { active = false, result = nil }
 local armedAt = 0
@@ -48,14 +51,20 @@ local function on_frame()
     frame.last = t
     if last == 0 then return end
     local dt = t - last
-    frame.n = frame.n + 1
-    frame.ms = frame.ms + dt
-    if dt > frame.max then frame.max = dt; frame.maxAt = t - armedAt end
-    if dt <= 8 then frame.b8 = frame.b8 + 1
-    elseif dt <= 16 then frame.b16 = frame.b16 + 1
-    elseif dt <= 25 then frame.b25 = frame.b25 + 1
-    elseif dt <= 33 then frame.b33 = frame.b33 + 1
-    else frame.bx = frame.bx + 1 end
+    if dt > STALL_MS then
+        frame.stalls = frame.stalls + 1
+        frame.stallMs = frame.stallMs + dt
+        if dt > frame.stallMax then frame.stallMax = dt end
+    else
+        frame.n = frame.n + 1
+        frame.ms = frame.ms + dt
+        if dt > frame.max then frame.max = dt; frame.maxAt = t - armedAt end
+        if dt <= 8 then frame.b8 = frame.b8 + 1
+        elseif dt <= 16 then frame.b16 = frame.b16 + 1
+        elseif dt <= 25 then frame.b25 = frame.b25 + 1
+        elseif dt <= 33 then frame.b33 = frame.b33 + 1
+        else frame.bx = frame.bx + 1 end
+    end
 
     if gp.active then
         local kb = gcc("count")
@@ -112,6 +121,7 @@ function Diag.reset()
     end
     frame.n, frame.ms, frame.max, frame.maxAt = 0, 0, 0, 0
     frame.b8, frame.b16, frame.b25, frame.b33, frame.bx, frame.last = 0, 0, 0, 0, 0, 0
+    frame.stalls, frame.stallMs, frame.stallMax = 0, 0, 0
     heap.min, heap.max, heap.alloc, heap.cycles, heap.last = math.huge, 0, 0, 0, 0
     gp.result = nil
     armedAt = now()
@@ -137,6 +147,10 @@ function Diag.lines()
             math.floor(frame.b25 / frame.n * 100 + 0.5),
             math.floor(frame.b33 / frame.n * 100 + 0.5),
             frame.bx, math.floor(frame.bx / frame.n * 100 + 0.5))
+        if frame.stalls > 0 then
+            add("  stalls >%ds (loading screens etc, excluded above): %d  ·  worst %.1fs",
+                math.floor(STALL_MS / 1000), frame.stalls, frame.stallMax / 1000)
+        end
     else
         add("frames: (no samples yet)")
     end
@@ -186,6 +200,13 @@ function Diag.install()
         for i = 1, #keys do
             local k = keys[i]
             if type(W[k]) == "function" then W[k] = wrap_fn(W[k], probe("ui:" .. k)) end
+        end
+        if type(W._sections) == "table" then
+            for k, fn in pairs(W._sections) do
+                if type(fn) == "function" then
+                    W._sections[k] = wrap_fn(fn, probe("sec:" .. k))
+                end
+            end
         end
     end
 
