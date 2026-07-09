@@ -8,8 +8,6 @@
 
 # Personal tool -- not for distribution (yet). Built with AI assistance (Claude).
 # This Add-on is not created by, affiliated with, or sponsored by ZeniMax Media Inc.
-# NOTE: APIVersion above is a placeholder from the sibling addons -- verify the
-# live value in-game with  /script d(GetAPIVersion())  and update if it warns.
 
 bindings.xml
 
