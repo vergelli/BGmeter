@@ -265,6 +265,9 @@ function BUILDERS.crazy_king()
         local own1 = (o % 2 == 0) and 2 or 1
         flag_cycle(script, o, 55000 + (o - 1) * 76000, own1, 3 - own1)
     end
+    flag_cycle(script, 1, 500000, 2, 1)
+    flag_cycle(script, 2, 300000, 1, 2)
+    table.sort(script, function(a, z) return a[1] < z[1] end)
     make_objectives(m, flags, script)
     finish(m, "crazy king")
 end
