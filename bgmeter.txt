@@ -53,6 +53,11 @@ pipeline/presentation.lua
 
 ui/templates.xml
 ui/export.lua
-ui/window.lua
+ui/win_core.lua
+ui/win_header.lua
+ui/win_battle.lua
+ui/win_chart.lua
+ui/win_haul.lua
+ui/win_shell.lua
 
 bgmeter.lua
