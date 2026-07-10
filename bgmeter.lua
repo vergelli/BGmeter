@@ -405,16 +405,12 @@ local function on_slash(args)
     elseif args == "last" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.window.show_match(1) end
-    elseif args == "export" then
-        if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
-        else BGMeter.UI.export.show(BGMeter.History.most_recent()) end
     elseif args == "layers" and K.dev_tools() then
         BGMeter.UI.window.toggle_layers_debug()
     elseif args == "report" then
         cmd_report()
     elseif args == "clear" then
-        BGMeter.History.clear()
-        Log.say("history cleared")
+        BGMeter.UI.window.confirm_clear()
     elseif args == "debug" then
         Log.DEBUG = not Log.DEBUG
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
@@ -429,7 +425,7 @@ local function on_slash(args)
         BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
     else
         local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|layers" or ""
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|export|report|demo|demo2|ap|dump|clear|debug%s]", extra)
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|report|demo|demo2|ap|dump|clear|debug%s]", extra)
     end
 end
 

@@ -303,9 +303,9 @@ local function build()
     end)
     launcher = { win = win }
 
-    launcher.glowFx = P.icon(win, "EsoUI/Art/Crafting/crafting_tooltip_glow_center.dds")
+    launcher.glowFx = P.icon(win, "bgmeter/assets/glow.dds")
     launcher.glowFx:SetAnchor(CENTER, win, CENTER, 0, 0)
-    launcher.glowFx:SetDimensions(88, 88)
+    launcher.glowFx:SetDimensions(116, 116)
     if launcher.glowFx.SetBlendMode then launcher.glowFx:SetBlendMode(TEX_BLEND_MODE_ADD) end
     launcher.glowFx:SetHidden(true)
 
@@ -333,7 +333,7 @@ local function build()
         local g = a[2] + (b2[2] - a[2]) * f
         local bch = a[3] + (b2[3] - a[3]) * f
         launcher.glow:SetColor(r, g, bch, 0.65)
-        local pulse = 0.40 + 0.30 * (0.5 + 0.5 * math.sin(t * math.pi * 4))
+        local pulse = 0.55 + 0.35 * (0.5 + 0.5 * math.sin(t * math.pi * 4))
         launcher.glowFx:SetColor(r, g, bch, pulse)
     end
 

@@ -266,7 +266,9 @@ function W._make_row(parent)
     row.name = P.label(row.container, S.FONT.row, K.COLOR.text)
     row.name:SetAnchor(LEFT, row.container, LEFT, NAME_X, 0)
     row.name:SetAnchor(RIGHT, row.container, RIGHT, -NAME_RIGHT, 0)
+    row.name:SetHeight(L.row_h)
     row.name:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
+    if row.name.SetMaxLineCount then row.name:SetMaxLineCount(1) end
     if TEXT_WRAP_MODE_ELLIPSIS and row.name.SetWrapMode then
         row.name:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     end

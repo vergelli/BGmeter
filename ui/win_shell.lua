@@ -29,8 +29,6 @@ local SCOREBG_R  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_right.dds
 
 local AUTO_OPEN_STATES = { "exit", "instant", "off" }
 local AUTO_OPEN_LABELS = { exit = "ON EXIT", instant = "INSTANT", off = "OFF" }
-local OPACITY_STATES = { 0.85, 0.92, 0.97, 1.0 }
-local OPACITY_LABELS = { [0.85] = "85%", [0.92] = "92%", [0.97] = "97%", [1.0] = "100%" }
 local HISTORY_STATES = { 25, 50, 100 }
 local HISTORY_LABELS = { [25] = "25", [50] = "50", [100] = "100" }
 
@@ -50,8 +48,8 @@ local SETTINGS_SECTIONS = {
         { kind = "toggle", key = "show_standing",  label = "Standing / session panel" },
         { kind = "toggle", key = "show_awards",    label = "MVP / column leaders" },
         { kind = "toggle", key = "show_timeline",  label = "Match timeline chart" },
-        { kind = "cycle",  key = "opacity",        label = "Background opacity",
-          states = OPACITY_STATES, labels = OPACITY_LABELS },
+        { kind = "slider", key = "opacity",        label = "Background opacity",
+          min = 0.60, max = 1.0, step = 0.01 },
     } },
 }
 
@@ -85,6 +83,7 @@ local function build_settings()
     win:SetClampedToScreen(true)
     win:SetHidden(true)
     win:SetDrawTier(DT_HIGH)
+    win:SetDrawLevel(5)
     s.window = win
 
     local bg = P.rect(win, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
@@ -125,28 +124,57 @@ local function build_settings()
             name:SetAnchor(TOPLEFT, win, TOPLEFT, PADX + 4, y)
             name:SetDimensions(190, ROW_H - 2)
             name:SetVerticalAlignment(TEXT_ALIGN_CENTER)
-            local btn = text_button(win, "")
-            btn:SetDimensions(84, ROW_H - 4)
-            btn:SetAnchor(TOPRIGHT, win, TOPRIGHT, -PADX, y)
             local key, kind = t.key, t.kind
             local paint
-            if kind == "cycle" then
-                local states = t.states or AUTO_OPEN_STATES
-                local labels = t.labels or AUTO_OPEN_LABELS
-                paint = function() btn:SetText(labels[Prefs.get(key)] or "?") end
-                btn:SetHandler("OnClicked", function()
-                    local cur = Prefs.get(key)
-                    local idx = 1
-                    for i, v in ipairs(states) do if v == cur then idx = i break end end
-                    Prefs.set(key, states[(idx % #states) + 1])
-                    paint(); on_pref_changed(key)
+            if kind == "slider" then
+                local pct = P.label(win, S.FONT.small, K.COLOR.text_dim)
+                pct:SetDimensions(38, ROW_H - 2)
+                pct:SetAnchor(TOPRIGHT, win, TOPRIGHT, -PADX, y)
+                pct:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+                pct:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+                local sl = BGMeter.zenimax.ui.create_from_virtual(nil, win, "ZO_Slider")
+                sl:SetDimensions(88, 14)
+                sl:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(PADX + 42), y + 6)
+                sl:SetMinMax(t.min or 0, t.max or 1)
+                if sl.SetValueStep then sl:SetValueStep(t.step or 0.01) end
+                local applying = false
+                local function show(v) pct:SetText(string.format("%d%%", math.floor(v * 100 + 0.5))) end
+                paint = function()
+                    applying = true
+                    local v = Prefs.get(key) or t.min or 0
+                    sl:SetValue(v)
+                    show(v)
+                    applying = false
+                end
+                sl:SetHandler("OnValueChanged", function(_, v)
+                    if applying then return end
+                    v = math.floor(v * 100 + 0.5) / 100
+                    Prefs.set(key, v)
+                    show(v)
+                    W._apply_visuals()
                 end)
             else
-                paint = function() btn:SetText(Prefs.get(key) and "ON" or "OFF") end
-                btn:SetHandler("OnClicked", function()
-                    Prefs.toggle(key)
-                    paint(); on_pref_changed(key)
-                end)
+                local btn = text_button(win, "")
+                btn:SetDimensions(84, ROW_H - 4)
+                btn:SetAnchor(TOPRIGHT, win, TOPRIGHT, -PADX, y)
+                if kind == "cycle" then
+                    local states = t.states or AUTO_OPEN_STATES
+                    local labels = t.labels or AUTO_OPEN_LABELS
+                    paint = function() btn:SetText(labels[Prefs.get(key)] or "?") end
+                    btn:SetHandler("OnClicked", function()
+                        local cur = Prefs.get(key)
+                        local idx = 1
+                        for i, v in ipairs(states) do if v == cur then idx = i break end end
+                        Prefs.set(key, states[(idx % #states) + 1])
+                        paint(); on_pref_changed(key)
+                    end)
+                else
+                    paint = function() btn:SetText(Prefs.get(key) and "ON" or "OFF") end
+                    btn:SetHandler("OnClicked", function()
+                        Prefs.toggle(key)
+                        paint(); on_pref_changed(key)
+                    end)
+                end
             end
             s.rows[key] = paint
             y = y + ROW_H
@@ -157,7 +185,7 @@ local function build_settings()
     clear:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, PADX, -52)
     clear:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -PADX, -52)
     clear:SetHeight(28)
-    clear:SetHandler("OnClicked", function() BGMeter.History.clear(); W.current_index = 1; W.toggle_settings(); W.render(false) end)
+    clear:SetHandler("OnClicked", function() W.confirm_clear() end)
 
     local reset = text_button(win, "Reset window size & position")
     reset:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, PADX, -16)
@@ -267,6 +295,39 @@ local function apply_visual_prefs()
     W.haul.container:SetHidden(not Prefs.get("show_haul"))
 end
 
+function W._apply_visuals()
+    if W.built then apply_visual_prefs() end
+end
+
+local function do_clear()
+    BGMeter.History.clear()
+    W.current_index = 1
+    if settings_open then W.toggle_settings() end
+    if W.built and not W.win:IsHidden() then W.render(false) end
+    if BGMeter.UI.menu then BGMeter.UI.menu.refresh_if_visible() end
+    BGMeter.Log.say("match history cleared")
+end
+
+if ESO_Dialogs then
+    ESO_Dialogs["BGMETER_CLEAR_HISTORY"] = {
+        canQueue = true,
+        title = { text = "Clear match history" },
+        mainText = { text = "This permanently deletes EVERY recorded battleground.\n\nThere is no undo." },
+        buttons = {
+            { text = SI_DIALOG_CONFIRM, callback = do_clear },
+            { text = SI_DIALOG_CANCEL },
+        },
+    }
+end
+
+function W.confirm_clear()
+    if ESO_Dialogs and type(ZO_Dialogs_ShowDialog) == "function" then
+        ZO_Dialogs_ShowDialog("BGMETER_CLEAR_HISTORY")
+    else
+        do_clear()
+    end
+end
+
 function W.render(animate)
     if not W.built then return end
     if Anim then Anim.clear() end
@@ -353,11 +414,6 @@ function W.render_detail(m)
     end
 end
 
-function W.export()
-    local m = BGMeter.History.get(W.current_index)
-    if BGMeter.UI.export then BGMeter.UI.export.show(m) end
-end
-
 local layers_debug = false
 
 function W.toggle_layers_debug()
@@ -413,7 +469,7 @@ function W.step(dir)
 end
 
 function W.toggle_settings()
-    if not W.built then return end
+    build()
     settings_open = not settings_open
     W.settings.window:SetHidden(not settings_open)
     if settings_open then

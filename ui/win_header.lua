@@ -71,19 +71,16 @@ local function build_header(win)
     h.gear = mk_button(win, TX.gear, 28, function() W.toggle_settings() end, "Settings")
     h.gear:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 30), 11)
 
-    h.export = mk_button(win, TX.export, 24, function() W.export() end, "Export match data")
-    h.export:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 64), 13)
-
     h.next = mk_button(win, TX.nextb, 26, function() W.step(1) end, "Newer match")
-    h.next:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 100), 13)
+    h.next:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 64), 13)
 
     h.counter = P.label(win, S.FONT.small, K.COLOR.text_dim)
-    h.counter:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 132), 17)
+    h.counter:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 96), 17)
     h.counter:SetDimensions(48, 18)
     h.counter:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     h.prev = mk_button(win, TX.prev, 26, function() W.step(-1) end, "Older match")
-    h.prev:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 184), 13)
+    h.prev:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 148), 13)
 
     return h
 end
