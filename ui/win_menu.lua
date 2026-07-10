@@ -22,8 +22,7 @@ local LAUNCHER_TX = {
     o = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_over.dds",
 }
 
-local MENU_ART   = "esoui/art/lfg/lfg_bgs_genericlfg_tooltip.dds"
-local MENU_ART_U = 0.75
+local MENU_ART = "esoui/art/lorelibrary/lorelibrary_note.dds"
 local MENU_ART_ALPHA = 0.30
 
 local ROW_BASE      = "EsoUI/Art/Miscellaneous/listItem_backdrop.dds"
@@ -37,8 +36,10 @@ local MODE_SHORT = {
 local MENU_W = 348
 local MENU_H = 424
 local ROW_H = 28
-local HEAD_H = 44
-local FOOT_H = 28
+local HEAD_H = 46
+local FOOT_H = 34
+local INSET_PAD = 20
+local MIN_H, MAX_AUTO_H = 240, 620
 
 local built = false
 local launcher = nil
@@ -84,6 +85,46 @@ local function mode_tag(m)
     local tag = MODE_SHORT[gt] or "?"
     if m.teamSize then tag = tag .. "  " .. m.teamSize .. "v" .. m.teamSize end
     return tag
+end
+
+local art_tries = 0
+
+local function apply_art_cover()
+    if not built then return end
+    local art = panel.art
+    local w = panel.win:GetWidth() - 4
+    local h = panel.win:GetHeight() - 4
+    if w <= 0 or h <= 0 then return end
+    local tw, th
+    pcall(function() tw, th = art:GetTextureFileDimensions() end)
+    if not tw or tw <= 0 or not th or th <= 0 then
+        art:SetTextureCoords(0, 1, 0, 1)
+        if art_tries < 3 and type(zo_callLater) == "function" then
+            art_tries = art_tries + 1
+            zo_callLater(apply_art_cover, 350)
+        end
+        return
+    end
+    art_tries = 0
+    local ca = w / h
+    local ta = tw / th
+    if ta > ca then
+        local uw = ca / ta
+        local u0 = (1 - uw) / 2
+        art:SetTextureCoords(u0, u0 + uw, 0, 1)
+    else
+        local vh = ta / ca
+        local v0 = (1 - vh) / 2
+        art:SetTextureCoords(0, 1, v0, v0 + vh)
+    end
+end
+
+local function auto_height()
+    local mg = sv_menu()
+    if (mg.h or 0) > 0 then return end
+    local count = BGMeter.History.count()
+    local want = HEAD_H + FOOT_H + 18 + math.max(count, 1) * ROW_H
+    panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
 local function make_row(i)
@@ -187,6 +228,7 @@ local function build()
     pw:SetHandler("OnResizeStop", function()
         mg = sv_menu()
         mg.w, mg.h = pw:GetWidth(), pw:GetHeight()
+        apply_art_cover()
         M.refresh()
     end)
     pw:SetHandler("OnMouseWheel", function(_, delta)
@@ -206,7 +248,6 @@ local function build()
     panel.art = P.icon(pw, MENU_ART)
     panel.art:SetAnchor(TOPLEFT, pw, TOPLEFT, 2, 2)
     panel.art:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -2, -2)
-    panel.art:SetTextureCoords(0, MENU_ART_U, 0, 1)
     panel.art:SetColor(1, 1, 1, MENU_ART_ALPHA)
 
     P.frame(pw):SetAnchorFill(pw)
@@ -227,8 +268,8 @@ local function build()
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
     panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, 12, HEAD_H)
-    panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -12, -FOOT_H)
+    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H)
+    panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -INSET_PAD, -FOOT_H)
     panel.inset:SetMouseEnabled(false)
 
     panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
@@ -255,14 +296,13 @@ function M.refresh()
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
     local insetH = h - HEAD_H - FOOT_H - 10
-    local vis = math.max(1, math.min(count, math.floor(insetH / ROW_H)))
     panel.vis = math.max(1, math.floor(insetH / ROW_H))
 
     local maxOff = math.max(0, count - panel.vis)
     if offset > maxOff then offset = maxOff end
-    vis = math.min(count - offset, panel.vis)
+    local vis = math.min(count - offset, panel.vis)
 
-    local roww = w - 24 - 10
+    local roww = w - 2 * INSET_PAD - 10
     panel.empty:SetHidden(count > 0)
 
     for i = 1, vis do
@@ -302,6 +342,8 @@ function M.delete(index)
     if not BGMeter.History.delete(index) then return end
     Sound.play("nav")
     W.on_history_changed(index)
+    auto_height()
+    apply_art_cover()
     M.refresh()
 end
 
@@ -316,6 +358,8 @@ function M.show_menu()
     end
     panel.win:SetHidden(false)
     offset = 0
+    auto_height()
+    apply_art_cover()
     M.refresh()
     Sound.play("open")
 end
@@ -330,7 +374,10 @@ function M.toggle()
 end
 
 function M.refresh_if_visible()
-    if built and not panel.win:IsHidden() then M.refresh() end
+    if built and not panel.win:IsHidden() then
+        auto_height()
+        M.refresh()
+    end
 end
 
 function M.sync()
