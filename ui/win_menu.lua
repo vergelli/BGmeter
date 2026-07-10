@@ -458,6 +458,44 @@ end
 
 local QUEUE_TICKER = "BGMeterQueueTick"
 
+local function safe_m(obj, method, ...)
+    if not obj or type(obj[method]) ~= "function" then return nil end
+    local ok, a = pcall(obj[method], obj, ...)
+    if not ok then return nil end
+    return a
+end
+
+local function push_set(q, id, name)
+    local A = BGMeter.zenimax.api
+    if not id then return end
+    name = clean(name) or clean(safe(A.lfg_set_info, id)) or ("Set " .. id)
+    q.sets[#q.sets + 1] = { id = id, name = name }
+end
+
+local function collect_from_manager(q, types)
+    local mgr = ZO_ACTIVITY_FINDER_ROOT_MANAGER
+    if not mgr or type(mgr.GetLocationsData) ~= "function" then return false end
+    for _, act in ipairs(types) do
+        local ok, locations = pcall(mgr.GetLocationsData, mgr, act)
+        if ok and type(locations) == "table" and #locations > 0 then
+            for _, loc in ipairs(locations) do
+                if safe_m(loc, "IsSetEntryType")
+                    and not safe_m(loc, "IsLocked")
+                    and not safe_m(loc, "IsDisabled") then
+                    push_set(q, safe_m(loc, "GetId"), safe_m(loc, "GetRawName"))
+                end
+            end
+            if #q.sets > 0 then
+                q.act = act
+                BGMeter.Log.debug("queue sets via manager: %d playable of %d (activity %s)",
+                    #q.sets, #locations, tostring(act))
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function populate_queue_sets()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
@@ -465,19 +503,21 @@ local function populate_queue_sets()
     q.sets = {}
     q.act = nil
     local types = { C.LFG_ACTIVITY_BG_CHAMPION, C.LFG_ACTIVITY_BG_NON_CHAMPION, C.LFG_ACTIVITY_BG_LOW_LEVEL }
-    for _, act in ipairs(types) do
-        local n = safe(A.lfg_num_sets, act) or 0
-        BGMeter.Log.debug("queue sets: activity=%s count=%s", tostring(act), tostring(n))
-        if n > 0 then
-            q.act = act
-            for i = 1, n do
-                local id = safe(A.lfg_set_id, act, i)
-                if id and not safe(A.lfg_set_disabled, id) then
-                    q.sets[#q.sets + 1] = { id = id, name = clean(safe(A.lfg_set_info, id)) or ("Set " .. id) }
+    if not collect_from_manager(q, types) then
+        for _, act in ipairs(types) do
+            local n = safe(A.lfg_num_sets, act) or 0
+            BGMeter.Log.debug("queue sets: activity=%s count=%s", tostring(act), tostring(n))
+            if n > 0 then
+                q.act = act
+                for i = 1, n do
+                    local id = safe(A.lfg_set_id, act, i)
+                    if id and not safe(A.lfg_set_disabled, id) then
+                        push_set(q, id, nil)
+                    end
                 end
+                BGMeter.Log.debug("queue sets: %d enabled of %d", #q.sets, n)
+                break
             end
-            BGMeter.Log.debug("queue sets: %d enabled of %d", #q.sets, n)
-            break
         end
     end
     if not q.sets[q.sel] then q.sel = 1 end
