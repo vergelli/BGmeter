@@ -212,44 +212,73 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
     end
 end
 
-function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
+function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmom, cmomMax)
     b.mom:ClearAnchors()
     b.mom:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -mom_off)
     b.mom:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -mom_off)
     b.mom:SetHeight(mom_h)
     b.mom:SetHidden(false)
 
-    local series = { tl.s1, tl.s2, tl.s3 }
-    local teams = tl.teams or {}
-    local maxLead = math.max(1, (lead and lead.maxLead) or 1)
     local function mx(t) return math.floor((t / tspan) * (w - 6) + 0.5) end
-    for i = 2, n do
-        local best, second, bestTeam = 0, 0, nil
-        for s = 1, 3 do
-            local team = teams[s]
-            local v = (series[s] and series[s][i]) or 0
-            if team and v > best then
-                second = best
-                best, bestTeam = v, team
-            elseif team and v > second then
-                second = v
+    if cmom then
+        b.momTitle:SetText("COMBAT MOMENTUM")
+        W.tips[b.momTitle] = "Who was winning the FIGHT, minute by minute.\nColor = team ahead on kills in the last 60s  ·  brighter = more dominant\nWhen this disagrees with the score chart above, kills were not buying points."
+        for _, sg in ipairs(cmom) do
+            local x0, x1 = mx(sg.t0), mx(sg.t1)
+            if x1 > x0 then
+                local r = b.mom_pool:acquire()
+                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 15)
+                r:SetDimensions(x1 - x0, 10)
+                if sg.team then
+                    local tc = S.team_color(sg.team)
+                    local a = 0.18 + 0.62 * math.min(1, sg.mag / math.max(cmomMax or 1, 1))
+                    P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
+                    local hit = b.tick_hit_pool:acquire()
+                    hit:SetAnchorFill(r)
+                    hit:SetHidden(false)
+                    W.tips[hit] = string.format("%s winning the fight (+%d kills in the last minute)  ·  %s - %s",
+                        team_name(sg.team), sg.mag, F.duration(sg.t0), F.duration(sg.t1))
+                else
+                    local nc = neutral_color()
+                    P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
+                end
+                r:SetHidden(false)
             end
         end
-        local margin = best - second
-        local x0, x1 = mx(tl.t[i - 1] or 0), mx(tl.t[i] or 0)
-        if x1 > x0 then
-            local r = b.mom_pool:acquire()
-            r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 15)
-            r:SetDimensions(x1 - x0, 10)
-            if bestTeam and margin > 0 then
-                local tc = S.team_color(bestTeam)
-                local a = 0.15 + 0.60 * math.min(1, margin / maxLead)
-                P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
-            else
-                local nc = neutral_color()
-                P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
+    elseif lead then
+        b.momTitle:SetText("MOMENTUM")
+        W.tips[b.momTitle] = "Who was leading, and by how much.\nColor = leading team  ·  brighter = bigger lead"
+        local series = { tl.s1, tl.s2, tl.s3 }
+        local teams = tl.teams or {}
+        local maxLead = math.max(1, (lead and lead.maxLead) or 1)
+        for i = 2, n do
+            local best, second, bestTeam = 0, 0, nil
+            for s = 1, 3 do
+                local team = teams[s]
+                local v = (series[s] and series[s][i]) or 0
+                if team and v > best then
+                    second = best
+                    best, bestTeam = v, team
+                elseif team and v > second then
+                    second = v
+                end
             end
-            r:SetHidden(false)
+            local margin = best - second
+            local x0, x1 = mx(tl.t[i - 1] or 0), mx(tl.t[i] or 0)
+            if x1 > x0 then
+                local r = b.mom_pool:acquire()
+                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 15)
+                r:SetDimensions(x1 - x0, 10)
+                if bestTeam and margin > 0 then
+                    local tc = S.team_color(bestTeam)
+                    local a = 0.15 + 0.60 * math.min(1, margin / maxLead)
+                    P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
+                else
+                    local nc = neutral_color()
+                    P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
+                end
+                r:SetHidden(false)
+            end
         end
     end
 
@@ -335,6 +364,7 @@ function SEC.timeline(m)
         end
         dc.lead = BGMeter.Match.lead_stats(tl)
         dc.bm = BGMeter.Match.bloodiest_minute(m.killfeed)
+        dc.cmom, dc.cmomMax = BGMeter.Match.combat_momentum(m.killfeed, tspan)
         W._derived = dc
     end
     local lanes, relicMode = dc.lanes, dc.relicMode
@@ -347,7 +377,7 @@ function SEC.timeline(m)
     local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0
     local occ_h = occ and L.occ_h or 0
     local tdm_line = (not lanes) and lead ~= nil
-    local mom_h = lead and (tdm_line and 46 or 28) or 0
+    local mom_h = (dc.cmom or lead) and (tdm_line and 46 or 28) or 0
 
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
@@ -462,7 +492,7 @@ function SEC.timeline(m)
         SEC.occupation(b, occ, neutralPct, fstats, w)
     end
     if mom_h > 0 then
-        SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line)
+        SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, dc.cmom, dc.cmomMax)
     end
 
     W.chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes, kf = m.killfeed }

@@ -63,11 +63,18 @@ local function make_timeline(m, teams, dur, rounds, top1, top2, step)
     m.timeline = tl
 end
 
-local function make_killfeed(m, dur, teams)
+local function make_killfeed(m, dur, teams, bias)
     m.killfeed = {}
     local n = math.min(#m.battle, #ROSTER)
     for i = 1, 34 do
         local ki = jit(i + 200, 1, n)
+        if bias and teams[bias] and jit(i + 500, 0, 100) < 74 then
+            local tries = 0
+            while m.battle[ki].team ~= teams[bias] and tries < 8 do
+                ki = (ki % n) + 1
+                tries = tries + 1
+            end
+        end
         local di = ((ki + jit(i + 300, 0, n - 2)) % n) + 1
         local kr, dr = m.battle[ki], m.battle[di]
         if kr and dr and kr.team ~= dr.team then
@@ -344,7 +351,7 @@ function BUILDERS.capture_the_flag()
         r.carrierKills = (i % 6 == 0) and jit(i + 140, 1, 2) or 0
     end)
     make_timeline(m, teams, math.floor(14.6 * 60000), 1, 200, 500, 100)
-    make_killfeed(m, math.floor(14.6 * 60000), teams)
+    make_killfeed(m, math.floor(14.6 * 60000), teams, 1)
     local relics = {
         { name = "Fire Drakes Relic", home = teams[1] },
         { name = "Pit Daemons Relic", home = teams[2] },

@@ -360,6 +360,54 @@ function Match.relic_lanes(m, tspan)
     return lanes
 end
 
+function Match.combat_momentum(killfeed, tspan, windowMs, stepMs)
+    if not killfeed or #killfeed < 4 or not tspan or tspan <= 0 then return nil end
+    windowMs = windowMs or 60000
+    stepMs = stepMs or 5000
+    local cur = {}
+    local lo, hi = 1, 0
+    local samples = {}
+    local t = 0
+    while t <= tspan do
+        while hi < #killfeed and (killfeed[hi + 1].t or 0) <= t do
+            hi = hi + 1
+            local team = killfeed[hi].kt
+            if team then cur[team] = (cur[team] or 0) + 1 end
+        end
+        while lo <= hi and (killfeed[lo].t or 0) < t - windowMs do
+            local team = killfeed[lo].kt
+            if team then cur[team] = (cur[team] or 0) - 1 end
+            lo = lo + 1
+        end
+        local best, second, bestTeam = 0, 0, nil
+        for team, c in pairs(cur) do
+            if c > best then
+                second = best
+                best, bestTeam = c, team
+            elseif c > second then
+                second = c
+            end
+        end
+        local diff = best - second
+        samples[#samples + 1] = { t = t, team = (diff > 0) and bestTeam or nil, mag = diff }
+        t = t + stepMs
+    end
+    local segs, curSeg, maxMag = {}, nil, 1
+    for _, s in ipairs(samples) do
+        local t1 = math.min(s.t + stepMs, tspan)
+        if curSeg and curSeg.team == s.team then
+            curSeg.t1 = t1
+            if s.mag > curSeg.mag then curSeg.mag = s.mag end
+        else
+            curSeg = { t0 = s.t, t1 = t1, team = s.team, mag = s.mag }
+            segs[#segs + 1] = curSeg
+        end
+        if s.mag > maxMag then maxMag = s.mag end
+    end
+    if #segs == 0 then return nil end
+    return segs, maxMag
+end
+
 function Match.lead_stats(tl)
     if not tl or not tl.t or #tl.t < 2 then return nil end
     local series = { tl.s1, tl.s2, tl.s3 }

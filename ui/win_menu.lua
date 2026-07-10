@@ -184,12 +184,22 @@ local function refresh_panel()
     local sv = BGMeter.zenimax.savedvars.get()
     local standing = sv and sv.standing
     st.c:SetHidden(false)
-    if st.icon then st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds") end
     if standing and (standing.rank or 0) > 0 then
-        set_text(st.label, "rank #" .. F.commas(standing.rank))
+        local top = standing.rank <= 100
+        if st.icon then
+            st.icon:SetTexture(top and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
+                or "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
+            if top then st.icon:SetColor(0.72, 0.53, 0.98, 1) else st.icon:SetColor(1, 1, 1, 1) end
+        end
+        set_text(st.label, "rank #" .. F.commas(standing.rank) .. (top and "  ·  top 100" or ""))
         S.color(st.label, K.COLOR.gold)
-        st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
+        st.tip = string.format("Competitive standing\nrating %s%s", F.commas(standing.score or 0),
+            top and "\nwithin reward range (top 100)" or "")
     else
+        if st.icon then
+            st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
+            st.icon:SetColor(1, 1, 1, 1)
+        end
         set_text(st.label, "unranked")
         S.color(st.label, K.COLOR.text_dim)
         st.tip = "Competitive standing\nplay a ranked battleground to appear"
