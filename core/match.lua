@@ -332,6 +332,10 @@ function Match.relic_lanes(m, tspan)
             if evl == "flag_taken" then
                 close(lane, t)
                 lane.cur, lane.t0 = rl.hold[i] or 0, t
+                if not lane.home or lane.home == 0 then
+                    lane.ticks[#lane.ticks + 1] = { t = t, own = rl.hold[i] or 0, kind = "take",
+                                                    who = rl.who and rl.who[i] or nil }
+                end
             elseif evl == "flag_dropped" or evl == "flag_spawned" then
                 close(lane, t)
                 lane.cur = 0

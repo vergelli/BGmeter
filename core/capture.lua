@@ -349,7 +349,10 @@ end
 function Capture.on_murderball(_, keepId, objectiveId, ctx, name, controlEvent, controlState, holder, lastHolder, holderRaw, holderDisp, lastRaw, lastDisp, pinType)
     if not active then return end
     local C = BGMeter.zenimax.constants
-    record_relic_event(keepId, objectiveId, name, nil, controlEvent, holder, lastHolder)
+    local ei = record_relic_event(keepId, objectiveId, name, nil, controlEvent, holder, lastHolder)
+    if ei and C.OBJ_EVENT_LABEL[controlEvent] == "flag_taken" then
+        active.relics.who[ei] = clean_name(holderDisp or holderRaw)
+    end
     BGMeter.Log.debug("ball t=%s %s ev=%s st=%s hold=%s(%s) last=%s(%s) pin=%s ids=%s:%s",
         BGMeter.Format.duration(obj_elapsed()), tostring(clean_name(name)),
         tostring(C.OBJ_EVENT_LABEL[controlEvent] or controlEvent),

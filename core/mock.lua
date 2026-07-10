@@ -298,6 +298,10 @@ function BUILDERS.murderball()
     make_timeline(m, teams, 10 * 60000, 1, 500, 377)
     make_killfeed(m, 10 * 60000, teams)
     local balls = { { name = "Chaosball" }, { name = "Chaosball" }, { name = "Chaosball" } }
+    local carriers = {
+        { "Velladocuments", "Shadowmend", "Lyra Heartwood", "@NightAxe" },
+        { "@StormLord", "Brakka gro-Mug", "@FrostCaller", "Serenna Vox" },
+    }
     local script = {}
     for o = 1, 3 do
         local t = 22000 + o * 4000
@@ -306,7 +310,8 @@ function BUILDERS.murderball()
         while t < 560000 do
             local hold = jit(o * 100 + t, 18, 65) * 1000
             local tm = teams[ti]
-            script[#script + 1] = { t, o, "flag_taken", tm, 0 }
+            local who = carriers[ti][jit(o * 400 + t, 1, 5)]
+            script[#script + 1] = { t, o, "flag_taken", tm, 0, who }
             script[#script + 1] = { t + hold, o, "flag_dropped", 0, tm }
             local loose = jit(o * 200 + t, 4, 22) * 1000
             script[#script + 1] = { t + hold + loose, o, "flag_timer_return", 0, tm }

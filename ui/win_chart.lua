@@ -143,7 +143,14 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             local tip
             local ctf = (gt == "capture_the_flag")
             local tlabel = tick.name or lane_label(lane)
-            if tick.kind == "def" then
+            if tick.kind == "take" then
+                ic:SetTexture(string.format("EsoUI/Art/MapPins/battlegrounds_murderball_%s.dds",
+                    S.team_art_key(tick.own)))
+                ic:SetDimensions(L.pin_size - 12, L.pin_size - 12)
+                ic:SetColor(1, 1, 1, 1)
+                tip = string.format("%s took %s @ %s",
+                    tick.who or team_name(tick.own), tlabel, F.duration(tick.t))
+            elseif tick.kind == "def" then
                 local tc = S.team_color(tick.own)
                 if ctf then
                     ic:SetTexture("EsoUI/Art/Buttons/closeButton_up.dds")

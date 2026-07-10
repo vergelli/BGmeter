@@ -19,7 +19,7 @@ local M = {}
 local LAUNCHER_ICON = "bgmeter/assets/launcher.dds"
 local LAUNCHER_IDLE = 0.90
 
-local MENU_ART = "esoui/art/lorelibrary/lorelibrary_note.dds"
+local MENU_ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
 local MENU_ART_ALPHA = 0.30
 
 local ROW_BASE      = "EsoUI/Art/Miscellaneous/listItem_backdrop.dds"
@@ -34,9 +34,10 @@ local MENU_W = 348
 local MENU_H = 424
 local ROW_H = 28
 local HEAD_H = 46
+local BAND_H = 22
 local FOOT_H = 34
 local INSET_PAD = 20
-local MIN_H, MAX_AUTO_H = 240, 620
+local MIN_H, MAX_AUTO_H = 260, 640
 
 local built = false
 local launcher = nil
@@ -120,8 +121,26 @@ local function auto_height()
     local mg = sv_menu()
     if (mg.h or 0) > 0 then return end
     local count = BGMeter.History.count()
-    local want = HEAD_H + FOOT_H + 18 + math.max(count, 1) * ROW_H
+    local want = HEAD_H + BAND_H + FOOT_H + 18 + math.max(count, 1) * ROW_H
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
+end
+
+local function refresh_band()
+    local sess = BGMeter.Session
+    if sess and sess.matches > 0 then
+        set_text(panel.bandL, string.format("tonight  %dW-%dL  ·  %s AP",
+            sess.wins, sess.losses, F.commas(sess.ap)))
+        local col = K.COLOR.text_dim
+        if sess.wins > sess.losses then col = K.COLOR.heal
+        elseif sess.losses > sess.wins then col = K.COLOR.accent end
+        S.color(panel.bandL, col)
+    else
+        set_text(panel.bandL, "no battles tonight yet")
+        S.color(panel.bandL, K.COLOR.text_dim)
+    end
+    local sv = BGMeter.zenimax.savedvars.get()
+    local st = sv and sv.standing
+    set_text(panel.bandR, (st and (st.rank or 0) > 0) and ("rank #" .. F.commas(st.rank)) or "")
 end
 
 local function make_row(i)
@@ -265,8 +284,17 @@ local function build()
     panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
+    panel.bandL = P.label(pw, S.FONT.small, K.COLOR.text_dim)
+    panel.bandL:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD + 2, HEAD_H)
+    panel.bandL:SetHeight(BAND_H)
+
+    panel.bandR = P.label(pw, S.FONT.small, K.COLOR.gold)
+    panel.bandR:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), HEAD_H)
+    panel.bandR:SetHeight(BAND_H)
+    panel.bandR:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+
     panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H)
+    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H + BAND_H)
     panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -INSET_PAD, -FOOT_H)
     panel.inset:SetMouseEnabled(false)
 
@@ -291,9 +319,11 @@ function M.refresh()
     local H = BGMeter.History
     local count = H.count()
 
+    refresh_band()
+
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
-    local insetH = h - HEAD_H - FOOT_H - 10
+    local insetH = h - HEAD_H - BAND_H - FOOT_H - 10
     panel.vis = math.max(1, math.floor(insetH / ROW_H))
 
     local maxOff = math.max(0, count - panel.vis)
