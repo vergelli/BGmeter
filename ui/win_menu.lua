@@ -45,6 +45,7 @@ local panel = nil
 local rows = {}
 local offset = 0
 local on_hud = true
+local reopen_after_report = false
 
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
@@ -272,8 +273,9 @@ local function make_row(i)
     r.container:SetHandler("OnMouseUp", function(_, _, upInside)
         if upInside and r.index then
             Sound.play("match")
+            reopen_after_report = true
+            M.hide_menu(true)
             BGMeter.UI.window.show_match(r.index)
-            M.refresh()
         end
     end)
     return r
@@ -730,8 +732,9 @@ function M.show_menu()
     Sound.play("menu")
 end
 
-function M.hide_menu()
+function M.hide_menu(silent)
     if not built then return end
+    if not silent and not panel.win:IsHidden() then Sound.play("close") end
     panel.win:SetHidden(true)
     queue_ticker_sync(false)
 end
@@ -739,6 +742,14 @@ end
 function M.toggle()
     if not built then return end
     if panel.win:IsHidden() then M.show_menu() else M.hide_menu() end
+end
+
+function M.on_report_closed()
+    if not reopen_after_report then return end
+    reopen_after_report = false
+    if built and Prefs.get("show_launcher") and on_hud then
+        M.show_menu()
+    end
 end
 
 function M.refresh_if_visible()
@@ -752,7 +763,7 @@ function M.sync()
     if not built then return end
     local vis = Prefs.get("show_launcher") and on_hud
     launcher.win:SetHidden(not vis)
-    if not vis then M.hide_menu() end
+    if not vis then M.hide_menu(true) end
 end
 
 function M.on_scene(hud)

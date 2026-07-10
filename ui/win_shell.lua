@@ -465,7 +465,7 @@ function W.step(dir)
     if total == 0 then return end
     W.current_index = math.max(1, math.min(total, W.current_index + dir))
     W.selected_row = nil
-    Sound.play("nav"); W.render(true)
+    Sound.play("match"); W.render(true)
 end
 
 function W.toggle_settings()
@@ -475,6 +475,8 @@ function W.toggle_settings()
     if settings_open then
         W.settings.repaint()
         Sound.play("settings")
+    else
+        Sound.play("close")
     end
 end
 
@@ -547,12 +549,19 @@ end
 
 function W.hide()
     if not W.built then return end
+    local was_visible = not W.win:IsHidden()
     settings_open = false
     W.settings.window:SetHidden(true)
     user_visible = false
     W.win:SetHidden(true); W._persist_hidden(true)
     W._chart_hover_stop()
     hide_medal_card()
+    if was_visible then
+        Sound.play("close")
+        if BGMeter.UI.menu and BGMeter.UI.menu.on_report_closed then
+            BGMeter.UI.menu.on_report_closed()
+        end
+    end
 end
 
 function W.toggle()

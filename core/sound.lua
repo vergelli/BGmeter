@@ -9,6 +9,7 @@ local CUE = {
     menu     = "BOOK_OPEN",
     match    = "BOOK_PAGE_TURN",
     settings = "TREE_HEADER_CLICK",
+    close    = "BOOK_CLOSE",
     win      = "DUEL_WON",
     loss     = "GENERAL_ALERT_ERROR",
     rankup   = "LEVEL_UP",

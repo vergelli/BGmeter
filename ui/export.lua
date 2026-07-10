@@ -82,7 +82,9 @@ function E.show_text(text)
 end
 
 function E.hide()
-    if controls then controls.window:SetHidden(true) end
+    if not controls or controls.window:IsHidden() then return end
+    controls.window:SetHidden(true)
+    if BGMeter.Sound then BGMeter.Sound.play("close") end
 end
 
 BGMeter.UI.export = E
