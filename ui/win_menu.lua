@@ -687,7 +687,12 @@ function M.update_queue()
     local capturing = BGMeter.Capture and BGMeter.Capture.is_active and BGMeter.Capture.is_active() or false
     update_footer()
     local compact = (q.statusW or 200) < 110
-    if searching then
+    if q.btn.SetEnabled then q.btn:SetEnabled(not capturing or searching) end
+    if capturing and not searching then
+        q.btn:SetText("Queue")
+        set_text(q.status, compact and "" or "in a battleground")
+        S.color(q.status, K.COLOR.text_dim)
+    elseif searching then
         q.btn:SetText("Cancel")
         local startMs, etaMs = safe(A.lfg_times)
         local now = safe(A.now_ms) or 0
@@ -723,6 +728,9 @@ function M.queue_click()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     local q = panel.queue
+    if BGMeter.Capture and BGMeter.Capture.is_active() and not safe(A.lfg_searching) then
+        return
+    end
     if safe(A.lfg_searching) then
         safe(A.lfg_cancel)
         Sound.play("nav")
