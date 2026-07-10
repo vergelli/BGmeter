@@ -146,6 +146,13 @@ local function row_chrome(container)
     return base, hl
 end
 
+local function lane_metrics(n)
+    local L = K.LAYOUT
+    if not n or n <= 6 then return L.lane_h, L.lane_gap end
+    if n <= 9 then return 8, 4 end
+    return 6, 2
+end
+
 local function player_ident(r)
     local d, c = r.displayName, r.charName
     if c then c = (c:gsub("%^.*$", "")) end
@@ -274,6 +281,7 @@ U.team_icon = team_icon
 U.hide_all = hide_all
 U.player_ident = player_ident
 U.row_chrome = row_chrome
+U.lane_metrics = lane_metrics
 U.hit_proxy = hit_proxy
 U.hexc = hexc
 U.neutral_color = neutral_color

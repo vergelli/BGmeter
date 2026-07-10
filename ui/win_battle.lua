@@ -310,8 +310,8 @@ local function apply_dynamic_min_width(m)
     local nflags = m.objectives and m.objectives.list and #m.objectives.list or 0
     if nflags == 0 and m.relics and m.relics.list then nflags = #m.relics.list end
     if nflags > 0 then
-        local lanes = math.min(6, nflags)
-        extra = (L.occ_h + 2) + (L.ribbon_top + lanes * (L.lane_h + L.lane_gap) + 3 + 2) + (28 + 2)
+        local lh, lg = U.lane_metrics(nflags)
+        extra = (L.occ_h + 2) + (L.ribbon_top + nflags * (lh + lg) + 3 + 2) + (28 + 2)
     else
         extra = 46 + 2
     end

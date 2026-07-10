@@ -119,15 +119,17 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
     b.ribbon:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -y_off)
     b.ribbon:SetHeight(ribbon_h)
     b.ribbon:SetHidden(false)
+    local lh, lg = U.lane_metrics(#lanes)
+    local pinS = math.max(16, math.floor(L.pin_size * lh / L.lane_h))
     local function rx(t) return math.floor((t / tspan) * (w - 6) + 0.5) end
     for li, lane in ipairs(lanes) do
-        local y = L.ribbon_top + (li - 1) * (L.lane_h + L.lane_gap)
+        local y = L.ribbon_top + (li - 1) * (lh + lg)
         for _, seg in ipairs(lane.segs) do
             local x0, x1 = rx(seg.t0), rx(seg.t1)
             if x1 > x0 then
                 local r = b.ribbon_pool:acquire()
                 r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, x0, y)
-                r:SetDimensions(x1 - x0, L.lane_h)
+                r:SetDimensions(x1 - x0, lh)
                 if seg.own and seg.own ~= 0 then
                     local tc = S.team_color(seg.own)
                     P.set_rect_color(r, { tc[1], tc[2], tc[3], K.ALPHA.ribbon_fill })
@@ -146,7 +148,7 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             if tick.kind == "take" then
                 ic:SetTexture(string.format("EsoUI/Art/MapPins/battlegrounds_murderball_%s.dds",
                     S.team_art_key(tick.own)))
-                ic:SetDimensions(L.pin_size - 12, L.pin_size - 12)
+                ic:SetDimensions(pinS - 12, pinS - 12)
                 ic:SetColor(1, 1, 1, 1)
                 tip = string.format("%s took %s @ %s",
                     tick.who or team_name(tick.own), tlabel, F.duration(tick.t))
@@ -154,10 +156,10 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
                 local tc = S.team_color(tick.own)
                 if ctf then
                     ic:SetTexture("EsoUI/Art/Buttons/closeButton_up.dds")
-                    ic:SetDimensions(L.pin_size - 10, L.pin_size - 10)
+                    ic:SetDimensions(pinS - 10, pinS - 10)
                 else
                     ic:SetTexture("EsoUI/Art/WorldMap/map_AVA_tabIcon_resourceDefense_up.dds")
-                    ic:SetDimensions(L.pin_size - 6, L.pin_size - 6)
+                    ic:SetDimensions(pinS - 6, pinS - 6)
                 end
                 ic:SetColor(tc[1], tc[2], tc[3], 1)
                 tip = string.format("%s %s %s @ %s",
@@ -165,21 +167,21 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
                     tlabel, F.duration(tick.t))
             elseif ctf then
                 ic:SetTexture("EsoUI/Art/Collections/Favorite_StarOnly.dds")
-                ic:SetDimensions(L.pin_size, L.pin_size)
+                ic:SetDimensions(pinS, pinS)
                 local tc = S.team_color(tick.own)
                 ic:SetColor(tc[1], tc[2], tc[3], 1)
                 tip = string.format("%s scored %s @ %s",
                     tick.who or team_name(tick.own), tlabel, F.duration(tick.t))
             else
                 ic:SetTexture(flag_pin(gt, tick.letter or lane.letter, tick.own))
-                ic:SetDimensions(L.pin_size, L.pin_size)
+                ic:SetDimensions(pinS, pinS)
                 ic:SetColor(1, 1, 1, 1)
                 tip = string.format("%s captured %s @ %s",
                     team_name(tick.own), tlabel, F.duration(tick.t))
             end
-            local half = math.floor(L.pin_size / 2)
+            local half = math.floor(pinS / 2)
             local tx = math.max(half, math.min(rx(tick.t), w - 6 - half))
-            ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, tx, y + math.floor(L.lane_h / 2))
+            ic:SetAnchor(CENTER, b.ribbon, TOPLEFT, tx, y + math.floor(lh / 2))
             ic:SetHidden(false)
             local hit = b.tick_hit_pool:acquire()
             hit:SetAnchorFill(ic)
@@ -193,7 +195,7 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
         if is_letter or river then
             pin:SetTexture(flag_pin(gt, river and nil or lane.letter, 0))
             pin:ClearAnchors()
-            pin:SetAnchor(LEFT, b.ribbon, TOPLEFT, 2, y + math.floor(L.lane_h / 2))
+            pin:SetAnchor(LEFT, b.ribbon, TOPLEFT, 2, y + math.floor(lh / 2))
             pin:SetHidden(false)
             lbl:SetHidden(true)
         else
@@ -382,7 +384,11 @@ function SEC.timeline(m)
         b.ribbonTitle:SetText(relicMode and (gt == "murderball" and "BALL POSSESSION" or "RELIC RUNS") or "FLAG CONTROL")
         b.occTitle:SetText(relicMode and "POSSESSION" or "FLAG OCCUPATION")
     end
-    local ribbon_h = lanes and (L.ribbon_top + #lanes * (L.lane_h + L.lane_gap) + 3) or 0
+    local ribbon_h = 0
+    if lanes then
+        local lh, lg = U.lane_metrics(#lanes)
+        ribbon_h = L.ribbon_top + #lanes * (lh + lg) + 3
+    end
     local occ_h = occ and L.occ_h or 0
     local tdm_line = (not lanes) and lead ~= nil
     local mom_h = (dc.cmom or lead) and (tdm_line and 46 or 28) or 0
