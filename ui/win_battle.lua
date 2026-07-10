@@ -218,7 +218,7 @@ local function build_battle(win)
 
     b.momTitle = P.label(b.mom, S.FONT.small, K.COLOR.text_dim)
     b.momTitle:SetText("MOMENTUM")
-    b.momTitle:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 2)
+    b.momTitle:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 4, 0)
     W.tip_static(b.momTitle,
         "Who was leading, and by how much.\nColor = leading team  ·  brighter = bigger lead")
 

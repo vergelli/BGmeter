@@ -29,13 +29,20 @@ local SCOREBG_R  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_right.dds
 
 local AUTO_OPEN_STATES = { "exit", "instant", "off" }
 local AUTO_OPEN_LABELS = { exit = "ON EXIT", instant = "INSTANT", off = "OFF" }
+local OPACITY_STATES = { 0.85, 0.92, 0.97, 1.0 }
+local OPACITY_LABELS = { [0.85] = "85%", [0.92] = "92%", [0.97] = "97%", [1.0] = "100%" }
+local HISTORY_STATES = { 25, 50, 100 }
+local HISTORY_LABELS = { [25] = "25", [50] = "50", [100] = "100" }
 
 local SETTINGS_SECTIONS = {
     { title = "GENERAL", rows = {
-        { kind = "cycle",  key = "auto_open_mode", label = "Auto-open results" },
+        { kind = "cycle",  key = "auto_open_mode", label = "Auto-open results",
+          states = AUTO_OPEN_STATES, labels = AUTO_OPEN_LABELS },
         { kind = "toggle", key = "show_launcher",  label = "Launcher icon" },
         { kind = "toggle", key = "sounds",         label = "Sound cues" },
         { kind = "toggle", key = "animate",        label = "Animations" },
+        { kind = "cycle",  key = "max_history",    label = "Matches kept",
+          states = HISTORY_STATES, labels = HISTORY_LABELS },
     } },
     { title = "RESULT WINDOW", rows = {
         { kind = "toggle", key = "show_haul",      label = "Haul panel" },
@@ -43,6 +50,8 @@ local SETTINGS_SECTIONS = {
         { kind = "toggle", key = "show_standing",  label = "Standing / session panel" },
         { kind = "toggle", key = "show_awards",    label = "MVP / column leaders" },
         { kind = "toggle", key = "show_timeline",  label = "Match timeline chart" },
+        { kind = "cycle",  key = "opacity",        label = "Background opacity",
+          states = OPACITY_STATES, labels = OPACITY_LABELS },
     } },
 }
 
@@ -122,12 +131,14 @@ local function build_settings()
             local key, kind = t.key, t.kind
             local paint
             if kind == "cycle" then
-                paint = function() btn:SetText(AUTO_OPEN_LABELS[Prefs.get(key)] or "?") end
+                local states = t.states or AUTO_OPEN_STATES
+                local labels = t.labels or AUTO_OPEN_LABELS
+                paint = function() btn:SetText(labels[Prefs.get(key)] or "?") end
                 btn:SetHandler("OnClicked", function()
                     local cur = Prefs.get(key)
                     local idx = 1
-                    for i, v in ipairs(AUTO_OPEN_STATES) do if v == cur then idx = i break end end
-                    Prefs.set(key, AUTO_OPEN_STATES[(idx % #AUTO_OPEN_STATES) + 1])
+                    for i, v in ipairs(states) do if v == cur then idx = i break end end
+                    Prefs.set(key, states[(idx % #states) + 1])
                     paint(); on_pref_changed(key)
                 end)
             else

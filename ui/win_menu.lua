@@ -303,6 +303,12 @@ local function build()
     end)
     launcher = { win = win }
 
+    launcher.glowFx = P.icon(win, "EsoUI/Art/Crafting/crafting_tooltip_glow_center.dds")
+    launcher.glowFx:SetAnchor(CENTER, win, CENTER, 0, 0)
+    launcher.glowFx:SetDimensions(88, 88)
+    if launcher.glowFx.SetBlendMode then launcher.glowFx:SetBlendMode(TEX_BLEND_MODE_ADD) end
+    launcher.glowFx:SetHidden(true)
+
     launcher.glow = P.icon(win, LAUNCHER_ICON)
     launcher.glow:SetAnchor(CENTER, win, CENTER, 0, 0)
     launcher.glow:SetDimensions(52, 52)
@@ -323,11 +329,12 @@ local function build()
         local j = (i % #GLOW_COLORS) + 1
         local f = phase - (i - 1)
         local a, b2 = GLOW_COLORS[i], GLOW_COLORS[j]
-        launcher.glow:SetColor(
-            a[1] + (b2[1] - a[1]) * f,
-            a[2] + (b2[2] - a[2]) * f,
-            a[3] + (b2[3] - a[3]) * f,
-            0.65)
+        local r = a[1] + (b2[1] - a[1]) * f
+        local g = a[2] + (b2[2] - a[2]) * f
+        local bch = a[3] + (b2[3] - a[3]) * f
+        launcher.glow:SetColor(r, g, bch, 0.65)
+        local pulse = 0.40 + 0.30 * (0.5 + 0.5 * math.sin(t * math.pi * 4))
+        launcher.glowFx:SetColor(r, g, bch, pulse)
     end
 
     local function glow_loop()
@@ -339,11 +346,13 @@ local function build()
         launcher.hovered = true
         launcher.icon:SetColor(1, 1, 1, 1)
         launcher.glow:SetHidden(false)
+        launcher.glowFx:SetHidden(false)
         glow_loop()
     end)
     win:SetHandler("OnMouseExit", function()
         launcher.hovered = false
         launcher.glow:SetHidden(true)
+        launcher.glowFx:SetHidden(true)
         launcher.icon:SetColor(1, 1, 1, LAUNCHER_IDLE)
     end)
 

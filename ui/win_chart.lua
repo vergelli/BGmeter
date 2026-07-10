@@ -228,7 +228,7 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
             local x0, x1 = mx(sg.t0), mx(sg.t1)
             if x1 > x0 then
                 local r = b.mom_pool:acquire()
-                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 15)
+                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 18)
                 r:SetDimensions(x1 - x0, 10)
                 if sg.team then
                     local tc = S.team_color(sg.team)
@@ -243,7 +243,7 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
                         ic:SetTexture("EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
                         ic:SetDimensions(18, 18)
                         ic:SetColor(tc[1], tc[2], tc[3], 1)
-                        ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), 20)
+                        ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), 23)
                         ic:SetHidden(false)
                     end
                 else
@@ -275,7 +275,7 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
             local x0, x1 = mx(tl.t[i - 1] or 0), mx(tl.t[i] or 0)
             if x1 > x0 then
                 local r = b.mom_pool:acquire()
-                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 15)
+                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 18)
                 r:SetDimensions(x1 - x0, 10)
                 if bestTeam and margin > 0 then
                     local tc = S.team_color(bestTeam)
