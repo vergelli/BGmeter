@@ -153,6 +153,8 @@ local function hide_all(list, hidden) for _, c in ipairs(list) do c:SetHidden(hi
 
 local function player_ident(r)
     local d, c = r.displayName, r.charName
+    if c then c = (c:gsub("%^.*$", "")) end
+    if d then d = (d:gsub("%^.*$", "")) end
     if d and c and c ~= "" and c ~= d then
         return string.format("%s (%s)", d, c)
     end

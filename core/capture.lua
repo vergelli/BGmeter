@@ -89,8 +89,8 @@ function Capture.read_battle(m)
     for i = 1, n do
         local row = Match.new_row()
         local charName, displayName, team, isLocal = safe(A.get_entry_info, i, round)
-        row.charName    = charName
-        row.displayName = displayName
+        row.charName    = clean_name(charName)
+        row.displayName = clean_name(displayName)
         row.team        = team or safe(A.get_entry_team, i, round)
         row.isLocal     = isLocal and true or false
         row.classId     = safe(A.get_entry_class, i, round)
