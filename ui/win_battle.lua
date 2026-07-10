@@ -18,9 +18,6 @@ local Icons = BGMeter.Icons
 local Awards = BGMeter.Awards
 local Prefs = BGMeter.Prefs
 
--- Numeric columns, anchored from the RIGHT edge of each row so the table reflows
--- when the window is resized. `right` = distance of the column's right edge from
--- the row's right edge; `w` = column width.
 local COLS = {
     { key = "damage",  right = 230, w = 56, label = "DMG", shift = true },
     { key = "healing", right = 170, w = 50, label = "HEAL", shift = true },
@@ -42,7 +39,7 @@ local function col_hidden(col)
     return (col.flag and not caps_shown) and true or false
 end
 local INDEX_X, ICON_X, NAME_X = 6, 24, 50
-local NAME_RIGHT = 296   -- name's right edge offset (clears the damage column)
+local NAME_RIGHT = 296
 local BAR_X, BAR_RIGHT = 50, 6
 
 local function one_line(lbl)
@@ -52,15 +49,12 @@ end
 
 local function list_width() return W.cur_w - 2 * L.margin - L.haul_w - L.gap end
 
--- ── build: battle table ─────────────────────────────────────────────────────
-
 local function build_battle(win)
     local b = {}
     b.container = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
     b.container:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin, L.header_h)
     b.container:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.haul_w + L.gap + L.margin), -L.footer_h)
 
-    -- header row, columns anchored from the right (so they reflow on resize)
     b.headers = {}
     local nameH = P.label(b.container, S.FONT.small, K.COLOR.text_dim)
     nameH:SetText("PLAYER")
@@ -71,7 +65,6 @@ local function build_battle(win)
     for _, col in ipairs(COLS) do
         local lbl = P.label(b.container, S.FONT.small, K.COLOR.text_dim)
         lbl:SetText(col.label)
-        -- single TOPRIGHT anchor (RIGHT+TOP together conflict and mis-stretch)
         lbl:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -col_right(col), 0)
         lbl:SetDimensions(col.w, 16)
         lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
@@ -85,7 +78,6 @@ local function build_battle(win)
         b.headers[col.key] = lbl
     end
 
-    -- header underline
     b.rule = P.rect(b.container, { 1, 1, 1, 0.10 })
     b.rule:SetAnchor(TOPLEFT, b.container, TOPLEFT, 0, 18)
     b.rule:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, 0, 18)
@@ -255,8 +247,6 @@ function W._make_row(parent)
     row.highlight = P.rect(row.container, { 1, 1, 1, 0 })
     row.highlight:SetAnchorFill(row.container)
 
-    -- a slim team-coloured strip down the left edge, so you can scan teams at a
-    -- glance even though the table is sorted by performance
     row.teamStrip = P.rect(row.container, { 0, 0, 0, 0 })
     row.teamStrip:SetDimensions(3, L.row_h - 8)
     row.teamStrip:SetAnchor(LEFT, row.container, LEFT, 1, 0)

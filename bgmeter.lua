@@ -1,16 +1,9 @@
--- bgmeter :: bgmeter.lua  (entry, loaded last)
--- Bootstraps the addon: opens SavedVars, wires the capture pipeline, builds the
--- slash-command router. Everything else is attached to the single BGMeter global.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
 
 local K = BGMeter.Constants
 
--- ── /bgmeter dump  (the M0 validator) ─────────────────────────────────────
--- Reads the live scoreboard + progression snapshot and prints it to chat, so we
--- can confirm the API returns what we expect (especially whether veterancy moves
--- in a battleground) BEFORE trusting it in the UI.
 local function cmd_dump()
     local A   = BGMeter.zenimax.api
     local Log = BGMeter.Log
@@ -48,7 +41,6 @@ local function cmd_dump()
         F.commas(A.get_unit_xp() or 0), F.commas(A.get_unit_xp_max() or 0),
         F.commas(A.get_cp_earned() or 0))
 
-    -- Competitive standing: query then read (may be cached or pending).
     if A.query_bg_leaderboard then
         pcall(A.query_bg_leaderboard, BGMeter.zenimax.constants.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
     end
@@ -58,7 +50,6 @@ local function cmd_dump()
         tostring(st.score), tostring(st.mmr or "—"), tostring(st.impacts))
 end
 
--- ── /bgmeter demo  (synthetic match -> see the window without queueing a BG) ─
 local function cmd_demo(two_teams)
     local Match = BGMeter.Match
     local A = BGMeter.zenimax.api
@@ -188,7 +179,7 @@ local function cmd_demo(two_teams)
     m.haul.vetEnd   = { rank = 14, tier = 14, percent = 0.81, progressToNext = 4050, tierTotal = 5000, rankTitle = "Veteran Lieutenant", seasonName = "Whitestrake's Mayhem", secondsLeft = 387600, inZone = true }
     Match.derive(m)
     m.standing = { rank = 3, prevRank = 5, rankDelta = 2, score = 1840, prevScore = 1795, scoreDelta = 45, mmr = 1620, impacts = true }
-    m.records  = { damage = true, ap = true, rank = true }   -- showcase the ★ markers
+    m.records  = { damage = true, ap = true, rank = true }
 
     BGMeter.History.push(m)
     BGMeter.UI.window.show_match(1)
@@ -197,10 +188,6 @@ local function cmd_demo(two_teams)
     BGMeter.Log.say("demo match injected -- window shown")
 end
 
--- ── /bgmeter ap  (the AvA AP-source probe) ─────────────────────────────────
--- Prints the live AvA session + its AP-by-source split, and toggles a verbose
--- mode that echoes each AP gain with its reason code -- so we can confirm the
--- `reason` attribution is correct in Cyrodiil BEFORE trusting the breakdown.
 local function cmd_ap()
     local Ava = BGMeter.Ava
     local Log = BGMeter.Log
@@ -395,7 +382,6 @@ local function cmd_report()
     BGMeter.UI.export.show_text(table.concat(lines, "\n"))
 end
 
--- ── slash router ──────────────────────────────────────────────────────────
 local function on_slash(args)
     args = (args or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     local Log = BGMeter.Log
@@ -447,7 +433,6 @@ local function on_slash(args)
     end
 end
 
--- ── bootstrap ─────────────────────────────────────────────────────────────
 local function on_addon_loaded()
     BGMeter.zenimax.savedvars.init(K.SAVED_VARS, 1)
 

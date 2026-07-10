@@ -1,6 +1,3 @@
--- bgmeter :: lib/plot/bar.lua
--- A horizontal meter bar: a dim track with a coloured fill. Used for the battle
--- table rows (damage/heal meter) and for the veterancy season-track fill.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -10,8 +7,6 @@ local Bar = {}
 
 local TRACK_COLOR = { 1, 1, 1, 0.07 }
 
--- Create a bar inside `parent`. Returns a table { container, track, fill }.
--- The caller anchors `container`; the track/fill fill it.
 function Bar.create(parent)
     local P = BGMeter.Plot.primitives
     local ui = BGMeter.zenimax.ui
@@ -25,8 +20,6 @@ function Bar.create(parent)
     fill:SetAnchor(BOTTOMLEFT, container, BOTTOMLEFT, 0, 0)
     fill:SetWidth(0)
 
-    -- "sheen": a thin brighter line along the top of the fill, so the bar reads
-    -- as a lit surface (like ESO's own meters) instead of a flat block.
     local sheen = P.rect(container, { 1, 1, 1, 0.18 })
     sheen:SetAnchor(TOPLEFT, fill, TOPLEFT, 0, 0)
     sheen:SetHeight(2)
@@ -35,13 +28,10 @@ function Bar.create(parent)
     return { container = container, track = track, fill = fill, sheen = sheen }
 end
 
--- Lighten an RGBA toward white for the sheen highlight.
 local function lighten(c)
     return { c[1] + (1 - c[1]) * 0.45, c[2] + (1 - c[2]) * 0.45, c[3] + (1 - c[3]) * 0.45, 0.55 }
 end
 
--- Set the fill: pct in [0,1], coloured by `color`. `width` is the container's
--- pixel width (the fill is pct of it).
 function Bar.set(bar, pct, color, width)
     if not bar then return end
     pct = math.max(0, math.min(1, pct or 0))

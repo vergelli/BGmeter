@@ -1,17 +1,3 @@
--- bgmeter :: core/ava.lua
--- The AvA / Cyrodiil session engine -- the "transversal" half of bgmeter that
--- lives OUTSIDE the battleground scoreboard. In open-world AvA there is no
--- post-match moment, so we keep a rolling session: it opens when you enter an
--- AvA world (Cyrodiil / Imperial City), accumulates the AP you earn split BY
--- SOURCE (kills / keep offense / keep defense / resurrects / other), tracks XP,
--- and snapshots your veterancy at the start so the haul reads as "this session".
---
--- The veterancy reward-track itself is AvA-wide (the same season track in BGs
--- and Cyrodiil); this module owns the AP-by-source attribution and an observer
--- fan-out any consumer can subscribe to.
---
--- Everything is pcall-guarded and zero-alloc on the hot path is NOT a concern
--- here (AP events fire a few times a second at most), so clarity wins.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -25,20 +11,15 @@ local function safe(fn, ...)
     return a, b, c, d
 end
 
--- ── source buckets ──────────────────────────────────────────────────────────
--- Render order + display metadata for the AP-by-source breakdown. `color` is a
--- self-contained RGBA swatch (kept here, not in K.COLOR, so the buckets own
--- their own identity) used for the HUD breakdown rows + the stacked mini-bar.
 Ava.SOURCES = {
-    { key = "kills",   label = "Kills",        color = { 0.89, 0.26, 0.20, 1 } },  -- vermilion
-    { key = "offense", label = "Keep offense", color = { 0.95, 0.80, 0.35, 1 } },  -- gold
-    { key = "defense", label = "Keep defense", color = { 0.35, 0.65, 0.85, 1 } },  -- storm blue
-    { key = "rez",     label = "Resurrects",   color = { 0.30, 0.78, 0.45, 1 } },  -- verdant green
-    { key = "bg",      label = "Battlegrounds",color = { 0.55, 0.50, 0.95, 1 } },  -- violet
-    { key = "other",   label = "Other",        color = { 0.55, 0.55, 0.60, 1 } },  -- dim
+    { key = "kills",   label = "Kills",        color = { 0.89, 0.26, 0.20, 1 } },
+    { key = "offense", label = "Keep offense", color = { 0.95, 0.80, 0.35, 1 } },
+    { key = "defense", label = "Keep defense", color = { 0.35, 0.65, 0.85, 1 } },
+    { key = "rez",     label = "Resurrects",   color = { 0.30, 0.78, 0.45, 1 } },
+    { key = "bg",      label = "Battlegrounds",color = { 0.55, 0.50, 0.95, 1 } },
+    { key = "other",   label = "Other",        color = { 0.55, 0.55, 0.60, 1 } },
 }
 
--- reason enum -> bucket key. Built lazily (after constants load) and cached.
 local _reason_map = nil
 local function reason_map()
     if _reason_map then return _reason_map end
@@ -59,28 +40,23 @@ local function bucket_for(reason)
     return reason_map()[reason] or "other"
 end
 
--- ── session state ───────────────────────────────────────────────────────────
--- A fresh, empty tally. `sources` holds per-bucket AP totals.
 local function blank_session()
     return {
         active   = false,
         startMs  = safe(BGMeter.zenimax.api.now_ms) or 0,
-        ap       = 0,            -- total AP gained this session
-        xp       = 0,            -- total XP gained this session
-        gains    = 0,            -- number of AP gain events (for sanity / probe)
+        ap       = 0,
+        xp       = 0,
+        gains    = 0,
         zone     = nil,
-        vetStart = nil,          -- veterancy snapshot when the session opened
+        vetStart = nil,
         sources  = { kills = 0, offense = 0, defense = 0, rez = 0, bg = 0, other = 0 },
     }
 end
 
 Ava.session = blank_session()
 
--- Debug probe toggle: when true, each AP gain is echoed to chat with its reason
--- so we can confirm the live `reason` codes BEFORE trusting the breakdown.
 Ava.probe = false
 
--- ── AvA presence ────────────────────────────────────────────────────────────
 function Ava.in_ava()
     local A = BGMeter.zenimax.api
     local v = safe(A.is_player_in_ava_world)
@@ -88,7 +64,6 @@ function Ava.in_ava()
     return v and true or false
 end
 
--- ── lifecycle ───────────────────────────────────────────────────────────────
 function Ava.begin_session()
     local A = BGMeter.zenimax.api
     local s = blank_session()
@@ -106,20 +81,14 @@ function Ava.end_session()
     BGMeter.Log.debug("ava session end: ap=%d", Ava.session.ap)
 end
 
--- Manual reset (slash command / settings): start a clean tally in place.
 function Ava.reset()
     if Ava.in_ava() then Ava.begin_session()
     else Ava.session = blank_session() end
 end
 
--- ── event handlers ──────────────────────────────────────────────────────────
-
--- AP changed. Signature: (eventCode, alliancePoints, playSound, difference, reason).
 function Ava.on_ap(_, _alliancePoints, _playSound, difference, reason)
-    if not difference or difference <= 0 then return end   -- ignore spends/zero
+    if not difference or difference <= 0 then return end
     if not Ava.in_ava() then
-        -- Out of AvA (e.g. a quest reward in a city): never opens a session, but
-        -- still echo for the probe so we can see every reason code in the wild.
         if Ava.probe then
             BGMeter.Log.say("|cffd700AP|r +%d  reason=%s (outside AvA)",
                 difference, tostring(reason))
@@ -140,15 +109,12 @@ function Ava.on_ap(_, _alliancePoints, _playSound, difference, reason)
     end
 end
 
--- XP changed. Signature: (eventCode, reason, level, previousXp, currentXp).
 function Ava.on_xp(_, _reason, _level, prev, current)
     if not Ava.session.active then return end
     if not prev or not current then return end
     Ava.session.xp = Ava.session.xp + math.max(0, current - prev)
 end
 
-
--- Player loaded a zone -- open or close the session as AvA presence changes.
 function Ava.on_player_activated()
     if Ava.in_ava() then
         if not Ava.session.active then Ava.begin_session() end
@@ -157,9 +123,6 @@ function Ava.on_player_activated()
     end
 end
 
--- ── derived read-outs (for the HUD + probe) ─────────────────────────────────
-
--- AP per hour at the current session pace (0 when the session is too young).
 function Ava.ap_per_hour()
     local s = Ava.session
     local nowMs = safe(BGMeter.zenimax.api.now_ms) or s.startMs
@@ -168,8 +131,6 @@ function Ava.ap_per_hour()
     return s.ap / hours
 end
 
--- The breakdown as an ordered list of { key, label, color, ap, pct } -- only the
--- buckets that actually earned something, biggest first.
 function Ava.breakdown()
     local s = Ava.session
     local total = s.ap > 0 and s.ap or 1
@@ -185,7 +146,6 @@ function Ava.breakdown()
     return out
 end
 
--- One-line text summary for the probe / the main window footer.
 function Ava.summary()
     local s = Ava.session
     if s.ap == 0 and not s.active then return nil end
@@ -195,7 +155,6 @@ function Ava.summary()
         s.active and "" or "  (ended)")
 end
 
--- ── init ────────────────────────────────────────────────────────────────────
 function Ava.init()
     local E = BGMeter.zenimax.events
     local C = BGMeter.zenimax.constants
@@ -205,7 +164,6 @@ function Ava.init()
     E.register(P .. "XP",   C.EVENT_EXPERIENCE_GAIN,              Ava.on_xp)
     E.register(P .. "Zone", C.EVENT_PLAYER_ACTIVATED,             Ava.on_player_activated)
 
-    -- If we reload while already standing in Cyrodiil, open the session now.
     if Ava.in_ava() then Ava.begin_session() end
     BGMeter.Log.debug("ava engine wired (in_ava=%s)", tostring(Ava.in_ava()))
 end

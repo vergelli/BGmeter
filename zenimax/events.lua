@@ -1,7 +1,3 @@
--- bgmeter :: zenimax/events.lua
--- EVENT_MANAGER wrapper. Mirrors the Vermilion boundary: every handler is
--- wrapped in pcall so a single bad event can never take down the addon, and
--- registration is centralised so unregister is trivial.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -10,7 +6,6 @@ BGMeter.zenimax = BGMeter.zenimax or {}
 local EM = EVENT_MANAGER
 local M = {}
 
--- One-shot ADD_ON_LOADED, self-unregistering, filtered by addon name.
 function M.register_addon_loaded(addon_name, callback)
     local token = addon_name .. "_OnLoaded"
     EM:RegisterForEvent(token, EVENT_ADD_ON_LOADED, function(_, loaded_name)
@@ -21,7 +16,6 @@ function M.register_addon_loaded(addon_name, callback)
     end)
 end
 
--- Register a handler, wrapping it so errors are logged (DEBUG) not fatal.
 function M.register(name, event_code, handler)
     EM:RegisterForEvent(name, event_code, function(...)
         local ok, err = pcall(handler, ...)

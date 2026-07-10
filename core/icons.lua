@@ -1,7 +1,3 @@
--- bgmeter :: core/icons.lua
--- Texture-path helpers. Uses only stock ESO art (guaranteed present) so the UI
--- looks native with zero authored assets. Class icons come from the engine;
--- role icons are the LFG art used everywhere in the base UI.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -15,8 +11,6 @@ local function safe(fn, ...)
     return v
 end
 
--- Class icon for a scoreboard entry's classId (DK, Sorc, NB, Templar, Warden,
--- Necro, Arcanist...). Returns a texture path or nil.
 function Icons.class(classId)
     if not classId or classId == 0 then return nil end
     return safe(GetClassIcon, classId)
@@ -28,11 +22,9 @@ Icons.ROLE = {
     tank   = "EsoUI/Art/LFG/LFG_icon_tank.dds",
 }
 
--- Progression icons -- the actual in-game art the user asked for.
 Icons.XP  = "EsoUI/Art/Icons/Icon_Experience.dds"
 Icons.CP  = "EsoUI/Art/Champion/champion_icon_32.dds"
 
--- The green Alliance-Points currency icon, straight from the engine.
 function Icons.ap()
     local C = BGMeter.zenimax.constants
     return safe(BGMeter.zenimax.api.get_currency_icon, C.CURT_ALLIANCE_POINTS)

@@ -1,7 +1,3 @@
--- bgmeter :: core/session.lua
--- In-memory tally of the current play session (resets on /reloadui or relog).
--- Gives the result window a glanceable "how's tonight going" footer without
--- persisting anything -- the long-term record lives in history + records.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -16,7 +12,6 @@ function Session.record(m)
     Session.xp = Session.xp + (m.haul.xpGained or 0)
 end
 
--- A one-line summary, or nil when no matches have been played this session.
 function Session.summary()
     if Session.matches == 0 then return nil end
     local F = BGMeter.Format

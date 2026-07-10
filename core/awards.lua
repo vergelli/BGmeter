@@ -1,7 +1,3 @@
--- bgmeter :: core/awards.lua
--- Standout detection for the battle table. Deliberately restrained (the user
--- asked for least-intrusive): one overall MVP crown, plus per-column leaders
--- that the table tints gold. No clutter of badges on every row.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -10,9 +6,6 @@ local Awards = {}
 
 local LEADER_FIELDS = { "damage", "healing", "kills", "assists", "caps", "carried" }
 
--- Returns { leaders = { field -> prow }, mvp = prow }.
--- MVP is a weighted blend so a pure healer or a kill-heavy player can still win,
--- not just raw damage. Weights are in damage-equivalent points.
 function Awards.compute(m)
     local leaders = {}
     for _, f in ipairs(LEADER_FIELDS) do

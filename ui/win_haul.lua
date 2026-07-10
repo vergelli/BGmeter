@@ -16,8 +16,6 @@ local Bar = BGMeter.Plot.bar
 local Icons = BGMeter.Icons
 local Prefs = BGMeter.Prefs
 
--- ── build: haul panel ───────────────────────────────────────────────────────
-
 local MEDAL_PERROW, MEDAL_STEP, MEDAL_CAP = 7, 24, 14
 
 local medal_card = nil
@@ -117,7 +115,6 @@ local function build_haul(win)
     p.heading:SetText("YOUR HAUL")
     p.heading:SetAnchor(TOP, p.container, TOP, 0, 14)
 
-    -- ── veterancy: medallion on the left, rank + tier each on its own row ──
     p.vetIcon = P.icon(p.container)
     p.vetIcon:SetDimensions(52, 52)
     p.vetIcon:SetAnchor(TOPLEFT, p.container, TOPLEFT, PAD, 44)
@@ -147,11 +144,8 @@ local function build_haul(win)
     p.div1:SetAnchor(TOPLEFT, p.season, BOTTOMLEFT, 0, 12)
     p.div1:SetDimensions(INNER, 1)
 
-    -- ── receipt: AP / XP / CP, each a clear row with its real icon ──
-    -- [icon] name (fixed-width, left) ......... value (right). The value box
-    -- starts AFTER the name box, so the two never overlap.
     local VAL_W = 74
-    local NAME_W = INNER - 22 - 8 - VAL_W - 4   -- icon + gap + name + gap + value = INNER
+    local NAME_W = INNER - 22 - 8 - VAL_W - 4
     local function receipt_line(anchorTo, dy, iconTex)
         local icon = P.icon(p.container, iconTex)
         icon:SetDimensions(22, 22)
@@ -161,8 +155,6 @@ local function build_haul(win)
         name:SetDimensions(NAME_W, 22)
         name:SetVerticalAlignment(TEXT_ALIGN_CENTER)
         local val = P.label(p.container, S.FONT.row, K.COLOR.gold)
-        -- single LEFT anchor + fixed width (a second RIGHT->container anchor
-        -- pulled every value to the panel's vertical centre, overlapping them)
         val:SetAnchor(LEFT, name, RIGHT, 4, 0)
         val:SetDimensions(VAL_W, 22)
         val:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
@@ -173,7 +165,6 @@ local function build_haul(win)
     p.xp = receipt_line(p.ap.icon, 10, Icons.XP); p.xp.name:SetText("Experience")
     p.cp = receipt_line(p.xp.icon, 10, Icons.CP); p.cp.name:SetText("Champion Pts")
 
-    -- ── medals: label on its own row, icons wrap into a grid below it ──
     p.medalLabel = P.label(p.container, S.FONT.row, K.COLOR.text_dim)
     p.medalLabel:SetText("Medals")
     p.medalLabel:SetAnchor(TOPLEFT, p.cp.icon, BOTTOMLEFT, 0, 12)
@@ -200,7 +191,6 @@ local function build_haul(win)
     p.medalMore = P.label(p.container, S.FONT.small, K.COLOR.medal)
     p.medalMore:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 6 + 2 * MEDAL_STEP)
 
-    -- efficiency, anchored below a reserved two-row medal grid
     p.eff = P.label(p.container, S.FONT.small, K.COLOR.accent)
     p.eff:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 30 + 2 * MEDAL_STEP)
     p.eff:SetDimensions(INNER, 16)
@@ -357,17 +347,12 @@ function SEC.haul(m, animate)
     hide_all(standControls, false)
     p.standHeading:SetText("COMPETITIVE STANDING")
 
-    -- The big rank font lacks the movement glyphs, so the indicator lives on the
-    -- small sub-line as a real inline arrow texture (unicode ▲/▼ box out in
-    -- several fonts) plus a colour-coded count; the big number stays clean.
     local st = m.standing
     if not st then
         set_text(p.standRank, "..."); S.color(p.standRank, K.COLOR.text_dim)
         set_text(p.standSub, "loading leaderboard...")
         W.tips[p.standRank] = "Competitive leaderboard standing"
     elseif st.rank and st.rank > 0 then
-        -- big rank font lacks the ★ glyph (it renders as a box) -> keep the
-        -- number clean, signal a personal best with gold colour + a sub badge.
         set_text(p.standRank, "#" .. F.commas(st.rank))
         local rankCol, move = K.COLOR.text, ""
         if st.rankDelta > 0 then rankCol = K.COLOR.heal; move = F.icon(ICON_SORTUP, 16) .. string.format(" |c5cc85f%d up|r   ", st.rankDelta)

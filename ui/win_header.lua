@@ -29,8 +29,6 @@ local function team_art_key(team)
     return TEAM_KEY[team]
 end
 
--- ── build: header ───────────────────────────────────────────────────────────
-
 local function build_header(win)
     local h = {}
     h.emblem = P.icon(win, K.LOGO)

@@ -1,6 +1,3 @@
--- bgmeter :: core/prefs.lua
--- Thin accessor over sv.prefs, so the UI reads/writes settings through one place
--- and never has to nil-check the SavedVars tree. Defaults live in zenimax/savedvars.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter

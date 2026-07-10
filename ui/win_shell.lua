@@ -27,8 +27,6 @@ local in_combat = false
 local SCOREBG_L  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_left.dds"
 local SCOREBG_R  = "EsoUI/Art/Battlegrounds/battlegrounds_scoreboardBG_right.dds"
 
--- ── build: settings overlay ──────────────────────────────────────────────────
-
 local AUTO_OPEN_STATES = { "exit", "instant", "off" }
 local AUTO_OPEN_LABELS = { exit = "ON EXIT", instant = "INSTANT", off = "OFF" }
 
@@ -171,8 +169,6 @@ local function build_settings()
     return s
 end
 
--- ── build ─────────────────────────────────────────────────────────────────
-
 local function build()
     if W.built then return end
 
@@ -237,7 +233,6 @@ local function build()
     W.measure = P.label(win, S.FONT.row, K.COLOR.text)
     W.measure:SetHidden(true)
 
-    -- empty-state emblem (crossed swords), shown only when there's no match yet
     W.emptyIcon = P.icon(win, "EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
     W.emptyIcon:SetDimensions(72, 72)
     W.emptyIcon:SetAnchor(CENTER, win, CENTER, -(L.haul_w + L.gap) / 2, -30)
@@ -255,15 +250,11 @@ local function build()
     W.built = true
 end
 
--- ── visual prefs ────────────────────────────────────────────────────────────
-
 local function apply_visual_prefs()
     local op = Prefs.get("opacity") or 0.97
     P.set_rect_color(W.bg, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], op })
     W.haul.container:SetHidden(not Prefs.get("show_haul"))
 end
-
--- ── render ────────────────────────────────────────────────────────────────
 
 function W.render(animate)
     if not W.built then return end
@@ -350,8 +341,6 @@ function W.render_detail(m)
         S.color(W.detail, session and K.COLOR.gold or K.COLOR.text_dim)
     end
 end
-
--- ── controller actions ──────────────────────────────────────────────────────
 
 function W.export()
     local m = BGMeter.History.get(W.current_index)

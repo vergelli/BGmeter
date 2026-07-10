@@ -1,12 +1,3 @@
--- The result window. Two faces of one battle:
---   left  -- THE BATTLE: every player's combat as a meter table (sortable,
---            selectable rows, class icons, MVP crown, column-leader highlights)
---   right -- THE HAUL:    your progression earned this match (veterancy season
---            track, AP/XP/CP with the real in-game currency icons, medals,
---            competitive standing, personal-best markers, AP efficiency)
--- Bordered + resizable (the battle table reflows from the window width), with a
--- VICTORY/DEFEAT banner, textured chrome buttons, history nav, settings overlay,
--- sounds, tooltips and animated bars/counters. Built with CreateTopLevelWindow.
 
 BGMeter = BGMeter or {}
 local BGMeter = BGMeter
@@ -29,10 +20,9 @@ W.built = false
 W.current_index = 1
 W.on_hud = true
 
--- inline-icon textures (real art instead of unicode glyphs that box out)
-local ICON_STAR  = "EsoUI/Art/Collections/favorite_starOnly.dds"          -- MVP marker
-local ICON_SORTUP = "EsoUI/Art/Miscellaneous/list_sortUp.dds"             -- sort ascending
-local ICON_SORTDN = "EsoUI/Art/Miscellaneous/list_sortDown.dds"           -- sort descending
+local ICON_STAR  = "EsoUI/Art/Collections/favorite_starOnly.dds"
+local ICON_SORTUP = "EsoUI/Art/Miscellaneous/list_sortUp.dds"
+local ICON_SORTDN = "EsoUI/Art/Miscellaneous/list_sortDown.dds"
 
 local TX = {
     close  = { n = "EsoUI/Art/Buttons/decline_up.dds",   p = "EsoUI/Art/Buttons/decline_down.dds",   o = "EsoUI/Art/Buttons/decline_over.dds" },
@@ -66,8 +56,6 @@ local MAP_ART = {
     ["ularra"]            = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds",
 }
 local MAP_ART_FALLBACK = "esoui/art/battlegrounds/gamepad/gp_battlegrounds_scoretracker.dds"
-
--- ── helpers ─────────────────────────────────────────────────────────────────
 
 local function set_text(label, text) if label then label:SetText(text or "") end end
 
@@ -117,8 +105,6 @@ local function set_bar(bar, pct, color, width, animate)
     else Bar.set(bar, pct, color, width) end
 end
 
--- A short celebratory "pop": the control swells then settles. Used on personal
--- bests so a record visibly jumps when the window opens.
 local function pop(control)
     if not control or not Prefs.get("animate") then return end
     Anim.start(K.ANIM.pop_ms, function(t)
