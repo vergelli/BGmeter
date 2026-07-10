@@ -474,7 +474,7 @@ function W.toggle_settings()
     W.settings.window:SetHidden(not settings_open)
     if settings_open then
         W.settings.repaint()
-        Sound.play("open")
+        Sound.play("settings")
     end
 end
 

@@ -423,8 +423,10 @@ local function on_slash(args)
         Log.say("perf counters reset")
     elseif args:find("^gcprobe") == 1 and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
+    elseif args:find("^sound") == 1 and K.dev_tools() then
+        BGMeter.Sound.audition(args:match("^sound%s*(.*)$"))
     else
-        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|layers" or ""
+        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|layers|sound [name]" or ""
         Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|report|demo|demo2|ap|dump|clear|debug%s]", extra)
     end
 end

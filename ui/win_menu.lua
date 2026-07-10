@@ -271,7 +271,7 @@ local function make_row(i)
     r.container:SetHandler("OnMouseExit", function() r.highlight:SetHidden(true) end)
     r.container:SetHandler("OnMouseUp", function(_, _, upInside)
         if upInside and r.index then
-            Sound.play("open")
+            Sound.play("match")
             BGMeter.UI.window.show_match(r.index)
             M.refresh()
         end
@@ -640,7 +640,7 @@ function M.queue_click()
         safe(A.lfg_clear_search)
         safe(A.lfg_add_set, s.id)
         local res = safe(A.lfg_start)
-        Sound.play("open")
+        Sound.play("nav")
         if C.ACTIVITY_QUEUE_RESULT_SUCCESS and res and res ~= C.ACTIVITY_QUEUE_RESULT_SUCCESS then
             BGMeter.Log.say("queue request rejected (result %s)", tostring(res))
         else
@@ -727,7 +727,7 @@ function M.show_menu()
     populate_queue_sets()
     M.update_queue()
     M.refresh()
-    Sound.play("open")
+    Sound.play("menu")
 end
 
 function M.hide_menu()
