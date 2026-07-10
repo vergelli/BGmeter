@@ -53,6 +53,20 @@ local function diff_and_store(cur)
     return cur
 end
 
+function Standing.celebrate(rank)
+    if not (CENTER_SCREEN_ANNOUNCE and CSA_CATEGORY_LARGE_TEXT) then return end
+    local sound = BGMeter.Prefs and BGMeter.Prefs.get("sounds") and SOUNDS and SOUNDS.ACHIEVEMENT_AWARDED or nil
+    local ok, mp = pcall(function()
+        return CENTER_SCREEN_ANNOUNCE:CreateMessageParams(CSA_CATEGORY_LARGE_TEXT, sound)
+    end)
+    if not ok or not mp then return end
+    if CENTER_SCREEN_ANNOUNCE_TYPE_SYSTEM_BROADCAST and mp.SetCSAType then
+        mp:SetCSAType(CENTER_SCREEN_ANNOUNCE_TYPE_SYSTEM_BROADCAST)
+    end
+    mp:SetText("|cF2CC59TOP 100|r", string.format("competitive leaderboard  ·  rank #%d", rank))
+    pcall(function() CENTER_SCREEN_ANNOUNCE:AddMessageWithParams(mp) end)
+end
+
 function Standing.apply()
     local cur = diff_and_store(Standing.read())
     local match = pending or BGMeter.History.most_recent()
@@ -62,6 +76,10 @@ function Standing.apply()
         if match.records and match.records.rank then BGMeter.Sound.play("pb") end
     end
     pending = nil
+
+    if cur.rank > 0 and cur.rank <= 100 and cur.prevRank > 100 then
+        Standing.celebrate(cur.rank)
+    end
 
     BGMeter.Log.debug("standing: rank=%d (Δ%d) score=%d (Δ%d)",
         cur.rank, cur.rankDelta, cur.score, cur.scoreDelta)

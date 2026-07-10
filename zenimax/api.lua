@@ -74,6 +74,12 @@ A.lfg_cancel       = CancelGroupSearches
 A.lfg_searching    = IsCurrentlySearchingForGroup
 A.lfg_times        = GetLFGSearchTimes
 A.lfg_cooldown     = GetLFGCooldownTimeRemainingSeconds
+A.lfg_num_requests       = GetNumActivityRequests
+A.lfg_request_ids        = GetActivityRequestIds
+A.lfg_activity_type      = GetActivityType
+A.lfg_set_activity_count = GetNumActivitySetActivities
+A.lfg_set_activity_id    = GetActivitySetActivityIdByIndex
+A.lfg_current_activity   = GetCurrentLFGActivityId
 
 A.get_ava_rank          = function() return GetUnitAvARank("player") end
 A.get_ava_rank_points   = function() return GetUnitAvARankPoints("player") end

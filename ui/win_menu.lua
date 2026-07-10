@@ -673,6 +673,43 @@ local function populate_queue_sets()
     end
 end
 
+local bg_types
+local function is_bg_activity(activityId)
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    if not bg_types then
+        bg_types = {}
+        for _, t in ipairs({ C.LFG_ACTIVITY_BG_CHAMPION, C.LFG_ACTIVITY_BG_NON_CHAMPION, C.LFG_ACTIVITY_BG_LOW_LEVEL }) do
+            if t ~= nil then bg_types[t] = true end
+        end
+    end
+    if not activityId or activityId <= 0 then return false end
+    return bg_types[safe(A.lfg_activity_type, activityId)] == true
+end
+
+local function bg_searching()
+    local A = BGMeter.zenimax.api
+    if not safe(A.lfg_searching) then return false end
+    local n = safe(A.lfg_num_requests)
+    if not n or type(A.lfg_request_ids) ~= "function" then return true end
+    for i = 1, n do
+        local ok, aid, sid = pcall(A.lfg_request_ids, i)
+        if ok then
+            if sid and sid ~= 0 and (safe(A.lfg_set_activity_count, sid) or 0) > 0 then
+                aid = safe(A.lfg_set_activity_id, sid, 1)
+            end
+            if is_bg_activity(aid) then return true end
+        end
+    end
+    return false
+end
+
+local function in_lfg_dungeon()
+    local A = BGMeter.zenimax.api
+    local curId = safe(A.lfg_current_activity) or 0
+    return curId > 0 and not is_bg_activity(curId)
+end
+
 local function queue_ticker_sync(searching)
     local E = BGMeter.zenimax.events
     local want = searching and built and not panel.win:IsHidden()
@@ -690,14 +727,26 @@ function M.update_queue()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     local q = panel.queue
-    local searching = safe(A.lfg_searching) and true or false
+    local anySearch = safe(A.lfg_searching) and true or false
+    local searching = anySearch and bg_searching()
     local capturing = BGMeter.Capture and BGMeter.Capture.is_active and BGMeter.Capture.is_active() or false
+    local inDungeon = in_lfg_dungeon()
     update_footer()
     local compact = (q.statusW or 200) < 110
-    if q.btn.SetEnabled then q.btn:SetEnabled(not capturing or searching) end
+    if q.btn.SetEnabled then
+        q.btn:SetEnabled(searching or not (capturing or anySearch or inDungeon))
+    end
     if capturing and not searching then
         q.btn:SetText("Queue")
         set_text(q.status, compact and "" or "in a battleground")
+        S.color(q.status, K.COLOR.text_dim)
+    elseif anySearch and not searching then
+        q.btn:SetText("Queue")
+        set_text(q.status, compact and "" or "in another queue")
+        S.color(q.status, K.COLOR.text_dim)
+    elseif inDungeon and not searching then
+        q.btn:SetText("Queue")
+        set_text(q.status, compact and "" or "in a dungeon")
         S.color(q.status, K.COLOR.text_dim)
     elseif searching then
         q.btn:SetText("Cancel")
@@ -735,14 +784,19 @@ function M.queue_click()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     local q = panel.queue
-    if BGMeter.Capture and BGMeter.Capture.is_active() and not safe(A.lfg_searching) then
+    if safe(A.lfg_searching) then
+        if bg_searching() then
+            safe(A.lfg_cancel)
+            Sound.play("nav")
+            BGMeter.Log.debug("battleground queue cancelled")
+            M.update_queue()
+        end
         return
     end
-    if safe(A.lfg_searching) then
-        safe(A.lfg_cancel)
-        Sound.play("nav")
-        BGMeter.Log.debug("battleground queue cancelled")
-    else
+    if (BGMeter.Capture and BGMeter.Capture.is_active()) or in_lfg_dungeon() then
+        return
+    end
+    do
         local s = q.sets and q.sets[q.sel]
         if not s then
             BGMeter.Log.say("no battleground queue entries found -- send me a /bgmeter report")
