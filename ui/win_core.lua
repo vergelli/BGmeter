@@ -151,6 +151,14 @@ end
 
 local function hide_all(list, hidden) for _, c in ipairs(list) do c:SetHidden(hidden) end end
 
+local function player_ident(r)
+    local d, c = r.displayName, r.charName
+    if d and c and c ~= "" and c ~= d then
+        return string.format("%s (%s)", d, c)
+    end
+    return d or c or "?"
+end
+
 local function hit_proxy(target)
     local h = BGMeter.zenimax.ui.create_control(nil, target:GetParent(), CT_CONTROL)
     h:SetAnchorFill(target)
@@ -267,6 +275,7 @@ U.pop = pop
 U.team_name = team_name
 U.team_icon = team_icon
 U.hide_all = hide_all
+U.player_ident = player_ident
 U.hit_proxy = hit_proxy
 U.hexc = hexc
 U.neutral_color = neutral_color

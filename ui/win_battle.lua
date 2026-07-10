@@ -306,7 +306,7 @@ local function apply_dynamic_min_width(m)
     if not W.measure then return end
     local maxw = 0
     for _, prow in ipairs(m.battle) do
-        W.measure:SetText(prow.displayName or prow.charName or "?")
+        W.measure:SetText(U.player_ident(prow))
         local tw = W.measure:GetTextWidth() or 0
         if tw > maxw then maxw = tw end
     end
@@ -456,7 +456,7 @@ function SEC.battle(m, animate)
         local cicon = Icons.class(prow.classId)
         if cicon then row.classIcon:SetTexture(cicon); row.classIcon:SetHidden(false) else row.classIcon:SetHidden(true) end
 
-        local nm = prow.displayName or prow.charName or "?"
+        local nm = U.player_ident(prow)
         if awards.mvp == prow then nm = F.icon(ICON_STAR, 20) .. " " .. nm end
         set_text(row.name, nm)
         S.color(row.name, prow.isLocal and K.COLOR.you or S.team_color(prow.team))

@@ -223,6 +223,7 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
     if cmom then
         b.momTitle:SetText("COMBAT MOMENTUM")
         W.tips[b.momTitle] = "Who was winning the FIGHT, minute by minute.\nColor = team ahead on kills in the last 60s  ·  brighter = more dominant\nWhen this disagrees with the score chart above, kills were not buying points."
+        local peak = math.max(3, math.ceil(math.max(cmomMax or 1, 1) * 0.75))
         for _, sg in ipairs(cmom) do
             local x0, x1 = mx(sg.t0), mx(sg.t1)
             if x1 > x0 then
@@ -236,8 +237,15 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
                     local hit = b.tick_hit_pool:acquire()
                     hit:SetAnchorFill(r)
                     hit:SetHidden(false)
-                    W.tips[hit] = string.format("%s winning the fight (+%d kills in the last minute)  ·  %s - %s",
-                        team_name(sg.team), sg.mag, F.duration(sg.t0), F.duration(sg.t1))
+                    W.tips[hit] = string.format("%s +%d kills", team_name(sg.team), sg.mag)
+                    if sg.mag >= peak and (x1 - x0) >= 26 then
+                        local ic = b.pin_pool:acquire()
+                        ic:SetTexture("EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
+                        ic:SetDimensions(18, 18)
+                        ic:SetColor(tc[1], tc[2], tc[3], 1)
+                        ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), 20)
+                        ic:SetHidden(false)
+                    end
                 else
                     local nc = neutral_color()
                     P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
