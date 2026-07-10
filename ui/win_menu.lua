@@ -245,13 +245,19 @@ local function refresh_panel()
     st = panel.stats.session
     local sess = BGMeter.Session
     if sess and sess.matches > 0 then
-        set_text(st.label, string.format("%dW-%dL tonight", sess.wins, sess.losses))
+        if (sess.streak or 0) >= 2 then
+            set_text(st.label, string.format("%dW-%dL  ·  %dx streak", sess.wins, sess.losses, sess.streak))
+        else
+            set_text(st.label, string.format("%dW-%dL tonight", sess.wins, sess.losses))
+        end
         local col = K.COLOR.text_dim
         if sess.wins > sess.losses then col = K.COLOR.heal
         elseif sess.losses > sess.wins then col = K.COLOR.accent end
         S.color(st.label, col)
-        st.tip = string.format("This play session\n%d battlegrounds\n%s AP  ·  %s XP earned",
-            sess.matches, F.commas(sess.ap), F.commas(sess.xp))
+        st.tip = string.format("This play session\n%d battlegrounds%s\n%s AP  ·  %s XP earned",
+            sess.matches,
+            (sess.streak or 0) >= 2 and string.format("\n%d wins in a row", sess.streak) or "",
+            F.commas(sess.ap), F.commas(sess.xp))
     else
         set_text(st.label, "no battles yet")
         S.color(st.label, K.COLOR.text_dim)
@@ -275,6 +281,16 @@ local function make_row(i)
     r.name:SetAnchor(LEFT, r.container, LEFT, 14, 0)
     r.name:SetHeight(ROW_H)
 
+    if r.name.SetMaxLineCount then r.name:SetMaxLineCount(1) end
+    if TEXT_WRAP_MODE_ELLIPSIS and r.name.SetWrapMode then
+        r.name:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+    end
+
+    r.kda = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
+    r.kda:SetAnchor(RIGHT, r.container, RIGHT, -154, 0)
+    r.kda:SetDimensions(60, ROW_H)
+    r.kda:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+
     r.mode = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
     r.mode:SetAnchor(RIGHT, r.container, RIGHT, -88, 0)
     r.mode:SetDimensions(62, ROW_H)
@@ -290,8 +306,16 @@ local function make_row(i)
     end, "Delete this match")
     r.del:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
 
-    r.container:SetHandler("OnMouseEnter", function() r.highlight:SetHidden(false) end)
-    r.container:SetHandler("OnMouseExit", function() r.highlight:SetHidden(true) end)
+    r.container:SetHandler("OnMouseEnter", function()
+        r.highlight:SetHidden(false)
+        if r.tip and ZO_Tooltips_ShowTextTooltip then
+            ZO_Tooltips_ShowTextTooltip(r.container, BOTTOM, r.tip)
+        end
+    end)
+    r.container:SetHandler("OnMouseExit", function()
+        r.highlight:SetHidden(true)
+        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+    end)
     r.container:SetHandler("OnMouseUp", function(_, _, upInside)
         if upInside and r.index then
             Sound.play("match")
@@ -326,6 +350,11 @@ local function build()
         if upInside then M.toggle() end
     end)
     launcher = { win = win }
+
+    launcher.pip = P.icon(win, "EsoUI/Art/Inventory/newItem_icon.dds")
+    launcher.pip:SetDimensions(18, 18)
+    launcher.pip:SetAnchor(TOPRIGHT, win, TOPRIGHT, 5, -5)
+    launcher.pip:SetHidden(true)
 
     launcher.glowFx = P.icon(win, "bgmeter/assets/glow.dds")
     launcher.glowFx:SetAnchor(CENTER, win, CENTER, 0, 0)
@@ -532,8 +561,9 @@ local function build()
     P.frame(panel.inset):SetAnchorFill(panel.inset)
 
     panel.empty = P.label(panel.inset, S.FONT.small, K.COLOR.text_dim)
-    panel.empty:SetText("no battlegrounds recorded yet")
+    panel.empty:SetText("no battlegrounds recorded yet\nqueue up below to record your first battle")
     panel.empty:SetAnchor(CENTER, panel.inset, CENTER, 0, 0)
+    panel.empty:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     panel.empty:SetHidden(true)
 
     panel.footer = P.label(pw, S.FONT.small, K.COLOR.text_dim)
@@ -752,12 +782,22 @@ function M.refresh()
         r.container:SetDimensions(roww, ROW_H)
         r.container:SetHidden(false)
         r.highlight:SetHidden(true)
-        r.name:SetWidth(math.max(80, roww - 176))
+        r.name:SetWidth(math.max(72, roww - 232))
         P.set_rect_color(r.pip, result_color(m.result))
         set_text(r.name, m.name or "Battleground")
         S.color(r.name, (BGMeter.UI.window.current() == idx and not BGMeter.UI.window.is_hidden()) and K.COLOR.you or K.COLOR.text)
         set_text(r.mode, mode_tag(m))
         set_text(r.ago, ago_label(m.capturedAt))
+        local lr = BGMeter.Match.local_row(m)
+        set_text(r.kda, lr and string.format("%d/%d/%d", lr.kills or 0, lr.deaths or 0, lr.assists or 0) or "")
+        local score = m.result or ""
+        if m.teams and #m.teams >= 2 then
+            score = string.format("%s  %d - %d", m.result or "", m.teams[1].score or 0, m.teams[2].score or 0)
+        end
+        r.tip = string.format("%s\n%s%s", clean(m.name) or "Battleground", score,
+            lr and string.format("\nyou  %d/%d/%d  ·  %s dmg  ·  %s heal",
+                lr.kills or 0, lr.deaths or 0, lr.assists or 0,
+                F.abbrev(lr.damage or 0), F.abbrev(lr.healing or 0)) or "")
     end
     for i = vis + 1, #rows do
         rows[i].container:SetHidden(true)
@@ -778,6 +818,7 @@ end
 
 function M.show_menu()
     if not built then return end
+    M.clear_unread()
     local mg = sv_menu()
     panel.win:ClearAnchors()
     if (mg.x or 0) ~= 0 or (mg.y or 0) ~= 0 then
@@ -813,6 +854,19 @@ function M.on_report_closed()
     if built and Prefs.get("show_launcher") and on_hud then
         M.show_menu()
     end
+end
+
+function M.mark_unread()
+    if built then launcher.pip:SetHidden(false) end
+end
+
+function M.clear_unread()
+    if built then launcher.pip:SetHidden(true) end
+end
+
+function M.on_game_menu()
+    reopen_after_report = false
+    M.hide_menu(true)
 end
 
 function M.refresh_if_visible()

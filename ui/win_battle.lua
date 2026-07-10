@@ -489,7 +489,29 @@ function SEC.battle(m, animate)
         if W.selected_row == prow then hl = { 1, 1, 1, K.ALPHA.row_selected } end
         row.baseHL = hl
         P.set_rect_color(row.highlight, hl)
-        row.container:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then W.select(prow) end end)
+        row.container:SetHandler("OnMouseUp", function(_, button, upInside)
+            if not upInside then return end
+            if MOUSE_BUTTON_INDEX_RIGHT and button == MOUSE_BUTTON_INDEX_RIGHT then
+                local name = prow.displayName or prow.charName
+                if name and not prow.isLocal
+                    and type(ClearMenu) == "function" and type(AddMenuItem) == "function"
+                    and type(ShowMenu) == "function" then
+                    name = (name:gsub("%^.*$", ""))
+                    ClearMenu()
+                    if CHAT_SYSTEM and CHAT_SYSTEM.StartTextEntry and CHAT_CHANNEL_WHISPER then
+                        AddMenuItem("Whisper " .. name, function()
+                            CHAT_SYSTEM:StartTextEntry("", CHAT_CHANNEL_WHISPER, name)
+                        end)
+                    end
+                    if type(GroupInviteByName) == "function" then
+                        AddMenuItem("Invite to Group", function() GroupInviteByName(name) end)
+                    end
+                    ShowMenu(row.container)
+                end
+                return
+            end
+            W.select(prow)
+        end)
 
         y = y + L.row_h
     end

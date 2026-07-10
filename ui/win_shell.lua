@@ -511,6 +511,7 @@ end
 
 function W.show_match(index)
     build()
+    if BGMeter.UI.menu and BGMeter.UI.menu.clear_unread then BGMeter.UI.menu.clear_unread() end
     W.current_index = index or 1
     W.selected_row = nil
     settings_open = false
@@ -610,6 +611,20 @@ function W.init()
             if sc and type(sc.RegisterCallback) == "function" then
                 pcall(function() sc:RegisterCallback("StateChange", handler) end)
             end
+        end
+        local gm = safe_m(SCENE_MANAGER, "GetScene", "gameMenuInGame")
+        if gm and type(gm.RegisterCallback) == "function" then
+            pcall(function()
+                gm:RegisterCallback("StateChange", function(_, newState)
+                    if newState == SCENE_SHOWING or newState == SCENE_SHOWN then
+                        if BGMeter.UI.menu and BGMeter.UI.menu.on_game_menu then
+                            BGMeter.UI.menu.on_game_menu()
+                        end
+                        if settings_open then W.toggle_settings() end
+                        if W.built and not W.win:IsHidden() then W.hide() end
+                    end
+                end)
+            end)
         end
     end
     W.on_hud = (BGMeter.zenimax.scene and BGMeter.zenimax.scene.is_hud_scene()) and true or false
