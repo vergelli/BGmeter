@@ -28,14 +28,14 @@ local MODE_SHORT = {
 }
 
 local MENU_W = 372
-local MENU_H = 518
+local MENU_H = 530
 local ROW_H = 28
 local HEAD_H = 46
-local PANEL_H = 116
+local PANEL_H = 128
 local QUEUE_H = 36
 local FOOT_H = 34
 local INSET_PAD = 20
-local MIN_H, MAX_AUTO_H = 378, 752
+local MIN_H, MAX_AUTO_H = 390, 764
 
 local TELVAR = CURT_TELVAR_STONES
 
@@ -161,10 +161,10 @@ local function refresh_panel()
         if st.bar then
             if nextNeed and nextNeed > base then
                 local pct = math.max(0, math.min(1, (pts - base) / (nextNeed - base)))
-                BGMeter.Plot.bar.set(st.bar, pct, K.COLOR.gold, st.barW)
-                BGMeter.Plot.bar.set_hidden(st.bar, false)
+                U.inset_bar_set(st.bar, pct, K.COLOR.gold, st.barW)
+                st.bar.container:SetHidden(false)
             else
-                BGMeter.Plot.bar.set_hidden(st.bar, true)
+                st.bar.container:SetHidden(true)
             end
         end
     else
@@ -191,10 +191,10 @@ local function refresh_panel()
         if st.bar then
             if snap.percent then
                 local pct = math.max(0, math.min(1, snap.percent))
-                BGMeter.Plot.bar.set(st.bar, pct, K.COLOR.veterancy, st.barW)
-                BGMeter.Plot.bar.set_hidden(st.bar, false)
+                U.inset_bar_set(st.bar, pct, K.COLOR.veterancy, st.barW)
+                st.bar.container:SetHidden(false)
             else
-                BGMeter.Plot.bar.set_hidden(st.bar, true)
+                st.bar.container:SetHidden(true)
             end
         end
     else
@@ -442,18 +442,18 @@ local function build()
 
     local function make_stat(rowi, right, withIcon, withBar)
         local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-        local rowH = right and 24 or 34
-        local iconS = right and 22 or 34
-        local pad = right and 6 or 8
+        local rowH = right and 24 or 38
+        local iconS = right and 22 or 38
+        local pad = right and 6 or 9
         c:SetHeight(rowH)
         c:SetMouseEnabled(true)
-        local y = HEAD_H + (rowi - 1) * (right and 26 or 36)
+        local y = HEAD_H + (rowi - 1) * (right and 26 or 40)
         if right then
             c:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), y)
             c:SetWidth(126)
         else
             c:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD + 2, y)
-            c:SetWidth(196)
+            c:SetWidth(200)
         end
         local st = { c = c }
         if withIcon then
@@ -461,19 +461,20 @@ local function build()
             st.icon:SetDimensions(iconS, iconS)
             st.icon:SetAnchor(LEFT, c, LEFT, 0, 0)
         end
+        local textX = withIcon and (iconS + pad) or 2
         st.label = P.label(c, right and S.FONT.small or S.FONT.row, K.COLOR.text)
-        st.label:SetAnchor(LEFT, c, LEFT, withIcon and (iconS + pad) or 2, 0)
-        st.label:SetAnchor(RIGHT, c, RIGHT, 0, 0)
         if withBar then
-            st.label:SetHeight(rowH - 10)
-            st.label:SetAnchor(TOP, c, TOP, 0, 0)
-            st.bar = BGMeter.Plot.bar.create(c)
-            st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, iconS + pad, -1)
-            st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -1)
-            st.bar.container:SetHeight(7)
-            P.set_rect_color(st.bar.track, { 0, 0, 0, 0.5 })
-            st.barW = 196 - iconS - pad
+            st.label:SetAnchor(TOPLEFT, c, TOPLEFT, textX, 3)
+            st.label:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 3)
+            st.label:SetHeight(20)
+            st.bar = U.inset_bar(c)
+            st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
+            st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -3)
+            st.bar.container:SetHeight(9)
+            st.barW = 200 - textX
         else
+            st.label:SetAnchor(LEFT, c, LEFT, textX, 0)
+            st.label:SetAnchor(RIGHT, c, RIGHT, 0, 0)
             st.label:SetHeight(rowH)
         end
         c:SetHandler("OnMouseEnter", function()

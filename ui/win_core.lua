@@ -146,6 +146,28 @@ local function row_chrome(container)
     return base, hl
 end
 
+local function inset_bar(parent)
+    local bar = {}
+    bar.container = BGMeter.zenimax.ui.create_control(nil, parent, CT_CONTROL)
+    bar.border = P.rect(bar.container, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.35 })
+    bar.border:SetAnchorFill(bar.container)
+    bar.back = P.rect(bar.container, { 0, 0, 0, 0.62 })
+    bar.back:SetAnchor(TOPLEFT, bar.container, TOPLEFT, 1, 1)
+    bar.back:SetAnchor(BOTTOMRIGHT, bar.container, BOTTOMRIGHT, -1, -1)
+    bar.fill = P.rect(bar.container, K.COLOR.gold)
+    bar.fill:SetAnchor(TOPLEFT, bar.container, TOPLEFT, 1, 1)
+    bar.fill:SetAnchor(BOTTOMLEFT, bar.container, BOTTOMLEFT, 1, -1)
+    bar.fill:SetWidth(0)
+    return bar
+end
+
+local function inset_bar_set(bar, pct, color, width)
+    if not bar then return end
+    pct = math.max(0, math.min(1, pct or 0))
+    P.set_rect_color(bar.fill, color or K.COLOR.gold)
+    bar.fill:SetWidth(math.max(0, math.floor((width - 2) * pct + 0.5)))
+end
+
 local function lane_metrics(n)
     local L = K.LAYOUT
     if not n or n <= 6 then return L.lane_h, L.lane_gap end
@@ -282,6 +304,8 @@ U.hide_all = hide_all
 U.player_ident = player_ident
 U.row_chrome = row_chrome
 U.lane_metrics = lane_metrics
+U.inset_bar = inset_bar
+U.inset_bar_set = inset_bar_set
 U.hit_proxy = hit_proxy
 U.hexc = hexc
 U.neutral_color = neutral_color
