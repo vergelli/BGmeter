@@ -23,7 +23,7 @@ function Presentation.publish(match)
 
     local lr = BGMeter.Match.local_row(match)
     local F = BGMeter.Format
-    BGMeter.Log.say("%s %s -- you: %s dmg, %s heal, %d/%d/%d -- haul %s AP, %s XP",
+    BGMeter.Log.debug("%s %s -- you: %s dmg, %s heal, %d/%d/%d -- haul %s AP, %s XP",
         tostring(match.name or "Battleground"),
         tostring(match.result or ""),
         lr and F.abbrev(lr.damage) or "0",
@@ -41,7 +41,7 @@ function Presentation.publish(match)
         BGMeter.UI.window.show_match(1)
     elseif mode == "exit" then
         pending_show = true
-        BGMeter.Log.say("results ready -- the window opens when you leave the battleground")
+        BGMeter.Log.debug("results ready -- the window opens when you leave the battleground")
     end
 end
 

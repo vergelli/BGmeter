@@ -305,7 +305,7 @@ local function do_clear()
     if settings_open then W.toggle_settings() end
     if W.built and not W.win:IsHidden() then W.render(false) end
     if BGMeter.UI.menu then BGMeter.UI.menu.refresh_if_visible() end
-    BGMeter.Log.say("match history cleared")
+    BGMeter.Log.debug("match history cleared")
 end
 
 if ESO_Dialogs then

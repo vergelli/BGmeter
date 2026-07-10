@@ -545,6 +545,23 @@ end
 
 local QUEUE_TICKER = "BGMeterQueueTick"
 
+local function update_footer(count, vis)
+    local Cap = BGMeter.Capture
+    if Cap and Cap.is_active and Cap.is_active() then
+        local nm, el = Cap.live()
+        set_text(panel.footer, string.format("|cf2cc55recording %s  ·  %s|r",
+            clean(nm) or "battleground", F.duration(el or 0)))
+        return
+    end
+    count = count or BGMeter.History.count()
+    vis = vis or math.min(count, panel.vis or count)
+    if panel.vis and count > panel.vis then
+        set_text(panel.footer, string.format("%d-%d of %d  ·  scroll for more", offset + 1, offset + vis, count))
+    else
+        set_text(panel.footer, count > 0 and (count .. (count == 1 and " battleground" or " battlegrounds")) or "")
+    end
+end
+
 local function safe_m(obj, method, ...)
     if not obj or type(obj[method]) ~= "function" then return nil end
     local ok, a = pcall(obj[method], obj, ...)
@@ -637,6 +654,8 @@ function M.update_queue()
     local C = BGMeter.zenimax.constants
     local q = panel.queue
     local searching = safe(A.lfg_searching) and true or false
+    local capturing = BGMeter.Capture and BGMeter.Capture.is_active and BGMeter.Capture.is_active() or false
+    update_footer()
     local compact = (q.statusW or 200) < 110
     if searching then
         q.btn:SetText("Cancel")
@@ -666,7 +685,7 @@ function M.update_queue()
             set_text(q.status, "")
         end
     end
-    queue_ticker_sync(searching)
+    queue_ticker_sync(searching or capturing)
 end
 
 function M.queue_click()
@@ -677,7 +696,7 @@ function M.queue_click()
     if safe(A.lfg_searching) then
         safe(A.lfg_cancel)
         Sound.play("nav")
-        BGMeter.Log.say("battleground queue cancelled")
+        BGMeter.Log.debug("battleground queue cancelled")
     else
         local s = q.sets and q.sets[q.sel]
         if not s then
@@ -691,7 +710,7 @@ function M.queue_click()
         if C.ACTIVITY_QUEUE_RESULT_SUCCESS and res and res ~= C.ACTIVITY_QUEUE_RESULT_SUCCESS then
             BGMeter.Log.say("queue request rejected (result %s)", tostring(res))
         else
-            BGMeter.Log.say("queued: %s", s.name)
+            BGMeter.Log.debug("queued: %s", s.name)
         end
     end
     M.update_queue()
@@ -745,11 +764,7 @@ function M.refresh()
         rows[i].index = nil
     end
 
-    if count > panel.vis then
-        set_text(panel.footer, string.format("%d-%d of %d  ·  scroll for more", offset + 1, offset + vis, count))
-    else
-        set_text(panel.footer, count > 0 and (count .. (count == 1 and " battleground" or " battlegrounds")) or "")
-    end
+    update_footer(count, vis)
 end
 
 function M.delete(index)

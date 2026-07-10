@@ -386,14 +386,25 @@ local function on_slash(args)
     args = (args or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     local Log = BGMeter.Log
 
-    if args == "" or args == "show" then
+    if args == "" then
+        BGMeter.UI.menu.toggle()
+        return
+    elseif args == "report" then
+        cmd_report()
+        return
+    end
+
+    if not K.dev_tools() then
+        Log.say("|cFFFFFF/bgmeter|r opens the battle registry  ·  |cFFFFFF/bgmeter report|r builds a diagnostic report")
+        return
+    end
+
+    if args == "show" then
         BGMeter.UI.window.show()
     elseif args == "hide" then
         BGMeter.UI.window.hide()
     elseif args == "toggle" then
         BGMeter.UI.window.toggle()
-    elseif args == "menu" then
-        BGMeter.UI.menu.toggle()
     elseif args == "dump" then
         cmd_dump()
     elseif args == "ap" then
@@ -405,16 +416,14 @@ local function on_slash(args)
     elseif args == "last" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.window.show_match(1) end
-    elseif args == "layers" and K.dev_tools() then
+    elseif args == "layers" then
         BGMeter.UI.window.toggle_layers_debug()
-    elseif args == "report" then
-        cmd_report()
     elseif args == "clear" then
         BGMeter.UI.window.confirm_clear()
     elseif args == "debug" then
         Log.DEBUG = not Log.DEBUG
         Log.say("debug %s", Log.DEBUG and "ON" or "OFF")
-    elseif args:find("^mock") == 1 and K.dev_tools() and BGMeter.Mock then
+    elseif args:find("^mock") == 1 and BGMeter.Mock then
         BGMeter.Mock.run(args:match("^mock%s*(.*)$"))
     elseif args == "perf" and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.UI.export.show_text(table.concat(BGMeter.Diag.lines(), "\n"))
@@ -423,11 +432,10 @@ local function on_slash(args)
         Log.say("perf counters reset")
     elseif args:find("^gcprobe") == 1 and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
-    elseif args:find("^sound") == 1 and K.dev_tools() then
+    elseif args:find("^sound") == 1 then
         BGMeter.Sound.audition(args:match("^sound%s*(.*)$"))
     else
-        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|layers|sound [name]" or ""
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|report|demo|demo2|ap|dump|clear|debug%s]", extra)
+        Log.say("dev: show|hide|toggle|last|demo|demo2|ap|dump|clear|debug|layers|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|sound [name]")
     end
 end
 
@@ -443,7 +451,7 @@ local function on_addon_loaded()
 
     SLASH_COMMANDS[K.SLASH] = on_slash
 
-    BGMeter.Log.say("v%s loaded  ·  %s for commands", K.VERSION, K.SLASH)
+    BGMeter.Log.debug("v%s loaded  ·  %s for commands", K.VERSION, K.SLASH)
 end
 
 BGMeter.zenimax.events.register_addon_loaded(K.ADDON_NAME, on_addon_loaded)

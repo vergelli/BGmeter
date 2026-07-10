@@ -528,6 +528,12 @@ end
 
 function Capture.is_active() return active ~= nil end
 
+function Capture.live()
+    if not active then return nil end
+    local A = BGMeter.zenimax.api
+    return active.name, (safe(A.now_ms) or 0) - (active.startMs or 0)
+end
+
 function Capture.snapshot_now()
     local A = BGMeter.zenimax.api
     local Match = BGMeter.Match
