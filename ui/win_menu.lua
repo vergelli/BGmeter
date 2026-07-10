@@ -168,13 +168,13 @@ local function refresh_panel()
         st.c:SetHidden(false)
         if st.icon then st.icon:SetTexture(snap.rankIcon or "") end
         set_text(st.label, string.format("%s  %d", clean(snap.rankTitle) or "Veterancy", snap.rank))
+        local season = clean(snap.seasonName)
+        local seasonLine = season and ("\n" .. season) or ""
         if snap.tierTotal and snap.tierTotal > 0 then
             st.tip = string.format("Veterancy rank %d\n%s / %s to the next rank%s",
-                snap.rank, F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal),
-                snap.seasonName and ("\n" .. clean(snap.seasonName)) or "")
+                snap.rank, F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal), seasonLine)
         else
-            st.tip = string.format("Veterancy rank %d%s", snap.rank,
-                snap.seasonName and ("\n" .. clean(snap.seasonName)) or "")
+            st.tip = string.format("Veterancy rank %d%s", snap.rank, seasonLine)
         end
     else
         st.c:SetHidden(true)
