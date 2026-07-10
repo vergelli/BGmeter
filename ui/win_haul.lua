@@ -42,6 +42,7 @@ local function build_medal_card()
     icon:SetAnchor(TOPLEFT, root, TOPLEFT, 14, 12)
 
     local name = P.label(root, S.FONT.header, K.COLOR.text)
+    U.clamp_line(name)
     name:SetAnchor(TOPLEFT, root, TOPLEFT, 64, 12)
     name:SetDimensions(202, 20)
 
@@ -120,11 +121,13 @@ local function build_haul(win)
     p.vetIcon:SetAnchor(TOPLEFT, p.container, TOPLEFT, PAD, 44)
 
     p.vetTitle = P.label(p.container, S.FONT.row, K.COLOR.veterancy)
+    U.clamp_line(p.vetTitle)
     p.vetTitle:SetAnchor(TOPLEFT, p.vetIcon, TOPRIGHT, 12, 6)
     p.vetTitle:SetDimensions(INNER - 64, 22)
     p.vetTitle:SetVerticalAlignment(TEXT_ALIGN_CENTER)
 
     p.vetTier = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
+    U.clamp_line(p.vetTier)
     p.vetTier:SetAnchor(TOPLEFT, p.vetTitle, BOTTOMLEFT, 0, 8)
     p.vetTier:SetDimensions(INNER - 64, 18)
 
@@ -133,10 +136,12 @@ local function build_haul(win)
     p.track.container:SetDimensions(INNER, 12)
 
     p.vetDelta = P.label(p.container, S.FONT.small, K.COLOR.veterancy)
+    U.clamp_line(p.vetDelta)
     p.vetDelta:SetAnchor(TOPLEFT, p.track.container, BOTTOMLEFT, 0, 8)
     p.vetDelta:SetDimensions(INNER, 16)
 
     p.season = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
+    U.clamp_line(p.season)
     p.season:SetAnchor(TOPLEFT, p.vetDelta, BOTTOMLEFT, 0, 4)
     p.season:SetDimensions(INNER, 16)
 
@@ -166,6 +171,7 @@ local function build_haul(win)
     p.cp = receipt_line(p.xp.icon, 10, Icons.CP); p.cp.name:SetText("Champion Pts")
 
     p.medalLabel = P.label(p.container, S.FONT.row, K.COLOR.text_dim)
+    U.clamp_line(p.medalLabel)
     p.medalLabel:SetText("Medals")
     p.medalLabel:SetAnchor(TOPLEFT, p.cp.icon, BOTTOMLEFT, 0, 12)
     p.medalLabel:SetDimensions(INNER, 18)
@@ -192,6 +198,7 @@ local function build_haul(win)
     p.medalMore:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 6 + 2 * MEDAL_STEP)
 
     p.eff = P.label(p.container, S.FONT.small, K.COLOR.accent)
+    U.clamp_line(p.eff)
     p.eff:SetAnchor(TOPLEFT, p.medalLabel, BOTTOMLEFT, 0, 30 + 2 * MEDAL_STEP)
     p.eff:SetDimensions(INNER, 16)
     p.eff:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
@@ -212,6 +219,7 @@ local function build_haul(win)
     p.standRank:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     p.standSub = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
+    U.clamp_line(p.standSub)
     p.standSub:SetAnchor(TOP, p.standRank, BOTTOM, 0, 2)
     p.standSub:SetDimensions(INNER, 18)
     p.standSub:SetHorizontalAlignment(TEXT_ALIGN_CENTER)

@@ -259,6 +259,7 @@ local function build()
     strip:SetHeight(3)
 
     W.detail = P.label(win, S.FONT.small, K.COLOR.text_dim)
+    U.clamp_line(W.detail)
     W.detail:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, L.margin, -10)
     W.detail:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -L.margin, -10)
     W.detail:SetHorizontalAlignment(TEXT_ALIGN_CENTER)

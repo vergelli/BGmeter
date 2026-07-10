@@ -290,16 +290,19 @@ local function make_row(i)
     r.kda:SetAnchor(RIGHT, r.container, RIGHT, -154, 0)
     r.kda:SetDimensions(60, ROW_H)
     r.kda:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    U.clamp_line(r.kda)
 
     r.mode = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
     r.mode:SetAnchor(RIGHT, r.container, RIGHT, -88, 0)
     r.mode:SetDimensions(62, ROW_H)
     r.mode:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    U.clamp_line(r.mode)
 
     r.ago = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
     r.ago:SetAnchor(RIGHT, r.container, RIGHT, -26, 0)
     r.ago:SetDimensions(56, ROW_H)
     r.ago:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    U.clamp_line(r.ago)
 
     r.del = mk_button(r.container, TX.close, 14, function()
         M.delete(r.index)
@@ -492,6 +495,7 @@ local function build()
         end
         local textX = withIcon and (iconS + pad) or 2
         st.label = P.label(c, right and S.FONT.small or S.FONT.row, K.COLOR.text)
+        U.clamp_line(st.label)
         if withBar then
             st.label:SetAnchor(TOPLEFT, c, TOPLEFT, textX, 3)
             st.label:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 3)
@@ -567,8 +571,11 @@ local function build()
     panel.empty:SetHidden(true)
 
     panel.footer = P.label(pw, S.FONT.small, K.COLOR.text_dim)
-    panel.footer:SetAnchor(BOTTOM, pw, BOTTOM, 0, -9)
+    panel.footer:SetAnchor(BOTTOMLEFT, pw, BOTTOMLEFT, 12, -9)
+    panel.footer:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -12, -9)
+    panel.footer:SetHeight(14)
     panel.footer:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    U.clamp_line(panel.footer)
 
     built = true
 end

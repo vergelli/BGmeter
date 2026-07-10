@@ -40,7 +40,9 @@ local function build_header(win)
     h.title:SetAnchor(LEFT, h.emblem, RIGHT, 8, 0)
 
     h.subtitle = P.label(win, S.FONT.small, K.COLOR.text_dim)
+    U.clamp_line(h.subtitle)
     h.subtitle:SetAnchor(TOPLEFT, h.emblem, BOTTOMLEFT, 0, 8)
+    h.subtitle:SetDimensions(240, 14)
 
     h.bannerGlow = P.icon(win, "EsoUI/Art/Crafting/crafting_tooltip_glow_center.dds")
     h.bannerGlow:SetAnchor(TOP, win, TOP, 0, 2)

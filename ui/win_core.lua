@@ -146,6 +146,14 @@ local function row_chrome(container)
     return base, hl
 end
 
+local function clamp_line(lbl)
+    if not lbl then return end
+    if lbl.SetMaxLineCount then lbl:SetMaxLineCount(1) end
+    if TEXT_WRAP_MODE_ELLIPSIS and lbl.SetWrapMode then
+        lbl:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+    end
+end
+
 local function inset_bar(parent)
     local bar = {}
     bar.container = BGMeter.zenimax.ui.create_control(nil, parent, CT_CONTROL)
@@ -306,6 +314,7 @@ U.row_chrome = row_chrome
 U.lane_metrics = lane_metrics
 U.inset_bar = inset_bar
 U.inset_bar_set = inset_bar_set
+U.clamp_line = clamp_line
 U.hit_proxy = hit_proxy
 U.hexc = hexc
 U.neutral_color = neutral_color
