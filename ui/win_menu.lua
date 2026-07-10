@@ -3,10 +3,11 @@ local BGMeter = BGMeter
 
 local U = BGMeter.UI._win
 local W = U.W
-local set_text, mk_button, hide_all = U.set_text, U.mk_button, U.hide_all
+local set_text, mk_button = U.set_text, U.mk_button
 local TX = U.TX
 
 local K = BGMeter.Constants
+local L = BGMeter.Constants.LAYOUT
 local F = BGMeter.Format
 local P = BGMeter.Plot.primitives
 local S = BGMeter.Plot.style
@@ -21,14 +22,23 @@ local LAUNCHER_TX = {
     o = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_over.dds",
 }
 
+local MENU_ART   = "esoui/art/lfg/lfg_bgs_genericlfg_tooltip.dds"
+local MENU_ART_U = 0.75
+local MENU_ART_ALPHA = 0.30
+
+local ROW_BASE      = "EsoUI/Art/Miscellaneous/listItem_backdrop.dds"
+local ROW_HIGHLIGHT = "EsoUI/Art/Miscellaneous/listItem_highlight.dds"
+
 local MODE_SHORT = {
     deathmatch = "DM", domination = "DOM", crazy_king = "CK",
     king_of_the_hill = "KOTH", capture_the_flag = "CTF", murderball = "BALL",
 }
 
-local MENU_W = 336
-local ROW_H = 26
-local MAX_VIS = 12
+local MENU_W = 348
+local MENU_H = 424
+local ROW_H = 28
+local HEAD_H = 44
+local FOOT_H = 28
 
 local built = false
 local launcher = nil
@@ -42,6 +52,13 @@ local function sv_launcher()
     if not sv then return { x = 0, y = 0 } end
     sv.launcher = sv.launcher or { x = 0, y = 0 }
     return sv.launcher
+end
+
+local function sv_menu()
+    local sv = BGMeter.zenimax.savedvars.get()
+    if not sv then return { x = 0, y = 0, w = 0, h = 0 } end
+    sv.menu = sv.menu or { x = 0, y = 0, w = 0, h = 0 }
+    return sv.menu
 end
 
 local function ago_label(capturedAt)
@@ -71,35 +88,40 @@ end
 
 local function make_row(i)
     local r = {}
-    r.container = BGMeter.zenimax.ui.create_control(nil, panel.win, CT_CONTROL)
-    r.container:SetDimensions(MENU_W - 24, ROW_H)
+    r.container = BGMeter.zenimax.ui.create_control(nil, panel.inset, CT_CONTROL)
     r.container:SetMouseEnabled(true)
 
-    r.highlight = P.rect(r.container, { 1, 1, 1, K.ALPHA.row_hover })
+    r.base = P.icon(r.container, ROW_BASE)
+    r.base:SetAnchorFill(r.container)
+    r.base:SetColor(1, 1, 1, 0.9)
+
+    r.highlight = P.icon(r.container, ROW_HIGHLIGHT)
     r.highlight:SetAnchorFill(r.container)
+    r.highlight:SetColor(1, 1, 1, 0.55)
     r.highlight:SetHidden(true)
 
     r.pip = P.rect(r.container, K.COLOR.text_dim)
-    r.pip:SetDimensions(3, ROW_H - 10)
-    r.pip:SetAnchor(LEFT, r.container, LEFT, 2, 0)
+    r.pip:SetDimensions(3, ROW_H - 12)
+    r.pip:SetAnchor(LEFT, r.container, LEFT, 4, 0)
 
     r.name = P.label(r.container, S.FONT.row, K.COLOR.text)
-    r.name:SetAnchor(LEFT, r.container, LEFT, 12, 0)
-    r.name:SetDimensions(150, ROW_H)
+    r.name:SetAnchor(LEFT, r.container, LEFT, 14, 0)
+    r.name:SetHeight(ROW_H)
 
     r.mode = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
-    r.mode:SetAnchor(LEFT, r.container, LEFT, 166, 0)
-    r.mode:SetDimensions(64, ROW_H)
+    r.mode:SetAnchor(RIGHT, r.container, RIGHT, -88, 0)
+    r.mode:SetDimensions(62, ROW_H)
+    r.mode:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
 
     r.ago = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
-    r.ago:SetAnchor(RIGHT, r.container, RIGHT, -24, 0)
+    r.ago:SetAnchor(RIGHT, r.container, RIGHT, -26, 0)
     r.ago:SetDimensions(56, ROW_H)
     r.ago:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
 
     r.del = mk_button(r.container, TX.close, 14, function()
         M.delete(r.index)
     end, "Delete this match")
-    r.del:SetAnchor(RIGHT, r.container, RIGHT, -4, 0)
+    r.del:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
 
     r.container:SetHandler("OnMouseEnter", function() r.highlight:SetHidden(false) end)
     r.container:SetHandler("OnMouseExit", function() r.highlight:SetHidden(true) end)
@@ -107,6 +129,7 @@ local function make_row(i)
         if upInside and r.index then
             Sound.play("open")
             BGMeter.UI.window.show_match(r.index)
+            M.refresh()
         end
     end)
     return r
@@ -147,16 +170,28 @@ local function build()
         if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
     end)
 
+    local mg = sv_menu()
     local pw = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterMenu")
-    pw:SetDimensions(MENU_W, 120)
+    pw:SetDimensions((mg.w and mg.w > 0) and mg.w or MENU_W, (mg.h and mg.h > 0) and mg.h or MENU_H)
     pw:SetMouseEnabled(true)
     pw:SetMovable(true)
     pw:SetClampedToScreen(true)
     pw:SetHidden(true)
     pw:SetDrawTier(DT_HIGH)
+    pw:SetResizeHandleSize(L.resize_h)
+    pw:SetDimensionConstraints(320, 240, 540, 780)
+    pw:SetHandler("OnMoveStop", function()
+        mg = sv_menu()
+        mg.x, mg.y = pw:GetLeft(), pw:GetTop()
+    end)
+    pw:SetHandler("OnResizeStop", function()
+        mg = sv_menu()
+        mg.w, mg.h = pw:GetWidth(), pw:GetHeight()
+        M.refresh()
+    end)
     pw:SetHandler("OnMouseWheel", function(_, delta)
         local count = BGMeter.History.count()
-        local maxOff = math.max(0, count - MAX_VIS)
+        local maxOff = math.max(0, count - (panel.vis or 1))
         local want = math.max(0, math.min(offset - delta, maxOff))
         if want ~= offset then
             offset = want
@@ -165,8 +200,15 @@ local function build()
     end)
     panel = { win = pw }
 
-    local bg = P.rect(pw, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
+    local bg = P.rect(pw, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.97 })
     bg:SetAnchorFill(pw)
+
+    panel.art = P.icon(pw, MENU_ART)
+    panel.art:SetAnchor(TOPLEFT, pw, TOPLEFT, 2, 2)
+    panel.art:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -2, -2)
+    panel.art:SetTextureCoords(0, MENU_ART_U, 0, 1)
+    panel.art:SetColor(1, 1, 1, MENU_ART_ALPHA)
+
     P.frame(pw):SetAnchorFill(pw)
 
     local strip = P.rect(pw, K.COLOR.accent)
@@ -184,13 +226,22 @@ local function build()
     panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
-    panel.empty = P.label(pw, S.FONT.small, K.COLOR.text_dim)
+    panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
+    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, 12, HEAD_H)
+    panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -12, -FOOT_H)
+    panel.inset:SetMouseEnabled(false)
+
+    panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
+    panel.insetBg:SetAnchorFill(panel.inset)
+    P.frame(panel.inset):SetAnchorFill(panel.inset)
+
+    panel.empty = P.label(panel.inset, S.FONT.small, K.COLOR.text_dim)
     panel.empty:SetText("no battlegrounds recorded yet")
-    panel.empty:SetAnchor(TOP, pw, TOP, 0, 52)
+    panel.empty:SetAnchor(CENTER, panel.inset, CENTER, 0, 0)
     panel.empty:SetHidden(true)
 
     panel.footer = P.label(pw, S.FONT.small, K.COLOR.text_dim)
-    panel.footer:SetAnchor(BOTTOM, pw, BOTTOM, 0, -10)
+    panel.footer:SetAnchor(BOTTOM, pw, BOTTOM, 0, -9)
     panel.footer:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
 
     built = true
@@ -200,11 +251,18 @@ function M.refresh()
     if not built or panel.win:IsHidden() then return end
     local H = BGMeter.History
     local count = H.count()
-    local maxOff = math.max(0, count - MAX_VIS)
-    if offset > maxOff then offset = maxOff end
-    local vis = math.min(count, MAX_VIS)
 
-    panel.win:SetHeight(48 + math.max(vis * ROW_H, 34) + 30)
+    local w = panel.win:GetWidth()
+    local h = panel.win:GetHeight()
+    local insetH = h - HEAD_H - FOOT_H - 10
+    local vis = math.max(1, math.min(count, math.floor(insetH / ROW_H)))
+    panel.vis = math.max(1, math.floor(insetH / ROW_H))
+
+    local maxOff = math.max(0, count - panel.vis)
+    if offset > maxOff then offset = maxOff end
+    vis = math.min(count - offset, panel.vis)
+
+    local roww = w - 24 - 10
     panel.empty:SetHidden(count > 0)
 
     for i = 1, vis do
@@ -217,11 +275,12 @@ function M.refresh()
         local m = H.get(idx)
         r.index = idx
         r.container:ClearAnchors()
-        r.container:SetAnchor(TOPLEFT, panel.win, TOPLEFT, 12, 44 + (i - 1) * ROW_H)
+        r.container:SetAnchor(TOPLEFT, panel.inset, TOPLEFT, 5, 5 + (i - 1) * ROW_H)
+        r.container:SetDimensions(roww, ROW_H - 2)
         r.container:SetHidden(false)
         r.highlight:SetHidden(true)
-        local rc = result_color(m.result)
-        P.set_rect_color(r.pip, rc)
+        r.name:SetWidth(math.max(80, roww - 176))
+        P.set_rect_color(r.pip, result_color(m.result))
         set_text(r.name, m.name or "Battleground")
         S.color(r.name, (BGMeter.UI.window.current() == idx and not BGMeter.UI.window.is_hidden()) and K.COLOR.you or K.COLOR.text)
         set_text(r.mode, mode_tag(m))
@@ -232,7 +291,7 @@ function M.refresh()
         rows[i].index = nil
     end
 
-    if count > MAX_VIS then
+    if count > panel.vis then
         set_text(panel.footer, string.format("%d-%d of %d  ·  scroll for more", offset + 1, offset + vis, count))
     else
         set_text(panel.footer, count > 0 and (count .. (count == 1 and " battleground" or " battlegrounds")) or "")
@@ -248,8 +307,13 @@ end
 
 function M.show_menu()
     if not built then return end
+    local mg = sv_menu()
     panel.win:ClearAnchors()
-    panel.win:SetAnchor(TOPLEFT, launcher.win, BOTTOMRIGHT, 2, 2)
+    if (mg.x or 0) ~= 0 or (mg.y or 0) ~= 0 then
+        panel.win:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, mg.x, mg.y)
+    else
+        panel.win:SetAnchor(TOPLEFT, launcher.win, BOTTOMRIGHT, 2, 2)
+    end
     panel.win:SetHidden(false)
     offset = 0
     M.refresh()

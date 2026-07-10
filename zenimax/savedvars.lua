@@ -19,6 +19,7 @@ local DEFAULTS = {
     },
     window   = { x = 0, y = 0, w = 0, h = 0, hidden = true, scale = 1.0 },
     launcher = { x = 0, y = 0 },
+    menu     = { x = 0, y = 0, w = 0, h = 0 },
     prefs    = {
         max_history    = 50,
         auto_open_mode = "exit",
