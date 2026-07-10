@@ -240,7 +240,7 @@ local function cmd_report()
         return a
     end
 
-    add("bgmeter diagnostic report -- v%s", K.VERSION)
+    add("BGmeter diagnostic report -- v%s", K.VERSION)
     add("api=%s  world=%s", tostring(safe(A.get_api_version)), tostring(safe(GetWorldName)))
     local round = safe(A.get_bg_round_index)
     add("bg: active=%s  state=%s  round=%s  numRounds=%s",
@@ -320,11 +320,7 @@ local function cmd_report()
             tostring(CZ.GAME_TYPE_LABEL[m.gameType] or m.gameType),
             F.duration(m.durationMs or 0), tostring(m.localTeam),
             tostring(m.teamSize), tostring(m.competitive))
-        local Api = BGMeter.zenimax.api
-        if m.bgId and type(Api.get_bg_art) == "function" then
-            local ok, tex = pcall(Api.get_bg_art, m.bgId)
-            add("bgId=%s  infoTexture=%s", tostring(m.bgId), ok and tostring(tex) or "?")
-        end
+        add("bgId=%s", tostring(m.bgId))
         add("local: medals=%s  medalIds=%d  timeline=%d samples  killfeed=%d",
             tostring(lr and lr.medals), lr and lr.medalIds and #lr.medalIds or 0,
             m.timeline and m.timeline.t and #m.timeline.t or 0,
@@ -426,7 +422,7 @@ local function on_slash(args)
     elseif args == "export" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.export.show(BGMeter.History.most_recent()) end
-    elseif args == "layers" then
+    elseif args == "layers" and K.dev_tools() then
         BGMeter.UI.window.toggle_layers_debug()
     elseif args == "report" then
         cmd_report()
@@ -446,8 +442,8 @@ local function on_slash(args)
     elseif args:find("^gcprobe") == 1 and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
     else
-        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]" or ""
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
+        local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|layers" or ""
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|export|report|demo|demo2|ap|dump|clear|debug%s]", extra)
     end
 end
 

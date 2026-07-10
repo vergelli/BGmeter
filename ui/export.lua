@@ -31,7 +31,7 @@ function E.build_text(m)
     local lines = {}
     local function add(s) lines[#lines + 1] = s end
 
-    add(string.format("bgmeter export -- %s", tostring(m.name or "Battleground")))
+    add(string.format("BGmeter export -- %s", tostring(m.name or "Battleground")))
     add(string.format("result: %s  ·  duration: %s%s",
         tostring(m.result or "?"), F.duration(m.durationMs or 0),
         (m.numRounds and m.numRounds > 1) and ("  ·  rounds: " .. m.numRounds) or ""))
@@ -128,9 +128,13 @@ local function build()
     strip:SetAnchor(TOPRIGHT, win, TOPRIGHT, -6, 6)
     strip:SetHeight(3)
 
+    local logo = P.icon(win, K.LOGO)
+    logo:SetDimensions(20, 20)
+    logo:SetAnchor(TOPLEFT, win, TOPLEFT, 16, 13)
+
     local title = P.label(win, S.FONT.title, K.COLOR.text)
-    title:SetText("bgmeter  ·  Export")
-    title:SetAnchor(TOPLEFT, win, TOPLEFT, 18, 14)
+    title:SetText(K.TITLE .. "  ·  Export")
+    title:SetAnchor(LEFT, logo, RIGHT, 8, 0)
 
     local hint = P.label(win, S.FONT.small, K.COLOR.text_dim)
     hint:SetText("Select All, then Ctrl+C to copy")

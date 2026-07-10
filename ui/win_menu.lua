@@ -303,16 +303,48 @@ local function build()
     end)
     launcher = { win = win }
 
+    launcher.glow = P.icon(win, LAUNCHER_ICON)
+    launcher.glow:SetAnchor(CENTER, win, CENTER, 0, 0)
+    launcher.glow:SetDimensions(52, 52)
+    launcher.glow:SetHidden(true)
+
     launcher.icon = P.icon(win, LAUNCHER_ICON)
     launcher.icon:SetAnchorFill(win)
     launcher.icon:SetColor(1, 1, 1, LAUNCHER_IDLE)
+
+    local GLOW_COLORS = { K.COLOR.team.fire, K.COLOR.team.storm, K.COLOR.team.pit }
+    local GLOW_CYCLE_MS = 2100
+    local Anim = BGMeter.Anim
+
+    local function glow_tick(t)
+        if not launcher.hovered then return end
+        local phase = t * #GLOW_COLORS
+        local i = math.min(math.floor(phase) + 1, #GLOW_COLORS)
+        local j = (i % #GLOW_COLORS) + 1
+        local f = phase - (i - 1)
+        local a, b2 = GLOW_COLORS[i], GLOW_COLORS[j]
+        launcher.glow:SetColor(
+            a[1] + (b2[1] - a[1]) * f,
+            a[2] + (b2[2] - a[2]) * f,
+            a[3] + (b2[3] - a[3]) * f,
+            0.65)
+    end
+
+    local function glow_loop()
+        if not launcher.hovered then return end
+        Anim.start(GLOW_CYCLE_MS, glow_tick, glow_loop, function(t) return t end)
+    end
+
     win:SetHandler("OnMouseEnter", function()
+        launcher.hovered = true
         launcher.icon:SetColor(1, 1, 1, 1)
-        if ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(win, RIGHT, "bgmeter  ·  battle registry") end
+        launcher.glow:SetHidden(false)
+        glow_loop()
     end)
     win:SetHandler("OnMouseExit", function()
+        launcher.hovered = false
+        launcher.glow:SetHidden(true)
         launcher.icon:SetColor(1, 1, 1, LAUNCHER_IDLE)
-        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
     end)
 
     local mg = sv_menu()
@@ -361,9 +393,13 @@ local function build()
     strip:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -6, 6)
     strip:SetHeight(3)
 
+    panel.logo = P.icon(pw, K.LOGO)
+    panel.logo:SetDimensions(20, 20)
+    panel.logo:SetAnchor(TOPLEFT, pw, TOPLEFT, 16, 13)
+
     panel.title = P.label(pw, S.FONT.title, K.COLOR.text)
-    panel.title:SetText("bgmeter  ·  Registry")
-    panel.title:SetAnchor(TOPLEFT, pw, TOPLEFT, 16, 15)
+    panel.title:SetText(K.TITLE .. "  ·  Registry")
+    panel.title:SetAnchor(LEFT, panel.logo, RIGHT, 8, 0)
 
     panel.close = mk_button(pw, TX.close, 20, function() M.hide_menu() end, "Close")
     panel.close:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -14, 15)

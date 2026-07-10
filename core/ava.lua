@@ -80,17 +80,6 @@ Ava.session = blank_session()
 -- so we can confirm the live `reason` codes BEFORE trusting the breakdown.
 Ava.probe = false
 
--- ── observers (the HUD subscribes here) ─────────────────────────────────────
-local observers = {}
-
-function Ava.subscribe(fn)
-    if type(fn) == "function" then observers[#observers + 1] = fn end
-end
-
-local function notify(evt)
-    for i = 1, #observers do pcall(observers[i], evt) end
-end
-
 -- ── AvA presence ────────────────────────────────────────────────────────────
 function Ava.in_ava()
     local A = BGMeter.zenimax.api
@@ -109,21 +98,18 @@ function Ava.begin_session()
     s.vetStart = BGMeter.Veterancy and BGMeter.Veterancy.snapshot() or nil
     Ava.session = s
     BGMeter.Log.debug("ava session begin: zone=%s", tostring(s.zone))
-    notify({ kind = "session", state = "begin", session = s })
 end
 
 function Ava.end_session()
     if not Ava.session.active then return end
     Ava.session.active = false
     BGMeter.Log.debug("ava session end: ap=%d", Ava.session.ap)
-    notify({ kind = "session", state = "end", session = Ava.session })
 end
 
 -- Manual reset (slash command / settings): start a clean tally in place.
 function Ava.reset()
     if Ava.in_ava() then Ava.begin_session()
     else Ava.session = blank_session() end
-    notify({ kind = "reset", session = Ava.session })
 end
 
 -- ── event handlers ──────────────────────────────────────────────────────────
@@ -152,8 +138,6 @@ function Ava.on_ap(_, _alliancePoints, _playSound, difference, reason)
         BGMeter.Log.say("|cffd700AP|r +%d  reason=%s  -> %s  (session %s)",
             difference, tostring(reason), bucket, BGMeter.Format.commas(s.ap))
     end
-
-    notify({ kind = "ap", delta = difference, bucket = bucket, session = s })
 end
 
 -- XP changed. Signature: (eventCode, reason, level, previousXp, currentXp).
@@ -163,13 +147,6 @@ function Ava.on_xp(_, _reason, _level, prev, current)
     Ava.session.xp = Ava.session.xp + math.max(0, current - prev)
 end
 
--- A veterancy tier ticked over -- forward to the HUD so it can flash + re-fill.
-function Ava.on_reward_track(_, rewardTrackType, _trackId, prevTier, newTier)
-    local C = BGMeter.zenimax.constants
-    if rewardTrackType ~= C.REWARD_TRACK_TYPE_AVA_VETERANCY then return end
-    local rankUp = (newTier and prevTier and newTier > prevTier) or false
-    notify({ kind = "veterancy", rankUp = rankUp, prevTier = prevTier, newTier = newTier })
-end
 
 -- Player loaded a zone -- open or close the session as AvA presence changes.
 function Ava.on_player_activated()
@@ -226,7 +203,6 @@ function Ava.init()
 
     E.register(P .. "AP",   C.EVENT_ALLIANCE_POINT_UPDATE,        Ava.on_ap)
     E.register(P .. "XP",   C.EVENT_EXPERIENCE_GAIN,              Ava.on_xp)
-    E.register(P .. "Vet",  C.EVENT_REWARD_TRACK_PROGRESS_GAINED, Ava.on_reward_track)
     E.register(P .. "Zone", C.EVENT_PLAYER_ACTIVATED,             Ava.on_player_activated)
 
     -- If we reload while already standing in Cyrodiil, open the session now.

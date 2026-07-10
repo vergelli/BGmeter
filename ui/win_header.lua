@@ -33,12 +33,12 @@ end
 
 local function build_header(win)
     local h = {}
-    h.emblem = P.rect(win, K.COLOR.accent)
-    h.emblem:SetDimensions(16, 16)
-    h.emblem:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin + 2, 16)
+    h.emblem = P.icon(win, K.LOGO)
+    h.emblem:SetDimensions(26, 26)
+    h.emblem:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin + 2, 11)
 
     h.title = P.label(win, S.FONT.title, K.COLOR.text)
-    h.title:SetText("bgmeter")
+    h.title:SetText(K.TITLE)
     h.title:SetAnchor(LEFT, h.emblem, RIGHT, 8, 0)
 
     h.subtitle = P.label(win, S.FONT.small, K.COLOR.text_dim)

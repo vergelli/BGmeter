@@ -27,7 +27,6 @@ A.get_bg_round_index = GetCurrentBattlegroundRoundIndex
 A.is_active_bg       = IsActiveWorldBattleground
 A.get_bg_name        = GetBattlegroundName        -- (battlegroundId) -> string
 A.get_bg_team_size   = GetBattlegroundTeamSize    -- (battlegroundId) -> int
-A.get_bg_art         = GetBattlegroundInfoTexture
 A.get_local_team     = function() return GetUnitBattlegroundTeam("player") end
 A.get_result_for_team = GetBattlegroundResultForTeam -- (team) -> BattlegroundResult
 A.get_num_rounds     = GetBattlegroundNumRounds
@@ -84,7 +83,6 @@ A.lfg_cancel       = CancelGroupSearches
 A.lfg_searching    = IsCurrentlySearchingForGroup
 A.lfg_times        = GetLFGSearchTimes
 A.lfg_cooldown     = GetLFGCooldownTimeRemainingSeconds
-A.get_unit_level   = function() return GetUnitLevel("player") end
 
 A.get_ava_rank          = function() return GetUnitAvARank("player") end
 A.get_ava_rank_points   = function() return GetUnitAvARankPoints("player") end

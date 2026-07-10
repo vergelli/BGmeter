@@ -9,6 +9,8 @@ local BGMeter = BGMeter
 local K = {}
 
 K.ADDON_NAME = "bgmeter"
+K.TITLE      = "BGmeter"
+K.LOGO       = "bgmeter/assets/launcher.dds"
 K.VERSION    = "0.1.0"          -- lockstep: manifest ## Version + ## AddOnVersion
 K.SAVED_VARS = "BGMeterSavedVars"
 K.SLASH      = "/bgmeter"
