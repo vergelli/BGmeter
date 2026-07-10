@@ -521,6 +521,11 @@ local function build()
     panel.queue.status = P.label(pw, S.FONT.small, K.COLOR.text_dim)
     panel.queue.status:SetAnchor(LEFT, panel.queue.btn, RIGHT, 8, 0)
     panel.queue.status:SetHeight(28)
+    panel.queue.statusW = 90
+    if panel.queue.status.SetMaxLineCount then panel.queue.status:SetMaxLineCount(1) end
+    if TEXT_WRAP_MODE_ELLIPSIS and panel.queue.status.SetWrapMode then
+        panel.queue.status:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+    end
 
     panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
     panel.insetBg:SetAnchorFill(panel.inset)
@@ -632,15 +637,20 @@ function M.update_queue()
     local C = BGMeter.zenimax.constants
     local q = panel.queue
     local searching = safe(A.lfg_searching) and true or false
+    local compact = (q.statusW or 200) < 110
     if searching then
         q.btn:SetText("Cancel")
         local startMs, etaMs = safe(A.lfg_times)
         local now = safe(A.now_ms) or 0
-        local txt = "in queue"
+        local txt = compact and "..." or "in queue"
         if startMs and startMs > 0 and now > startMs then
-            txt = "in queue  " .. F.duration(now - startMs)
-            if etaMs and etaMs > startMs then
-                txt = txt .. "  ·  eta ~" .. F.duration(etaMs - startMs)
+            if compact then
+                txt = F.duration(now - startMs)
+            else
+                txt = "in queue  " .. F.duration(now - startMs)
+                if etaMs and etaMs > startMs then
+                    txt = txt .. "  ·  eta ~" .. F.duration(etaMs - startMs)
+                end
             end
         end
         set_text(q.status, txt)
@@ -650,7 +660,7 @@ function M.update_queue()
         local cd = C.LFG_COOLDOWN_BATTLEGROUND_DESERTED_QUEUE
             and safe(A.lfg_cooldown, C.LFG_COOLDOWN_BATTLEGROUND_DESERTED_QUEUE) or 0
         if cd and cd > 0 then
-            set_text(q.status, "deserter  " .. F.duration(cd * 1000))
+            set_text(q.status, (compact and "" or "deserter  ") .. F.duration(cd * 1000))
             S.color(q.status, K.COLOR.accent)
         else
             set_text(q.status, "")
@@ -696,6 +706,9 @@ function M.refresh()
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
+
+    panel.queue.statusW = math.max(36, w - 2 * INSET_PAD - 168 - 4 - 92 - 8)
+    panel.queue.status:SetWidth(panel.queue.statusW)
     local insetH = h - HEAD_H - PANEL_H - QUEUE_H - FOOT_H - 10
     panel.vis = math.max(1, math.floor(insetH / (ROW_H + 2)))
 
