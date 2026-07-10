@@ -16,11 +16,8 @@ local Sound = BGMeter.Sound
 
 local M = {}
 
-local LAUNCHER_TX = {
-    n = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_up.dds",
-    p = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_down.dds",
-    o = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_over.dds",
-}
+local LAUNCHER_ICON = "bgmeter/assets/launcher.dds"
+local LAUNCHER_IDLE = 0.90
 
 local MENU_ART = "esoui/art/lorelibrary/lorelibrary_note.dds"
 local MENU_ART_ALPHA = 0.30
@@ -200,14 +197,15 @@ local function build()
     end)
     launcher = { win = win }
 
-    launcher.icon = P.icon(win, LAUNCHER_TX.n)
+    launcher.icon = P.icon(win, LAUNCHER_ICON)
     launcher.icon:SetAnchorFill(win)
+    launcher.icon:SetColor(1, 1, 1, LAUNCHER_IDLE)
     win:SetHandler("OnMouseEnter", function()
-        launcher.icon:SetTexture(LAUNCHER_TX.o)
+        launcher.icon:SetColor(1, 1, 1, 1)
         if ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(win, RIGHT, "bgmeter  ·  battle registry") end
     end)
     win:SetHandler("OnMouseExit", function()
-        launcher.icon:SetTexture(LAUNCHER_TX.n)
+        launcher.icon:SetColor(1, 1, 1, LAUNCHER_IDLE)
         if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
     end)
 
