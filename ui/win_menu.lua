@@ -30,14 +30,14 @@ local MODE_SHORT = {
     king_of_the_hill = "KOTH", capture_the_flag = "CTF", murderball = "BALL",
 }
 
-local MENU_W = 348
-local MENU_H = 460
+local MENU_W = 372
+local MENU_H = 470
 local ROW_H = 28
 local HEAD_H = 46
-local PANEL_H = 86
+local PANEL_H = 102
 local FOOT_H = 34
 local INSET_PAD = 20
-local MIN_H, MAX_AUTO_H = 320, 700
+local MIN_H, MAX_AUTO_H = 330, 700
 
 local TELVAR = CURT_TELVAR_STONES
 
@@ -323,7 +323,7 @@ local function build()
     pw:SetHidden(true)
     pw:SetDrawTier(DT_HIGH)
     pw:SetResizeHandleSize(L.resize_h)
-    pw:SetDimensionConstraints(320, 240, 540, 780)
+    pw:SetDimensionConstraints(360, 280, 560, 780)
     pw:SetHandler("OnMoveStop", function()
         mg = sv_menu()
         mg.x, mg.y = pw:GetLeft(), pw:GetTop()
@@ -372,26 +372,28 @@ local function build()
 
     local function make_stat(rowi, right, withIcon)
         local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-        c:SetHeight(24)
+        local rowH = right and 24 or 30
+        local iconS = right and 22 or 30
+        c:SetHeight(rowH)
         c:SetMouseEnabled(true)
-        local y = HEAD_H + (rowi - 1) * 26
+        local y = HEAD_H + (rowi - 1) * (right and 26 or 32)
         if right then
             c:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), y)
             c:SetWidth(126)
         else
             c:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD + 2, y)
-            c:SetWidth(170)
+            c:SetWidth(196)
         end
         local st = { c = c }
         if withIcon then
             st.icon = P.icon(c)
-            st.icon:SetDimensions(22, 22)
+            st.icon:SetDimensions(iconS, iconS)
             st.icon:SetAnchor(LEFT, c, LEFT, 0, 0)
         end
-        st.label = P.label(c, S.FONT.small, K.COLOR.text)
-        st.label:SetAnchor(LEFT, c, LEFT, withIcon and 27 or 2, 0)
+        st.label = P.label(c, right and S.FONT.small or S.FONT.row, K.COLOR.text)
+        st.label:SetAnchor(LEFT, c, LEFT, withIcon and (iconS + 6) or 2, 0)
         st.label:SetAnchor(RIGHT, c, RIGHT, 0, 0)
-        st.label:SetHeight(24)
+        st.label:SetHeight(rowH)
         c:SetHandler("OnMouseEnter", function()
             if st.tip and ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(c, BOTTOM, st.tip) end
         end)
