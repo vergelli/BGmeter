@@ -151,11 +151,21 @@ local function refresh_panel()
         if st.icon then st.icon:SetTexture(safe(A.get_ava_rank_icon, rank) or "") end
         set_text(st.label, string.format("%s  %d", rname, rank))
         local pts = safe(A.get_ava_rank_points) or 0
+        local base = safe(A.get_ava_points_needed, rank) or 0
         local nextNeed = safe(A.get_ava_points_needed, rank + 1)
         if nextNeed and nextNeed > pts then
             st.tip = string.format("Alliance War rank %d\n%s AP to the next rank", rank, F.commas(nextNeed - pts))
         else
             st.tip = string.format("Alliance War rank %d", rank)
+        end
+        if st.bar then
+            if nextNeed and nextNeed > base then
+                local pct = math.max(0, math.min(1, (pts - base) / (nextNeed - base)))
+                BGMeter.Plot.bar.set(st.bar, pct, K.COLOR.gold, st.barW)
+                BGMeter.Plot.bar.set_hidden(st.bar, false)
+            else
+                BGMeter.Plot.bar.set_hidden(st.bar, true)
+            end
         end
     else
         st.c:SetHidden(true)
@@ -174,6 +184,15 @@ local function refresh_panel()
                 snap.rank, F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal), seasonLine)
         else
             st.tip = string.format("Veterancy rank %d%s", snap.rank, seasonLine)
+        end
+        if st.bar then
+            if snap.percent then
+                local pct = math.max(0, math.min(1, snap.percent))
+                BGMeter.Plot.bar.set(st.bar, pct, K.COLOR.veterancy, st.barW)
+                BGMeter.Plot.bar.set_hidden(st.bar, false)
+            else
+                BGMeter.Plot.bar.set_hidden(st.bar, true)
+            end
         end
     else
         st.c:SetHidden(true)
@@ -418,7 +437,7 @@ local function build()
     panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
-    local function make_stat(rowi, right, withIcon)
+    local function make_stat(rowi, right, withIcon, withBar)
         local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
         local rowH = right and 24 or 30
         local iconS = right and 22 or 30
@@ -441,7 +460,17 @@ local function build()
         st.label = P.label(c, right and S.FONT.small or S.FONT.row, K.COLOR.text)
         st.label:SetAnchor(LEFT, c, LEFT, withIcon and (iconS + 6) or 2, 0)
         st.label:SetAnchor(RIGHT, c, RIGHT, 0, 0)
-        st.label:SetHeight(rowH)
+        if withBar then
+            st.label:SetHeight(rowH - 8)
+            st.label:SetAnchor(TOP, c, TOP, 0, 0)
+            st.bar = BGMeter.Plot.bar.create(c)
+            st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, iconS + 6, -1)
+            st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -1)
+            st.bar.container:SetHeight(5)
+            st.barW = 196 - iconS - 6
+        else
+            st.label:SetHeight(rowH)
+        end
         c:SetHandler("OnMouseEnter", function()
             if st.tip and ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(c, BOTTOM, st.tip) end
         end)
@@ -452,8 +481,8 @@ local function build()
     end
 
     panel.stats = {
-        ava     = make_stat(1, false, true),
-        vet     = make_stat(2, false, true),
+        ava     = make_stat(1, false, true, true),
+        vet     = make_stat(2, false, true, true),
         stand   = make_stat(3, false, true),
         ap      = make_stat(1, true, true),
         telvar  = make_stat(2, true, true),
