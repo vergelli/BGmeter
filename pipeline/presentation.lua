@@ -17,6 +17,7 @@ function Presentation.publish(match)
     BGMeter.History.push(match)
     BGMeter.Records.evaluate(match)
     BGMeter.Session.record(match)
+    if BGMeter.UI and BGMeter.UI.menu then BGMeter.UI.menu.refresh_if_visible() end
 
     BGMeter.Standing.request(match)
 

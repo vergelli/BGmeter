@@ -48,6 +48,13 @@ function History.most_recent()
     return History.get(1)
 end
 
+function History.delete(index)
+    local data = sv()
+    if not data or not data.matches or not data.matches[index] then return false end
+    table.remove(data.matches, index)
+    return true
+end
+
 function History.clear()
     local data = sv()
     if data then data.matches = {} end

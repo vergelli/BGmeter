@@ -18,6 +18,7 @@ local DEFAULTS = {
         damage = 0, healing = 0, kills = 0, ap = 0, bestRank = 0,
     },
     window   = { x = 0, y = 0, w = 0, h = 0, hidden = true, scale = 1.0 },
+    launcher = { x = 0, y = 0 },
     prefs    = {
         max_history    = 50,
         auto_open_mode = "exit",
@@ -28,6 +29,7 @@ local DEFAULTS = {
         show_standing  = true,
         show_awards    = true,
         show_timeline  = true,
+        show_launcher  = true,
         opacity        = 0.97,
         sort_key       = "damage",
         sort_desc      = true,

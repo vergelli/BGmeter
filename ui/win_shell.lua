@@ -35,6 +35,7 @@ local AUTO_OPEN_LABELS = { exit = "ON EXIT", instant = "INSTANT", off = "OFF" }
 local SETTINGS_SECTIONS = {
     { title = "GENERAL", rows = {
         { kind = "cycle",  key = "auto_open_mode", label = "Auto-open results" },
+        { kind = "toggle", key = "show_launcher",  label = "Launcher icon" },
         { kind = "toggle", key = "sounds",         label = "Sound cues" },
         { kind = "toggle", key = "animate",        label = "Animations" },
     } },
@@ -54,6 +55,9 @@ local function text_button(parent, label)
 end
 
 local function on_pref_changed(key)
+    if key == "show_launcher" and BGMeter.UI.menu then
+        BGMeter.UI.menu.sync()
+    end
     Sound.play("nav")
     W.render(false)
 end
@@ -463,11 +467,25 @@ end
 
 function W.current() return W.current_index end
 
+function W.is_hidden()
+    return not W.built or W.win:IsHidden()
+end
+
 function W.show() W.show_match(W.current_index); Sound.play("open") end
 
 function W.refresh_if_visible()
     if not W.built or W.win:IsHidden() then return end
     if W.current_index == 1 then W.render(false) end
+end
+
+function W.on_history_changed(removedIndex)
+    if removedIndex and removedIndex < W.current_index then
+        W.current_index = W.current_index - 1
+    end
+    local count = BGMeter.History.count()
+    if W.current_index > count then W.current_index = math.max(count, 1) end
+    W.selected_row = nil
+    if W.built and not W.win:IsHidden() then W.render(false) end
 end
 
 function W.hide()

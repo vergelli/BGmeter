@@ -394,6 +394,8 @@ local function on_slash(args)
         BGMeter.UI.window.hide()
     elseif args == "toggle" then
         BGMeter.UI.window.toggle()
+    elseif args == "menu" then
+        BGMeter.UI.menu.toggle()
     elseif args == "dump" then
         cmd_dump()
     elseif args == "ap" then
@@ -429,7 +431,7 @@ local function on_slash(args)
         BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
     else
         local extra = (K.dev_tools() and BGMeter.Mock) and "|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]" or ""
-        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
+        Log.say("commands: |cFFFFFF/bgmeter|r [show|hide|toggle|menu|last|export|report|demo|demo2|ap|dump|clear|debug|layers%s]", extra)
     end
 end
 
@@ -442,6 +444,7 @@ local function on_addon_loaded()
     BGMeter.Pipeline.acquisition.init()
     BGMeter.Ava.init()
     BGMeter.UI.window.init()
+    BGMeter.UI.menu.init()
 
     SLASH_COMMANDS[K.SLASH] = on_slash
 
