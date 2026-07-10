@@ -339,8 +339,12 @@ function W.render_detail(m)
         if (r.defPts or 0) > 0 then
             capsTxt = capsTxt .. string.format("  ·  %d def", r.defPts)
         end
+        local ident = r.displayName or r.charName or "?"
+        if r.displayName and r.charName and r.charName ~= "" and r.charName ~= r.displayName then
+            ident = string.format("%s (%s)", r.displayName, r.charName)
+        end
         set_text(W.detail, string.format("%s%s  ·  %s  --  %s dmg  ·  %s heal%s  ·  %d/%d/%d%s  ·  %d medals%s",
-            prefix, r.displayName or r.charName or "?", team_name(r.team),
+            prefix, ident, team_name(r.team),
             F.abbrev(r.damage), F.abbrev(r.healing), taken, r.kills, r.deaths, r.assists, capsTxt, r.medals or 0, eff))
         S.color(W.detail, K.COLOR.text_dim)
     else
