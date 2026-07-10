@@ -365,6 +365,22 @@ local function cmd_report()
         else
             add("objectives: (none captured)")
         end
+        local rl = m.relics
+        if rl and rl.t and #rl.t > 0 then
+            add("relics/balls: %d tracked, %d events", #rl.list, #rl.t)
+            for _, o in ipairs(rl.list) do
+                add("  %s (home=%s ids=%s:%s)", tostring(o.name),
+                    tostring(o.home), tostring(o.keepId), tostring(o.objectiveId))
+            end
+            for i = 1, #rl.t do
+                local o = rl.list[rl.o[i]]
+                add("  %s %s %s hold=%s last=%s%s",
+                    F.duration(rl.t[i] or 0), o and tostring(o.name) or "?",
+                    tostring(CZ.OBJ_EVENT_LABEL[rl.ev[i]] or rl.ev[i]),
+                    tostring(rl.hold[i]), tostring(rl.last[i]),
+                    rl.who and rl.who[i] and ("  by " .. rl.who[i]) or "")
+            end
+        end
     else
         add("(none)")
     end
