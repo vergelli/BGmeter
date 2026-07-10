@@ -458,26 +458,25 @@ end
 
 local QUEUE_TICKER = "BGMeterQueueTick"
 
-local function bg_activity()
-    local A = BGMeter.zenimax.api
-    local C = BGMeter.zenimax.constants
-    local lvl = safe(A.get_unit_level) or 50
-    if lvl < 50 and C.LFG_ACTIVITY_BG_LOW_LEVEL then return C.LFG_ACTIVITY_BG_LOW_LEVEL end
-    local cp = safe(A.get_cp_earned) or 0
-    if cp <= 0 and C.LFG_ACTIVITY_BG_NON_CHAMPION then return C.LFG_ACTIVITY_BG_NON_CHAMPION end
-    return C.LFG_ACTIVITY_BG_CHAMPION
-end
-
 local function populate_queue_sets()
     local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
     local q = panel.queue
     q.sets = {}
-    local act = bg_activity()
-    local n = act and safe(A.lfg_num_sets, act) or 0
-    for i = 1, n or 0 do
-        local id = safe(A.lfg_set_id, act, i)
-        if id then
-            q.sets[#q.sets + 1] = { id = id, name = clean(safe(A.lfg_set_info, id)) or ("Set " .. id) }
+    q.act = nil
+    local types = { C.LFG_ACTIVITY_BG_CHAMPION, C.LFG_ACTIVITY_BG_NON_CHAMPION, C.LFG_ACTIVITY_BG_LOW_LEVEL }
+    for _, act in ipairs(types) do
+        local n = safe(A.lfg_num_sets, act) or 0
+        BGMeter.Log.debug("queue sets: activity=%s count=%s", tostring(act), tostring(n))
+        if n > 0 then
+            q.act = act
+            for i = 1, n do
+                local id = safe(A.lfg_set_id, act, i)
+                if id then
+                    q.sets[#q.sets + 1] = { id = id, name = clean(safe(A.lfg_set_info, id)) or ("Set " .. id) }
+                end
+            end
+            break
         end
     end
     if not q.sets[q.sel] then q.sel = 1 end
@@ -548,7 +547,10 @@ function M.queue_click()
         BGMeter.Log.say("battleground queue cancelled")
     else
         local s = q.sets and q.sets[q.sel]
-        if not s then return end
+        if not s then
+            BGMeter.Log.say("no battleground queue entries found -- send me a /bgmeter report")
+            return
+        end
         safe(A.lfg_clear_search)
         safe(A.lfg_add_set, s.id)
         local res = safe(A.lfg_start)
