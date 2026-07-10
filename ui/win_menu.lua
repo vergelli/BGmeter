@@ -31,13 +31,15 @@ local MODE_SHORT = {
 }
 
 local MENU_W = 348
-local MENU_H = 424
+local MENU_H = 460
 local ROW_H = 28
 local HEAD_H = 46
-local BAND_H = 22
+local PANEL_H = 86
 local FOOT_H = 34
 local INSET_PAD = 20
-local MIN_H, MAX_AUTO_H = 260, 640
+local MIN_H, MAX_AUTO_H = 320, 700
+
+local TELVAR = CURT_TELVAR_STONES
 
 local built = false
 local launcher = nil
@@ -45,6 +47,18 @@ local panel = nil
 local rows = {}
 local offset = 0
 local on_hud = true
+
+local function safe(fn, ...)
+    if type(fn) ~= "function" then return nil end
+    local ok, a, b = pcall(fn, ...)
+    if not ok then return nil end
+    return a, b
+end
+
+local function clean(s)
+    if not s or s == "" then return nil end
+    return (tostring(s):gsub("%^.*$", ""))
+end
 
 local function sv_launcher()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -121,26 +135,98 @@ local function auto_height()
     local mg = sv_menu()
     if (mg.h or 0) > 0 then return end
     local count = BGMeter.History.count()
-    local want = HEAD_H + BAND_H + FOOT_H + 18 + math.max(count, 1) * ROW_H
+    local want = HEAD_H + PANEL_H + FOOT_H + 18 + math.max(count, 1) * ROW_H
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
-local function refresh_band()
+local function refresh_panel()
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+
+    local st = panel.stats.ava
+    local rank = safe(A.get_ava_rank)
+    if rank and rank > 0 then
+        st.c:SetHidden(false)
+        local gender = safe(A.get_gender) or 1
+        local rname = clean(safe(A.get_ava_rank_name, gender, rank)) or "?"
+        if st.icon then st.icon:SetTexture(safe(A.get_ava_rank_icon, rank) or "") end
+        set_text(st.label, string.format("%s  %d", rname, rank))
+        local pts = safe(A.get_ava_rank_points) or 0
+        local nextNeed = safe(A.get_ava_points_needed, rank + 1)
+        if nextNeed and nextNeed > pts then
+            st.tip = string.format("Alliance War rank %d\n%s AP to the next rank", rank, F.commas(nextNeed - pts))
+        else
+            st.tip = string.format("Alliance War rank %d", rank)
+        end
+    else
+        st.c:SetHidden(true)
+    end
+
+    st = panel.stats.vet
+    local snap = BGMeter.Veterancy and BGMeter.Veterancy.snapshot()
+    if snap and snap.rank then
+        st.c:SetHidden(false)
+        if st.icon then st.icon:SetTexture(snap.rankIcon or "") end
+        set_text(st.label, string.format("%s  %d", clean(snap.rankTitle) or "Veterancy", snap.rank))
+        if snap.tierTotal and snap.tierTotal > 0 then
+            st.tip = string.format("Veterancy rank %d\n%s / %s to the next rank%s",
+                snap.rank, F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal),
+                snap.seasonName and ("\n" .. clean(snap.seasonName)) or "")
+        else
+            st.tip = string.format("Veterancy rank %d%s", snap.rank,
+                snap.seasonName and ("\n" .. clean(snap.seasonName)) or "")
+        end
+    else
+        st.c:SetHidden(true)
+    end
+
+    st = panel.stats.stand
+    local sv = BGMeter.zenimax.savedvars.get()
+    local standing = sv and sv.standing
+    st.c:SetHidden(false)
+    if st.icon then st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds") end
+    if standing and (standing.rank or 0) > 0 then
+        set_text(st.label, "rank #" .. F.commas(standing.rank))
+        S.color(st.label, K.COLOR.gold)
+        st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
+    else
+        set_text(st.label, "unranked")
+        S.color(st.label, K.COLOR.text_dim)
+        st.tip = "Competitive standing\nplay a ranked battleground to appear"
+    end
+
+    st = panel.stats.ap
+    st.c:SetHidden(false)
+    if st.icon then st.icon:SetTexture(safe(A.get_currency_icon, C.CURT_ALLIANCE_POINTS) or "") end
+    set_text(st.label, F.commas(safe(A.get_alliance_points) or 0))
+    st.tip = "Alliance Points"
+
+    st = panel.stats.telvar
+    if TELVAR then
+        st.c:SetHidden(false)
+        if st.icon then st.icon:SetTexture(safe(A.get_currency_icon, TELVAR) or "") end
+        set_text(st.label, F.commas(safe(A.get_currency, TELVAR, C.CURRENCY_LOCATION_CHARACTER) or 0))
+        st.tip = "Tel Var Stones"
+    else
+        st.c:SetHidden(true)
+    end
+
+    st = panel.stats.session
     local sess = BGMeter.Session
     if sess and sess.matches > 0 then
-        set_text(panel.bandL, string.format("tonight  %dW-%dL  ·  %s AP",
-            sess.wins, sess.losses, F.commas(sess.ap)))
+        set_text(st.label, string.format("%dW-%dL tonight", sess.wins, sess.losses))
         local col = K.COLOR.text_dim
         if sess.wins > sess.losses then col = K.COLOR.heal
         elseif sess.losses > sess.wins then col = K.COLOR.accent end
-        S.color(panel.bandL, col)
+        S.color(st.label, col)
+        st.tip = string.format("This play session\n%d battlegrounds\n%s AP  ·  %s XP earned",
+            sess.matches, F.commas(sess.ap), F.commas(sess.xp))
     else
-        set_text(panel.bandL, "no battles tonight yet")
-        S.color(panel.bandL, K.COLOR.text_dim)
+        set_text(st.label, "no battles yet")
+        S.color(st.label, K.COLOR.text_dim)
+        st.tip = "This play session (since login)"
     end
-    local sv = BGMeter.zenimax.savedvars.get()
-    local st = sv and sv.standing
-    set_text(panel.bandR, (st and (st.rank or 0) > 0) and ("rank #" .. F.commas(st.rank)) or "")
+    st.c:SetHidden(false)
 end
 
 local function make_row(i)
@@ -284,17 +370,48 @@ local function build()
     panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
-    panel.bandL = P.label(pw, S.FONT.small, K.COLOR.text_dim)
-    panel.bandL:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD + 2, HEAD_H)
-    panel.bandL:SetHeight(BAND_H)
+    local function make_stat(rowi, right, withIcon)
+        local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
+        c:SetHeight(24)
+        c:SetMouseEnabled(true)
+        local y = HEAD_H + (rowi - 1) * 26
+        if right then
+            c:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), y)
+            c:SetWidth(126)
+        else
+            c:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD + 2, y)
+            c:SetWidth(170)
+        end
+        local st = { c = c }
+        if withIcon then
+            st.icon = P.icon(c)
+            st.icon:SetDimensions(22, 22)
+            st.icon:SetAnchor(LEFT, c, LEFT, 0, 0)
+        end
+        st.label = P.label(c, S.FONT.small, K.COLOR.text)
+        st.label:SetAnchor(LEFT, c, LEFT, withIcon and 27 or 2, 0)
+        st.label:SetAnchor(RIGHT, c, RIGHT, 0, 0)
+        st.label:SetHeight(24)
+        c:SetHandler("OnMouseEnter", function()
+            if st.tip and ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(c, BOTTOM, st.tip) end
+        end)
+        c:SetHandler("OnMouseExit", function()
+            if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+        end)
+        return st
+    end
 
-    panel.bandR = P.label(pw, S.FONT.small, K.COLOR.gold)
-    panel.bandR:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), HEAD_H)
-    panel.bandR:SetHeight(BAND_H)
-    panel.bandR:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    panel.stats = {
+        ava     = make_stat(1, false, true),
+        vet     = make_stat(2, false, true),
+        stand   = make_stat(3, false, true),
+        ap      = make_stat(1, true, true),
+        telvar  = make_stat(2, true, true),
+        session = make_stat(3, true, false),
+    }
 
     panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H + BAND_H)
+    panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H + PANEL_H)
     panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -INSET_PAD, -FOOT_H)
     panel.inset:SetMouseEnabled(false)
 
@@ -319,11 +436,11 @@ function M.refresh()
     local H = BGMeter.History
     local count = H.count()
 
-    refresh_band()
+    refresh_panel()
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
-    local insetH = h - HEAD_H - BAND_H - FOOT_H - 10
+    local insetH = h - HEAD_H - PANEL_H - FOOT_H - 10
     panel.vis = math.max(1, math.floor(insetH / ROW_H))
 
     local maxOff = math.max(0, count - panel.vis)

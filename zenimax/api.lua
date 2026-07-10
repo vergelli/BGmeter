@@ -72,6 +72,13 @@ A.get_alliance_points = function()
 end
 A.get_unit_xp        = function() return GetUnitXP("player") end
 A.get_unit_xp_max    = function() return GetUnitXPMax("player") end
+
+A.get_ava_rank          = function() return GetUnitAvARank("player") end
+A.get_ava_rank_points   = function() return GetUnitAvARankPoints("player") end
+A.get_ava_points_needed = GetNumPointsNeededForAvARank
+A.get_ava_rank_icon     = GetAvARankIcon
+A.get_ava_rank_name     = GetAvARankName
+A.get_gender            = function() return GetUnitGender("player") end
 A.get_cp_earned      = GetPlayerChampionPointsEarned                -- () -> int
 
 -- ── AvA presence / zone (for the transversal Cyrodiil session) ────────────
