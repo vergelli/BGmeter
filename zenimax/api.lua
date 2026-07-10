@@ -73,6 +73,18 @@ end
 A.get_unit_xp        = function() return GetUnitXP("player") end
 A.get_unit_xp_max    = function() return GetUnitXPMax("player") end
 
+A.lfg_num_sets     = GetNumActivitySetsByType
+A.lfg_set_id       = GetActivitySetIdByTypeAndIndex
+A.lfg_set_info     = GetActivitySetInfo
+A.lfg_clear_search = ClearActivityFinderSearch
+A.lfg_add_set      = AddActivityFinderSetSearchEntry
+A.lfg_start        = StartActivityFinderSearch
+A.lfg_cancel       = CancelGroupSearches
+A.lfg_searching    = IsCurrentlySearchingForGroup
+A.lfg_times        = GetLFGSearchTimes
+A.lfg_cooldown     = GetLFGCooldownTimeRemainingSeconds
+A.get_unit_level   = function() return GetUnitLevel("player") end
+
 A.get_ava_rank          = function() return GetUnitAvARank("player") end
 A.get_ava_rank_points   = function() return GetUnitAvARankPoints("player") end
 A.get_ava_points_needed = GetNumPointsNeededForAvARank

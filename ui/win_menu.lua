@@ -28,13 +28,14 @@ local MODE_SHORT = {
 }
 
 local MENU_W = 372
-local MENU_H = 470
+local MENU_H = 506
 local ROW_H = 28
 local HEAD_H = 46
 local PANEL_H = 102
+local QUEUE_H = 36
 local FOOT_H = 34
 local INSET_PAD = 20
-local MIN_H, MAX_AUTO_H = 330, 700
+local MIN_H, MAX_AUTO_H = 366, 740
 
 local TELVAR = CURT_TELVAR_STONES
 
@@ -132,7 +133,7 @@ local function auto_height()
     local mg = sv_menu()
     if (mg.h or 0) > 0 then return end
     local count = BGMeter.History.count()
-    local want = HEAD_H + PANEL_H + FOOT_H + 18 + math.max(count, 1) * (ROW_H + 2)
+    local want = HEAD_H + PANEL_H + QUEUE_H + FOOT_H + 18 + math.max(count, 1) * (ROW_H + 2)
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
@@ -414,8 +415,30 @@ local function build()
 
     panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
     panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H + PANEL_H)
-    panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -INSET_PAD, -FOOT_H)
+    panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -INSET_PAD, -(FOOT_H + QUEUE_H))
     panel.inset:SetMouseEnabled(false)
+
+    local qc = BGMeter.zenimax.ui.create_from_virtual(nil, pw, "ZO_ComboBox")
+    qc:SetDimensions(168, 30)
+    qc:SetAnchor(BOTTOMLEFT, pw, BOTTOMLEFT, INSET_PAD, -(FOOT_H + 3))
+    panel.queue = { combo_c = qc, sel = 1 }
+    if type(ZO_ComboBox_ObjectFromContainer) == "function" then
+        local ok, obj = pcall(ZO_ComboBox_ObjectFromContainer, qc)
+        if ok then panel.queue.combo = obj end
+    end
+    if panel.queue.combo and panel.queue.combo.SetSortsItems then
+        panel.queue.combo:SetSortsItems(false)
+    end
+
+    panel.queue.btn = BGMeter.zenimax.ui.create_from_virtual(nil, pw, "ZO_DefaultButton")
+    panel.queue.btn:SetDimensions(92, 28)
+    panel.queue.btn:SetAnchor(LEFT, qc, RIGHT, 4, 0)
+    panel.queue.btn:SetText("Queue")
+    panel.queue.btn:SetHandler("OnClicked", function() M.queue_click() end)
+
+    panel.queue.status = P.label(pw, S.FONT.small, K.COLOR.text_dim)
+    panel.queue.status:SetAnchor(LEFT, panel.queue.btn, RIGHT, 8, 0)
+    panel.queue.status:SetHeight(28)
 
     panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
     panel.insetBg:SetAnchorFill(panel.inset)
@@ -433,6 +456,112 @@ local function build()
     built = true
 end
 
+local QUEUE_TICKER = "BGMeterQueueTick"
+
+local function bg_activity()
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local lvl = safe(A.get_unit_level) or 50
+    if lvl < 50 and C.LFG_ACTIVITY_BG_LOW_LEVEL then return C.LFG_ACTIVITY_BG_LOW_LEVEL end
+    local cp = safe(A.get_cp_earned) or 0
+    if cp <= 0 and C.LFG_ACTIVITY_BG_NON_CHAMPION then return C.LFG_ACTIVITY_BG_NON_CHAMPION end
+    return C.LFG_ACTIVITY_BG_CHAMPION
+end
+
+local function populate_queue_sets()
+    local A = BGMeter.zenimax.api
+    local q = panel.queue
+    q.sets = {}
+    local act = bg_activity()
+    local n = act and safe(A.lfg_num_sets, act) or 0
+    for i = 1, n or 0 do
+        local id = safe(A.lfg_set_id, act, i)
+        if id then
+            q.sets[#q.sets + 1] = { id = id, name = clean(safe(A.lfg_set_info, id)) or ("Set " .. id) }
+        end
+    end
+    if not q.sets[q.sel] then q.sel = 1 end
+    if q.combo and q.combo.ClearItems then
+        q.combo:ClearItems()
+        for i, s in ipairs(q.sets) do
+            q.combo:AddItem(q.combo:CreateItemEntry(s.name, function() q.sel = i end))
+        end
+        if q.sets[q.sel] and q.combo.SetSelectedItemText then
+            q.combo:SetSelectedItemText(q.sets[q.sel].name)
+        end
+    end
+end
+
+local function queue_ticker_sync(searching)
+    local E = BGMeter.zenimax.events
+    local want = searching and built and not panel.win:IsHidden()
+    if want and not panel.queue.ticking then
+        E.register_update(QUEUE_TICKER, 1000, function() M.update_queue() end)
+        panel.queue.ticking = true
+    elseif not want and panel.queue.ticking then
+        E.unregister_update(QUEUE_TICKER)
+        panel.queue.ticking = false
+    end
+end
+
+function M.update_queue()
+    if not built then return end
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local q = panel.queue
+    local searching = safe(A.lfg_searching) and true or false
+    if searching then
+        q.btn:SetText("Cancel")
+        local startMs, etaMs = safe(A.lfg_times)
+        local now = safe(A.now_ms) or 0
+        local txt = "in queue"
+        if startMs and startMs > 0 and now > startMs then
+            txt = "in queue  " .. F.duration(now - startMs)
+            if etaMs and etaMs > startMs then
+                txt = txt .. "  ·  eta ~" .. F.duration(etaMs - startMs)
+            end
+        end
+        set_text(q.status, txt)
+        S.color(q.status, K.COLOR.gold)
+    else
+        q.btn:SetText("Queue")
+        local cd = C.LFG_COOLDOWN_BATTLEGROUND_DESERTED_QUEUE
+            and safe(A.lfg_cooldown, C.LFG_COOLDOWN_BATTLEGROUND_DESERTED_QUEUE) or 0
+        if cd and cd > 0 then
+            set_text(q.status, "deserter  " .. F.duration(cd * 1000))
+            S.color(q.status, K.COLOR.accent)
+        else
+            set_text(q.status, "")
+        end
+    end
+    queue_ticker_sync(searching)
+end
+
+function M.queue_click()
+    if not built then return end
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local q = panel.queue
+    if safe(A.lfg_searching) then
+        safe(A.lfg_cancel)
+        Sound.play("nav")
+        BGMeter.Log.say("battleground queue cancelled")
+    else
+        local s = q.sets and q.sets[q.sel]
+        if not s then return end
+        safe(A.lfg_clear_search)
+        safe(A.lfg_add_set, s.id)
+        local res = safe(A.lfg_start)
+        Sound.play("open")
+        if C.ACTIVITY_QUEUE_RESULT_SUCCESS and res and res ~= C.ACTIVITY_QUEUE_RESULT_SUCCESS then
+            BGMeter.Log.say("queue request rejected (result %s)", tostring(res))
+        else
+            BGMeter.Log.say("queued: %s", s.name)
+        end
+    end
+    M.update_queue()
+end
+
 function M.refresh()
     if not built or panel.win:IsHidden() then return end
     local H = BGMeter.History
@@ -442,7 +571,7 @@ function M.refresh()
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
-    local insetH = h - HEAD_H - PANEL_H - FOOT_H - 10
+    local insetH = h - HEAD_H - PANEL_H - QUEUE_H - FOOT_H - 10
     panel.vis = math.max(1, math.floor(insetH / (ROW_H + 2)))
 
     local maxOff = math.max(0, count - panel.vis)
@@ -507,12 +636,16 @@ function M.show_menu()
     offset = 0
     auto_height()
     apply_art_cover()
+    populate_queue_sets()
+    M.update_queue()
     M.refresh()
     Sound.play("open")
 end
 
 function M.hide_menu()
-    if built then panel.win:SetHidden(true) end
+    if not built then return end
+    panel.win:SetHidden(true)
+    queue_ticker_sync(false)
 end
 
 function M.toggle()
@@ -541,6 +674,11 @@ end
 
 function M.init()
     build()
+    local C = BGMeter.zenimax.constants
+    if C.EVENT_ACTIVITY_FINDER_STATUS_UPDATE then
+        BGMeter.zenimax.events.register("BGMeterQueue", C.EVENT_ACTIVITY_FINDER_STATUS_UPDATE,
+            function() M.update_queue() end)
+    end
     if SCENE_MANAGER then
         local function handler(_, newState)
             if newState == SCENE_SHOWN then M.on_scene(true)
