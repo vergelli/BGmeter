@@ -28,14 +28,14 @@ local MODE_SHORT = {
 }
 
 local MENU_W = 372
-local MENU_H = 506
+local MENU_H = 518
 local ROW_H = 28
 local HEAD_H = 46
-local PANEL_H = 102
+local PANEL_H = 116
 local QUEUE_H = 36
 local FOOT_H = 34
 local INSET_PAD = 20
-local MIN_H, MAX_AUTO_H = 366, 740
+local MIN_H, MAX_AUTO_H = 378, 752
 
 local TELVAR = CURT_TELVAR_STONES
 
@@ -175,7 +175,10 @@ local function refresh_panel()
     local snap = BGMeter.Veterancy and BGMeter.Veterancy.snapshot()
     if snap and snap.rank then
         st.c:SetHidden(false)
-        if st.icon then st.icon:SetTexture(snap.rankIcon or "") end
+        if st.icon then
+            st.icon:SetTexture(safe(A.get_veterancy_rank_icon, snap.rank, snap.seasonId)
+                or snap.rankIcon or "")
+        end
         set_text(st.label, string.format("%s  %d", clean(snap.rankTitle) or "Veterancy", snap.rank))
         local season = clean(snap.seasonName)
         local seasonLine = season and ("\n" .. season) or ""
@@ -439,11 +442,12 @@ local function build()
 
     local function make_stat(rowi, right, withIcon, withBar)
         local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-        local rowH = right and 24 or 30
-        local iconS = right and 22 or 30
+        local rowH = right and 24 or 34
+        local iconS = right and 22 or 34
+        local pad = right and 6 or 8
         c:SetHeight(rowH)
         c:SetMouseEnabled(true)
-        local y = HEAD_H + (rowi - 1) * (right and 26 or 32)
+        local y = HEAD_H + (rowi - 1) * (right and 26 or 36)
         if right then
             c:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), y)
             c:SetWidth(126)
@@ -458,16 +462,17 @@ local function build()
             st.icon:SetAnchor(LEFT, c, LEFT, 0, 0)
         end
         st.label = P.label(c, right and S.FONT.small or S.FONT.row, K.COLOR.text)
-        st.label:SetAnchor(LEFT, c, LEFT, withIcon and (iconS + 6) or 2, 0)
+        st.label:SetAnchor(LEFT, c, LEFT, withIcon and (iconS + pad) or 2, 0)
         st.label:SetAnchor(RIGHT, c, RIGHT, 0, 0)
         if withBar then
-            st.label:SetHeight(rowH - 8)
+            st.label:SetHeight(rowH - 10)
             st.label:SetAnchor(TOP, c, TOP, 0, 0)
             st.bar = BGMeter.Plot.bar.create(c)
-            st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, iconS + 6, -1)
+            st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, iconS + pad, -1)
             st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -1)
-            st.bar.container:SetHeight(5)
-            st.barW = 196 - iconS - 6
+            st.bar.container:SetHeight(7)
+            P.set_rect_color(st.bar.track, { 0, 0, 0, 0.5 })
+            st.barW = 196 - iconS - pad
         else
             st.label:SetHeight(rowH)
         end
