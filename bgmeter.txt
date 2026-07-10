@@ -6,7 +6,7 @@
 ## APIVersion: 101049 101050
 ## SavedVariables: BGMeterSavedVars
 
-# Personal tool -- not for distribution (yet). Built with AI assistance (Claude).
+# Built with AI assistance (Claude); reviewed, tested in-game and maintained by the author.
 # This Add-on is not created by, affiliated with, or sponsored by ZeniMax Media Inc.
 
 bindings.xml
