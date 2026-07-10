@@ -472,10 +472,11 @@ local function populate_queue_sets()
             q.act = act
             for i = 1, n do
                 local id = safe(A.lfg_set_id, act, i)
-                if id then
+                if id and not safe(A.lfg_set_disabled, id) then
                     q.sets[#q.sets + 1] = { id = id, name = clean(safe(A.lfg_set_info, id)) or ("Set " .. id) }
                 end
             end
+            BGMeter.Log.debug("queue sets: %d enabled of %d", #q.sets, n)
             break
         end
     end

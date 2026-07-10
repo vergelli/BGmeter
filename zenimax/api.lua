@@ -74,6 +74,7 @@ A.get_unit_xp        = function() return GetUnitXP("player") end
 A.get_unit_xp_max    = function() return GetUnitXPMax("player") end
 
 A.lfg_num_sets     = GetNumActivitySetsByType
+A.lfg_set_disabled = IsLFGActivitySetDisabled
 A.lfg_set_id       = GetActivitySetIdByTypeAndIndex
 A.lfg_set_info     = GetActivitySetInfo
 A.lfg_clear_search = ClearActivityFinderSearch
