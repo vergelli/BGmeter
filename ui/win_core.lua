@@ -151,6 +151,16 @@ end
 
 local function hide_all(list, hidden) for _, c in ipairs(list) do c:SetHidden(hidden) end end
 
+local function row_chrome(container)
+    local base = P.icon(container, "EsoUI/Art/Miscellaneous/listItem_backdrop.dds")
+    base:SetAnchorFill(container)
+    base:SetColor(1, 1, 1, 0.9)
+    local hl = P.rect(container, { 1, 1, 1, K.ALPHA.row_hover })
+    hl:SetAnchorFill(container)
+    hl:SetHidden(true)
+    return base, hl
+end
+
 local function player_ident(r)
     local d, c = r.displayName, r.charName
     if c then c = (c:gsub("%^.*$", "")) end
@@ -278,6 +288,7 @@ U.team_name = team_name
 U.team_icon = team_icon
 U.hide_all = hide_all
 U.player_ident = player_ident
+U.row_chrome = row_chrome
 U.hit_proxy = hit_proxy
 U.hexc = hexc
 U.neutral_color = neutral_color

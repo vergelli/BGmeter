@@ -22,9 +22,6 @@ local LAUNCHER_IDLE = 0.90
 local MENU_ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
 local MENU_ART_ALPHA = 0.30
 
-local ROW_BASE      = "EsoUI/Art/Miscellaneous/listItem_backdrop.dds"
-local ROW_HIGHLIGHT = "EsoUI/Art/Miscellaneous/listItem_highlight.dds"
-
 local MODE_SHORT = {
     deathmatch = "DM", domination = "DOM", crazy_king = "CK",
     king_of_the_hill = "KOTH", capture_the_flag = "CTF", murderball = "BALL",
@@ -135,7 +132,7 @@ local function auto_height()
     local mg = sv_menu()
     if (mg.h or 0) > 0 then return end
     local count = BGMeter.History.count()
-    local want = HEAD_H + PANEL_H + FOOT_H + 18 + math.max(count, 1) * ROW_H
+    local want = HEAD_H + PANEL_H + FOOT_H + 18 + math.max(count, 1) * (ROW_H + 2)
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
@@ -244,14 +241,7 @@ local function make_row(i)
     r.container = BGMeter.zenimax.ui.create_control(nil, panel.inset, CT_CONTROL)
     r.container:SetMouseEnabled(true)
 
-    r.base = P.icon(r.container, ROW_BASE)
-    r.base:SetAnchorFill(r.container)
-    r.base:SetColor(1, 1, 1, 0.9)
-
-    r.highlight = P.icon(r.container, ROW_HIGHLIGHT)
-    r.highlight:SetAnchorFill(r.container)
-    r.highlight:SetColor(1, 1, 1, 0.55)
-    r.highlight:SetHidden(true)
+    r.base, r.highlight = U.row_chrome(r.container)
 
     r.pip = P.rect(r.container, K.COLOR.text_dim)
     r.pip:SetDimensions(3, ROW_H - 12)
@@ -453,7 +443,7 @@ function M.refresh()
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
     local insetH = h - HEAD_H - PANEL_H - FOOT_H - 10
-    panel.vis = math.max(1, math.floor(insetH / ROW_H))
+    panel.vis = math.max(1, math.floor(insetH / (ROW_H + 2)))
 
     local maxOff = math.max(0, count - panel.vis)
     if offset > maxOff then offset = maxOff end
@@ -472,8 +462,8 @@ function M.refresh()
         local m = H.get(idx)
         r.index = idx
         r.container:ClearAnchors()
-        r.container:SetAnchor(TOPLEFT, panel.inset, TOPLEFT, 5, 5 + (i - 1) * ROW_H)
-        r.container:SetDimensions(roww, ROW_H - 2)
+        r.container:SetAnchor(TOPLEFT, panel.inset, TOPLEFT, 5, 4 + (i - 1) * (ROW_H + 2))
+        r.container:SetDimensions(roww, ROW_H)
         r.container:SetHidden(false)
         r.highlight:SetHidden(true)
         r.name:SetWidth(math.max(80, roww - 176))
