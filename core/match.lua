@@ -190,14 +190,16 @@ function Match.flag_lanes(m, tspan)
         for _, tk in ipairs(ep.ticks) do tk.name, tk.letter = ep.name, ep.letter end
     end
     table.sort(episodes, function(a, b) return a.w0 < b.w0 end)
+    local MAX_LANES = 6
     local lanes = {}
     for _, ep in ipairs(episodes) do
         local best = nil
         for _, lane in ipairs(lanes) do
             if lane.w1 <= ep.w0 and (best == nil or lane.w1 > best.w1) then best = lane end
         end
-        if not best and #lanes < 4 then
-            best = { letter = "~", name = nil, segs = {}, ticks = {}, covered = 0, w1 = 0 }
+        if not best and #lanes < MAX_LANES then
+            best = { letter = tostring(ep.letter), name = ep.name, li = ep.li,
+                     segs = {}, ticks = {}, covered = 0, w1 = 0 }
             lanes[#lanes + 1] = best
         end
         if not best then
@@ -206,12 +208,15 @@ function Match.flag_lanes(m, tspan)
                 if lane.w1 < best.w1 then best = lane end
             end
         end
+        if best.li ~= ep.li then
+            best.letter, best.name, best.li = "~", nil, -1
+        end
         for _, s in ipairs(ep.segs) do best.segs[#best.segs + 1] = s end
         for _, tk in ipairs(ep.ticks) do best.ticks[#best.ticks + 1] = tk end
         best.covered = best.covered + math.max(0, ep.w1 - ep.w0)
         if ep.w1 > best.w1 then best.w1 = ep.w1 end
     end
-    for _, lane in ipairs(lanes) do lane.w1 = nil end
+    for _, lane in ipairs(lanes) do lane.w1 = nil; lane.li = nil end
     return lanes
 end
 

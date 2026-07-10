@@ -337,9 +337,9 @@ local function cmd_report()
             add("  events by type: %s", table.concat(parts, "  "))
             for i = 1, #ob.t do
                 local o = ob.list[ob.o[i]]
-                add("  %s r%s [%s] %s st=%s own=%s",
+                add("  %s r%s [%s %s] %s st=%s own=%s",
                     F.duration(ob.t[i] or 0), tostring(ob.r and ob.r[i] or "?"),
-                    o and tostring(o.letter) or "?",
+                    o and tostring(o.letter) or "?", o and tostring(o.name) or "?",
                     tostring(CZ.OBJ_EVENT_LABEL[ob.ev[i]]
                         or (ob.ev[i] == -1 and "initial" or ob.ev[i])),
                     tostring(CZ.OBJ_STATE_LABEL[ob.st[i]] or ob.st[i]),
