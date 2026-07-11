@@ -362,7 +362,7 @@ local function build()
 
     launcher.glowFx = P.icon(win, "bgmeter/assets/glow.dds")
     launcher.glowFx:SetAnchor(CENTER, win, CENTER, 0, 0)
-    launcher.glowFx:SetDimensions(LSZ * 2.9, LSZ * 2.9)
+    launcher.glowFx:SetDimensions(LSZ * 2.2, LSZ * 2.2)
     if launcher.glowFx.SetBlendMode then launcher.glowFx:SetBlendMode(TEX_BLEND_MODE_ADD) end
     launcher.glowFx:SetHidden(true)
 
