@@ -334,7 +334,7 @@ local function build()
     if built then return end
 
     local g = sv_launcher()
-    local LSZ = 48
+    local LSZ = 56
     local win = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterLauncher")
     win:SetDimensions(LSZ, LSZ)
     win:SetMouseEnabled(true)
