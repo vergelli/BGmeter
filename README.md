@@ -7,6 +7,8 @@
 ![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+_BGmeter is not created by, affiliated with, or sponsored by ZeniMax Media Inc. or its affiliates. The Elder Scrolls® and related logos are registered trademarks or trademarks of ZeniMax Media Inc. in the United States and/or other countries. All in-game imagery, icons and emblem designs shown or adapted in this repository (including the BGmeter logo, which is derived from in-game battleground team emblems) are the property of ZeniMax Media Inc., are used for non-commercial, informational purposes only, and no ownership over them is claimed._
+
 <p align="center">
   <img src="docs/assets/logo-1-recut.png" width="300" alt="BGmeter" />
 </p>
@@ -74,8 +76,7 @@ by the game engine itself (not in Lua), the per-sample data path allocates
 zero memory, and nothing is written to chat. If you find a bug, a comment on
 ESOUI reaches the author (me).
 
-_BGmeter is not created by, affiliated with, or sponsored by ZeniMax Media Inc._
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). The license covers the addon code only: game artwork and derived designs remain the property of ZeniMax Media Inc.
