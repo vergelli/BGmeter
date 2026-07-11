@@ -436,8 +436,10 @@ local function on_slash(args)
         BGMeter.Sound.audition(args:match("^sound%s*(.*)$"))
     elseif args:find("^csa") == 1 then
         BGMeter.Standing.celebrate(tonumber(args:match("(%d+)")) or 87)
+    elseif args == "trophy" then
+        BGMeter.UI.menu.demo_trophy()
     else
-        Log.say("dev: show|hide|toggle|last|demo|demo2|ap|dump|clear|debug|layers|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|sound [name]|csa [rank]")
+        Log.say("dev: show|hide|toggle|last|demo|demo2|ap|dump|clear|debug|layers|mock <dm|dom|ck|ball|relic>|perf|gcprobe [sec]|sound [name]|csa [rank]|trophy")
     end
 end
 

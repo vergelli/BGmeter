@@ -210,6 +210,7 @@ local function refresh_panel()
     end
     local sv = BGMeter.zenimax.savedvars.get()
     local standing = sv and sv.standing
+    if M._demo_rank then standing = { rank = M._demo_rank, score = 123456 } end
     st.c:SetHidden(false)
     if standing and (standing.rank or 0) > 0 then
         local top = standing.rank <= 100
@@ -906,6 +907,21 @@ function M.delete(index)
     auto_height()
     apply_art_cover()
     M.refresh()
+end
+
+local DEMO_RANKS = { 96, 42, 7, 1 }
+function M.demo_trophy()
+    if not built then build() end
+    local idx = M._demo_idx or 0
+    idx = idx + 1
+    if idx > #DEMO_RANKS then
+        M._demo_idx, M._demo_rank = nil, nil
+        BGMeter.Log.say("trophy demo OFF (real standing restored)")
+    else
+        M._demo_idx, M._demo_rank = idx, DEMO_RANKS[idx]
+        BGMeter.Log.say("trophy demo: rank #%d", M._demo_rank)
+    end
+    if panel.win:IsHidden() then M.show_menu() else M.refresh() end
 end
 
 function M.show_menu()
