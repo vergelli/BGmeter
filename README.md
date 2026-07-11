@@ -1,42 +1,81 @@
-# bgmeter
+# BGmeter
 
-A personal **post-battle Battleground** window for The Elder Scrolls Online.
-When a match ends it shows two faces of the fight:
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Lua](https://img.shields.io/badge/Lua-5.1-2C2D72?logo=lua&logoColor=white)
+![ESO](https://img.shields.io/badge/ESO-Update%2049%20%C2%B7%20API%20101049-orange)
+![ESO](https://img.shields.io/badge/ESO-Update%2050%20%C2%B7%20API%20101050-orange)
+![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- **The Battle** — the full scoreboard of *every* player (damage, healing,
-  K/D/A, score, medals) as a sortable meter table. The stock UI hides damage and
-  healing for everyone but the row you click; bgmeter shows them all, with class
-  icons, an MVP crown, and gold-tinted column leaders.
-- **The Haul** — what *you* walked away with: veterancy season-track progress,
-  **AP / XP / CP** with the real in-game icons, the medals you earned, your
-  **competitive leaderboard rank** (with ▲/▼ movement since last match), and the
-  efficiency bridge (AP/min · AP/kill). Personal bests get a ★.
+<p align="center">
+  <img src="docs/assets/logo-1-recut.png" width="300" alt="BGmeter" />
+</p>
 
-It keeps a browsable **history** of your recent matches and a **session** tally
-(W-L + AP earned) for the night.
+**Battleground analytics for The Elder Scrolls Online.** BGmeter records every battleground you play and turns it into a report.
 
-## Commands
+## The Registry
 
-| Command | What it does |
+A browsable history of every recorded battle, and a warrior panel with relevant personal information.
+
+<p align="center">
+  <img src="docs/assets/main-menu-1.png" width="420" alt="The Registry" />
+</p>
+
+Some aesthetic details around the leaderboards:
+
+<p align="center">
+  <img src="docs/assets/standing-tiers.gif" alt="Standing tiers: Epic, Legendary, Mythic, Champion" />
+</p>
+
+You can also queue for battlegrounds directly from the Registry (this does not aim to replace the original menu, it's just a convenience).
+
+## The Battle Report
+
+When a match ends (or when you open one from the Registry), you get the whole
+story:
+
+- **Full scoreboard**: damage, healing, K/D/A, captures, score and medals, sortable by any column, and more.
+- **Match timeline**: team score over time, your kills and deaths marked,
+  the bloodiest minute highlighted.
+- **Combat momentum**: who was steamrolling whom, minute by minute.
+- **Objective charts per mode**: flag control lanes for Domination and Crazy
+  King, relic runs for Capture the Relic, carrier possession for Chaosball.
+  Every current battleground mode is supported, including multi-round formats.
+- **Your haul**: AP, XP and Champion Points earned, veterancy season-track progress, the medals you collected, and your
+  competitive standing with movement since the last match.
+
+<p align="center">
+  <img src="docs/assets/crazy-king-1.png" width="640" alt="Crazy King report" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/chaos-ball-1.png" width="560" alt="Chaosball report" />
+</p>
+
+## Install
+
+- Download the zip from [ESOUI](https://www.esoui.com/) and extract it into `Documents/Elder Scrolls Online/live/AddOns/`.
+
+## Use
+
+| | |
 |---|---|
-| `/bgmeter` | Show / hide the window |
-| `/bgmeter demo` | Inject a synthetic match and open the window (no BG needed) |
-| `/bgmeter dump` | Print the live scoreboard + progression + standing to chat |
-| `/bgmeter last` | Open the most recent match |
-| `/bgmeter toggle` / `hide` | Window controls |
-| `/bgmeter clear` | Clear match history |
-| `/bgmeter debug` | Toggle debug logging |
+| `/bgmeter` | Open / close the Battle Registry |
+| Launcher icon | Draggable shield on your screen, click to open. (Yes, you can deactivate it) |
+| Keybind | *Toggle BGmeter* under Controls → Keybindings |
 
-There's also a **"Toggle bgmeter window"** keybind, and a **gear** in the
-window's top-right for settings (auto-open, sounds, animations, which panels to
-show, clear history, reset position).
+Everything else lives in the UI: open a match from the Registry, use the gear
+for settings.
 
-## Notes
+## Good citizen
 
-- Personal tool, not published. Built with AI assistance (Claude).
-- Reads the native Battleground scoreboard + progression events — no combat-event
-  scraping, no external libraries.
-- Veterancy advancement may be Cyrodiil/IC-fed rather than BG-fed; the panel
-  shows your standing as context and lights the "this match" delta only when one
-  actually occurs. Confirm with `/bgmeter dump`.
-- See `../docs/HANDOFF.md` for architecture and the full API reference.
+BGmeter is built to be invisible while you fight. I measured and profiled it myself several times: combat events are filtered
+by the game engine itself (not in Lua), the per-sample data path allocates
+zero memory, and nothing is written to chat. If you find a bug, a comment on
+ESOUI reaches the author (me).
+
+_BGmeter is not created by, affiliated with, or sponsored by ZeniMax Media Inc._
+
+## License
+
+[MIT](LICENSE)
