@@ -56,4 +56,13 @@ function Log.lines()
     return out
 end
 
+function Log.seal()
+    local K = BGMeter.Constants
+    if K and K.dev_tools and K.dev_tools() then return end
+    local noop = function() end
+    Log.say, Log.debug, Log.error = noop, noop, noop
+    Log.lines = function() return {} end
+end
+Log.seal()
+
 BGMeter.Log = Log

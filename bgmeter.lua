@@ -386,16 +386,16 @@ local function on_slash(args)
     args = (args or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     local Log = BGMeter.Log
 
+    if not K.dev_tools() then
+        BGMeter.UI.menu.toggle()
+        return
+    end
+
     if args == "" then
         BGMeter.UI.menu.toggle()
         return
     elseif args == "report" then
         cmd_report()
-        return
-    end
-
-    if not K.dev_tools() then
-        Log.say("|cFFFFFF/bgmeter|r opens the battle registry  ·  |cFFFFFF/bgmeter report|r builds a diagnostic report")
         return
     end
 
@@ -458,4 +458,5 @@ local function on_addon_loaded()
     BGMeter.Log.debug("v%s loaded  ·  %s for commands", K.VERSION, K.SLASH)
 end
 
+BGMeter._slash = on_slash
 BGMeter.zenimax.events.register_addon_loaded(K.ADDON_NAME, on_addon_loaded)

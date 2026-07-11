@@ -829,23 +829,28 @@ function M.queue_click()
     if (BGMeter.Capture and BGMeter.Capture.is_active()) or in_lfg_dungeon() then
         return
     end
+    local flash
     do
         local s = q.sets and q.sets[q.sel]
         if not s then
-            BGMeter.Log.say("no battleground queue entries found -- send me a /bgmeter report")
-            return
-        end
-        safe(A.lfg_clear_search)
-        safe(A.lfg_add_set, s.id)
-        local res = safe(A.lfg_start)
-        Sound.play("nav")
-        if C.ACTIVITY_QUEUE_RESULT_SUCCESS and res and res ~= C.ACTIVITY_QUEUE_RESULT_SUCCESS then
-            BGMeter.Log.say("queue request rejected (result %s)", tostring(res))
+            flash = "no queue entries available"
         else
-            BGMeter.Log.debug("queued: %s", s.name)
+            safe(A.lfg_clear_search)
+            safe(A.lfg_add_set, s.id)
+            local res = safe(A.lfg_start)
+            Sound.play("nav")
+            if C.ACTIVITY_QUEUE_RESULT_SUCCESS and res and res ~= C.ACTIVITY_QUEUE_RESULT_SUCCESS then
+                flash = "queue rejected (" .. tostring(res) .. ")"
+            else
+                BGMeter.Log.debug("queued: %s", s.name)
+            end
         end
     end
     M.update_queue()
+    if flash then
+        set_text(q.status, flash)
+        S.color(q.status, K.COLOR.accent)
+    end
 end
 
 function M.refresh()
