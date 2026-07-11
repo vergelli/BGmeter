@@ -202,6 +202,12 @@ local function refresh_panel()
     end
 
     st = panel.stats.stand
+    local function trophy_tier(rank)
+        if rank == 1 then return { 1.00, 0.97, 0.82 }, 0.75 end
+        if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60 end
+        if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50 end
+        return { 0.72, 0.53, 0.98 }, 0.42
+    end
     local sv = BGMeter.zenimax.savedvars.get()
     local standing = sv and sv.standing
     st.c:SetHidden(false)
@@ -210,16 +216,32 @@ local function refresh_panel()
         if st.icon then
             st.icon:SetTexture(top and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
                 or "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
-            if top then st.icon:SetColor(0.72, 0.53, 0.98, 1) else st.icon:SetColor(1, 1, 1, 1) end
+            if top then
+                local col, glowA = trophy_tier(standing.rank)
+                st.icon:SetColor(col[1], col[2], col[3], 1)
+                if not st.glow then
+                    st.glow = P.icon(st.c, "bgmeter/assets/glow.dds")
+                    st.glow:SetAnchor(CENTER, st.icon, CENTER, 0, 0)
+                    st.glow:SetDimensions(64, 64)
+                    if st.glow.SetBlendMode then st.glow:SetBlendMode(TEX_BLEND_MODE_ADD) end
+                    if st.glow.SetDrawLevel then st.glow:SetDrawLevel(1) end
+                    if st.icon.SetDrawLevel then st.icon:SetDrawLevel(2) end
+                end
+                st.glow:SetColor(col[1], col[2], col[3], glowA)
+                st.glow:SetHidden(false)
+            else
+                st.icon:SetColor(1, 1, 1, 1)
+                if st.glow then st.glow:SetHidden(true) end
+            end
         end
         set_text(st.label, "rank #" .. F.commas(standing.rank) .. (top and "  ·  top 100" or ""))
         S.color(st.label, K.COLOR.gold)
-        st.tip = string.format("Competitive standing\nrating %s%s", F.commas(standing.score or 0),
-            top and "\nwithin reward range (top 100)" or "")
+        st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
     else
         if st.icon then
             st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
             st.icon:SetColor(1, 1, 1, 1)
+            if st.glow then st.glow:SetHidden(true) end
         end
         set_text(st.label, "unranked")
         S.color(st.label, K.COLOR.text_dim)
@@ -903,6 +925,9 @@ function M.show_menu()
     populate_queue_sets()
     M.update_queue()
     M.refresh()
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
     Sound.play("menu")
 end
 

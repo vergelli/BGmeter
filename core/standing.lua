@@ -87,6 +87,9 @@ function Standing.apply()
     if BGMeter.UI and BGMeter.UI.window and BGMeter.UI.window.refresh_if_visible then
         BGMeter.UI.window.refresh_if_visible()
     end
+    if BGMeter.UI and BGMeter.UI.menu and BGMeter.UI.menu.refresh_if_visible then
+        BGMeter.UI.menu.refresh_if_visible()
+    end
     return cur
 end
 
