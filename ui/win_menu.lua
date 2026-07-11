@@ -27,7 +27,7 @@ local MODE_SHORT = {
     king_of_the_hill = "KOTH", capture_the_flag = "CTF", murderball = "BALL",
 }
 
-local MENU_W = 372
+local MENU_W = 388
 local MENU_H = 530
 local ROW_H = 28
 local HEAD_H = 46
@@ -240,7 +240,7 @@ local function refresh_panel()
             end
             st.tierTag = tierTag
         end
-        set_text(st.label, "rank #" .. F.commas(standing.rank) .. (st.tierTag or ""))
+        set_text(st.label, "#" .. F.commas(standing.rank) .. (st.tierTag or ""))
         S.color(st.label, K.COLOR.gold)
         st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
     else
@@ -450,7 +450,7 @@ local function build()
     pw:SetHidden(true)
     pw:SetDrawTier(DT_HIGH)
     pw:SetResizeHandleSize(L.resize_h)
-    pw:SetDimensionConstraints(360, 280, 560, 780)
+    pw:SetDimensionConstraints(384, 280, 560, 780)
     pw:SetHandler("OnMoveStop", function()
         mg = sv_menu()
         mg.x, mg.y = pw:GetLeft(), pw:GetTop()
@@ -503,12 +503,12 @@ local function build()
 
     local function make_stat(rowi, right, withIcon, withBar)
         local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-        local rowH = right and 24 or 38
-        local iconS = right and 22 or 38
+        local rowH = right and 28 or 38
+        local iconS = right and 26 or 38
         local pad = right and 6 or 9
         c:SetHeight(rowH)
         c:SetMouseEnabled(true)
-        local y = HEAD_H + (rowi - 1) * (right and 26 or 40)
+        local y = HEAD_H + (rowi - 1) * (right and 30 or 40)
         if right then
             c:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), y)
             c:SetWidth(126)
@@ -556,6 +556,10 @@ local function build()
         telvar  = make_stat(2, true, true),
         session = make_stat(3, true, false),
     }
+    for _, key in ipairs({ "ap", "telvar" }) do
+        local lbl = panel.stats[key].label
+        if lbl.SetFont then lbl:SetFont(S.FONT.row) end
+    end
 
     panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
     panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H + PANEL_H)
