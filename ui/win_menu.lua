@@ -203,10 +203,10 @@ local function refresh_panel()
 
     st = panel.stats.stand
     local function trophy_tier(rank)
-        if rank == 1 then return { 1.00, 0.97, 0.82 }, 0.75 end
-        if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60 end
-        if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50 end
-        return { 0.72, 0.53, 0.98 }, 0.42
+        if rank == 1 then return { 1.00, 0.97, 0.82 }, 0.75, "Champion!" end
+        if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60, "Mythic!" end
+        if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50, "Legendary" end
+        return { 0.72, 0.53, 0.98 }, 0.42, "Epic"
     end
     local sv = BGMeter.zenimax.savedvars.get()
     local standing = sv and sv.standing
@@ -217,8 +217,9 @@ local function refresh_panel()
         if st.icon then
             st.icon:SetTexture(top and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
                 or "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
+            local tierTag = ""
             if top then
-                local col, glowA = trophy_tier(standing.rank)
+                local col, glowA, word = trophy_tier(standing.rank)
                 st.icon:SetColor(col[1], col[2], col[3], 1)
                 if not st.glow then
                     st.glow = P.icon(st.c, "bgmeter/assets/glow.dds")
@@ -230,12 +231,16 @@ local function refresh_panel()
                 end
                 st.glow:SetColor(col[1], col[2], col[3], glowA)
                 st.glow:SetHidden(false)
+                tierTag = string.format("  ·  |c%02X%02X%02X%s|r",
+                    math.floor(col[1] * 255 + 0.5), math.floor(col[2] * 255 + 0.5),
+                    math.floor(col[3] * 255 + 0.5), word)
             else
                 st.icon:SetColor(1, 1, 1, 1)
                 if st.glow then st.glow:SetHidden(true) end
             end
+            st.tierTag = tierTag
         end
-        set_text(st.label, "rank #" .. F.commas(standing.rank) .. (top and "  ·  top 100" or ""))
+        set_text(st.label, "rank #" .. F.commas(standing.rank) .. (st.tierTag or ""))
         S.color(st.label, K.COLOR.gold)
         st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
     else
