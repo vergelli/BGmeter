@@ -334,8 +334,9 @@ local function build()
     if built then return end
 
     local g = sv_launcher()
+    local LSZ = 48
     local win = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterLauncher")
-    win:SetDimensions(40, 40)
+    win:SetDimensions(LSZ, LSZ)
     win:SetMouseEnabled(true)
     win:SetMovable(true)
     win:SetClampedToScreen(true)
@@ -361,13 +362,13 @@ local function build()
 
     launcher.glowFx = P.icon(win, "bgmeter/assets/glow.dds")
     launcher.glowFx:SetAnchor(CENTER, win, CENTER, 0, 0)
-    launcher.glowFx:SetDimensions(116, 116)
+    launcher.glowFx:SetDimensions(LSZ * 2.9, LSZ * 2.9)
     if launcher.glowFx.SetBlendMode then launcher.glowFx:SetBlendMode(TEX_BLEND_MODE_ADD) end
     launcher.glowFx:SetHidden(true)
 
     launcher.glow = P.icon(win, LAUNCHER_ICON)
     launcher.glow:SetAnchor(CENTER, win, CENTER, 0, 0)
-    launcher.glow:SetDimensions(52, 52)
+    launcher.glow:SetDimensions(LSZ + 12, LSZ + 12)
     launcher.glow:SetHidden(true)
 
     launcher.icon = P.icon(win, LAUNCHER_ICON)
