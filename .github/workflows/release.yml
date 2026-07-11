@@ -1,0 +1,194 @@
+name: Release
+
+# Builds an ESOUI-ready zip and creates a GitHub Release.
+#
+# Triggered when a tag matching `v*` is pushed (e.g. v0.1.0), or manually via
+# the Actions tab. Output: bgmeter-<version>.zip attached to the GitHub
+# Release page. ESOUI upload stays manual — there is no public API for it.
+#
+# The zip is built with an ALLOWLIST: only the files the game actually loads
+# go in (manifest-listed .lua/.xml PLUS the assets/ textures referenced by
+# code). README, .git, .github stay in the repo so the user's AddOns/ folder
+# stays clean.
+#
+# Hardening carried over from Vermilion/Verdant releases:
+# - assets/ is NOT in the manifest file list but IS referenced by code
+#   (bgmeter/assets/*.dds) — forgetting it ships a broken launcher/glow.
+# - ESOUI moderators reject ANY hidden/dot file in the zip (even empty
+#   .gitkeep) — staging is defensively stripped.
+# - DEBUG keys must be OFF at tag time (K.DEBUG=false, K.MODE="") or the
+#   build fails — a shipped dev build exposes every diagnostic command.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to package (without v prefix, e.g. 0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
+
+      - name: Lint manifest (ESOUI §0 hard rules)
+        run: |
+          MANIFEST=bgmeter.txt
+          if [ "$(head -c3 "$MANIFEST" | od -An -tx1 | tr -d ' ')" = "efbbbf" ]; then
+            echo "::error::$MANIFEST has a UTF-8 BOM — must be UTF-8 without BOM"
+            exit 1
+          fi
+          LC_ALL=C awk '{ if (length($0) > 301) { printf "::error::%s line %d is %d bytes (>301)\n", FILENAME, NR, length($0); bad=1 } } END { exit bad }' "$MANIFEST"
+          APICOUNT=$(grep -E '^## APIVersion:' "$MANIFEST" | sed -E 's/^## APIVersion:[[:space:]]*//' | wc -w)
+          if [ "$APICOUNT" -lt 1 ]; then echo "::error::APIVersion directive missing or empty"; exit 1; fi
+          if [ "$APICOUNT" -gt 2 ]; then echo "::error::APIVersion has $APICOUNT values — max 2 (3+ are ignored by the parser)"; exit 1; fi
+          echo "Manifest lint passed (no BOM, lines <=301, APIVersion=$APICOUNT value(s))."
+
+      - name: Verify manifest version matches tag
+        run: |
+          M=$(grep -E '^## Version:' bgmeter.txt | sed -E 's/## Version:[[:space:]]*//')
+          if [ "$M" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::bgmeter.txt Version ($M) does not match tag (${{ steps.version.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Verify constants.lua VERSION matches tag
+        run: |
+          C=$(grep -E '^\s*K\.VERSION\s*=' core/constants.lua | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ "$C" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::core/constants.lua K.VERSION ($C) does not match tag (${{ steps.version.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Verify DEBUG keys are off
+        run: |
+          bad=0
+          if ! grep -qE '^\s*K\.DEBUG\s*=\s*false' core/constants.lua; then
+            echo "::error::K.DEBUG is not false in core/constants.lua — never ship a dev build"
+            bad=1
+          fi
+          if grep -qE '^\s*K\.MODE\s*=\s*"DEBUG"' core/constants.lua; then
+            echo "::error::K.MODE is still \"DEBUG\" in core/constants.lua — never ship a dev build"
+            bad=1
+          fi
+          if [ "$bad" -ne 0 ]; then exit 1; fi
+          echo "DEBUG keys verified off."
+
+      - name: Stage release files
+        run: |
+          mkdir -p staging/bgmeter
+          cp -r \
+            assets \
+            bindings.xml \
+            locales \
+            core \
+            lib \
+            zenimax \
+            observability \
+            pipeline \
+            ui \
+            bgmeter.lua \
+            bgmeter.txt \
+            staging/bgmeter/
+
+      - name: Strip hidden and junk files from staging
+        # ESOUI rejects any dot-prefixed file in the zip, including empty
+        # .gitkeep placeholders. Belt and suspenders on top of the allowlist.
+        run: |
+          find staging -name ".*" -not -name "." -not -name ".." -print -exec rm -rf {} + || true
+          find staging \( -name "Thumbs.db" -o -name "desktop.ini" -o -name ".DS_Store" -o -name "__MACOSX" \) -print -exec rm -rf {} + || true
+          leftover=$(find staging -name ".*" -not -name "." -not -name ".." | wc -l)
+          if [ "$leftover" -ne 0 ]; then
+            echo "::error::hidden files still present in staging"
+            exit 1
+          fi
+          echo "Staging clean of hidden/junk files."
+
+      - name: Verify staged textures
+        run: |
+          missing=0
+          refs=$(grep -rhoE 'bgmeter/assets/[A-Za-z0-9_./-]+\.dds' ui/ core/ pipeline/ lib/ observability/ zenimax/ bgmeter.lua bindings.xml | sort -u)
+          if [ -z "$refs" ]; then echo "::warning::no bgmeter/assets textures referenced in code"; fi
+          for ref in $refs; do
+            rel="${ref#bgmeter/}"
+            if [ -f "staging/bgmeter/$rel" ]; then
+              echo "ok: $rel"
+            else
+              echo "::error::texture referenced in code is missing from the zip: $rel"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          echo "ok: all referenced textures staged"
+
+      - name: Verify folder casing
+        run: |
+          if [ ! -d "staging/bgmeter" ]; then
+            echo "::error::Top-level folder must be exactly 'bgmeter'"
+            exit 1
+          fi
+
+      - name: Build zip
+        run: |
+          cd staging
+          zip -r "../bgmeter-${{ steps.version.outputs.version }}.zip" bgmeter/
+          cd ..
+          echo "----- zip contents -----"
+          unzip -l "bgmeter-${{ steps.version.outputs.version }}.zip"
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -f CHANGELOG.md ]; then
+            awk -v v="$VERSION" '
+              $0 ~ "^## \\[" v "\\]" { capture=1; next }
+              capture && /^## \[/    { exit }
+              capture                { print }
+            ' CHANGELOG.md > release_notes.md
+          fi
+          if [ ! -s release_notes.md ]; then
+            echo "No CHANGELOG section for [$VERSION]; using default notes."
+            echo "BGmeter $VERSION" > release_notes.md
+          fi
+          echo "----- release notes preview -----"
+          cat release_notes.md
+          echo "---------------------------------"
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: BGmeter ${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          files: bgmeter-${{ steps.version.outputs.version }}.zip
+          draft: false
+          prerelease: false
+
+      - name: Upload artifact (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bgmeter-${{ steps.version.outputs.version }}
+          path: bgmeter-${{ steps.version.outputs.version }}.zip
