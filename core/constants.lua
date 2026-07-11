@@ -11,8 +11,8 @@ K.VERSION    = "0.1.0"
 K.SAVED_VARS = "BGMeterSavedVars"
 K.SLASH      = "/bgmeter"
 
-K.DEBUG = true
-K.MODE  = "DEBUG"
+K.DEBUG = false
+K.MODE  = ""
 
 function K.dev_tools()
     return K.DEBUG == true and K.MODE == "DEBUG"
