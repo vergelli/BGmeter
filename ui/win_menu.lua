@@ -251,7 +251,11 @@ local function refresh_panel()
         end
         set_text(st.label, "unranked")
         S.color(st.label, K.COLOR.text_dim)
-        st.tip = "Competitive standing\nplay a ranked battleground to appear"
+        if standing and (standing.score or 0) > 0 then
+            st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score))
+        else
+            st.tip = "Competitive standing\nplay a ranked battleground to appear"
+        end
     end
 
     st = panel.stats.ap

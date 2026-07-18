@@ -47,7 +47,7 @@ local function diff_and_store(cur)
     cur.scoreDelta = (cur.prevScore > 0) and (cur.score - cur.prevScore) or 0
     cur.improved   = cur.rankDelta > 0 or (cur.rankDelta == 0 and cur.scoreDelta > 0)
 
-    if sv and cur.rank > 0 then
+    if sv then
         sv.standing = { rank = cur.rank, score = cur.score }
     end
     return cur
@@ -77,7 +77,7 @@ function Standing.apply()
     end
     pending = nil
 
-    if cur.rank > 0 and cur.rank <= 100 and cur.prevRank > 100 then
+    if cur.rank > 0 and cur.rank <= 100 and (cur.prevRank == 0 or cur.prevRank > 100) then
         Standing.celebrate(cur.rank)
     end
 
