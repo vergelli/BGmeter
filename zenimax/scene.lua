@@ -15,4 +15,13 @@ function M.is_hud_scene()
     return name == "hud" or name == "hudui"
 end
 
+function M.next_is_hud()
+    local sm = SCENE_MANAGER
+    if not sm or type(sm.GetNextScene) ~= "function" then return false end
+    local ok, nxt = pcall(function() return sm:GetNextScene() end)
+    if not ok or not nxt or type(nxt.GetName) ~= "function" then return false end
+    local name = nxt:GetName()
+    return name == "hud" or name == "hudui"
+end
+
 BGMeter.zenimax.scene = M

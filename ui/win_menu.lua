@@ -176,7 +176,7 @@ local function refresh_panel()
     if snap and snap.rank then
         st.c:SetHidden(false)
         if st.icon then
-            st.icon:SetTexture(safe(A.get_veterancy_rank_icon, snap.rank, snap.seasonId)
+            st.icon:SetTexture(safe(A.get_veterancy_rank_icon, snap.iconRank or snap.rank, snap.seasonId)
                 or snap.rankIcon or "")
         end
         set_text(st.label, string.format("%s  %d", clean(snap.rankTitle) or "Veterancy", snap.rank))
@@ -944,6 +944,8 @@ end
 
 function M.show_menu()
     if not built then return end
+    local A = BGMeter.zenimax.api
+    if not safe(A.is_ui_mode) then safe(A.set_ui_mode, true) end
     M.clear_unread()
     local mg = sv_menu()
     panel.win:ClearAnchors()
@@ -959,7 +961,6 @@ function M.show_menu()
     populate_queue_sets()
     M.update_queue()
     M.refresh()
-    local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
     Sound.play("menu")
@@ -975,6 +976,10 @@ end
 function M.toggle()
     if not built then return end
     if panel.win:IsHidden() then M.show_menu() else M.hide_menu() end
+end
+
+function M.is_hidden()
+    return not built or panel.win:IsHidden()
 end
 
 function M.on_report_closed()
@@ -1017,6 +1022,11 @@ function M.on_scene(hud)
     M.sync()
 end
 
+function M.on_scene_state(newState)
+    if newState == SCENE_SHOWN then M.on_scene(true)
+    elseif newState == SCENE_HIDDEN and not BGMeter.zenimax.scene.next_is_hud() then M.on_scene(false) end
+end
+
 function M.init()
     build()
     local C = BGMeter.zenimax.constants
@@ -1025,10 +1035,7 @@ function M.init()
             function() M.update_queue() end)
     end
     if SCENE_MANAGER then
-        local function handler(_, newState)
-            if newState == SCENE_SHOWN then M.on_scene(true)
-            elseif newState == SCENE_HIDDEN then M.on_scene(false) end
-        end
+        local function handler(_, newState) M.on_scene_state(newState) end
         for _, name in ipairs({ "hud", "hudui" }) do
             local ok, sc = pcall(function() return SCENE_MANAGER:GetScene(name) end)
             if ok and sc and type(sc.RegisterCallback) == "function" then
