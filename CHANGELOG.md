@@ -8,7 +8,7 @@
 - Report: the mouse wheel over the title bar moves between matches. Double-click on the title bar restores the default size. The registry title bar does the same.
 - Registry: deleting a match now takes two clicks on the cross. The first click turns it red for three seconds.
 - Registry: an arrow next to your veterancy rank opens the game's veterancy screen.
-- Haul: two rings under the AP line show your share of your team's damage and healing. They need a little vertical room, so the veterancy block above them is slightly tighter.
+- Haul: six rings under the AP line show your share of your team's damage, healing, kills (kills plus assists), damage taken, objectives (captures, or ball time in Chaosball) and medals. They need a little vertical room, so the veterancy block above them is slightly tighter.
 - Registry: before your first battle of the session, the record slot shows your all-time wins and losses.
 - Registry: kills are highlighted in each row's K/D/A.
 - Registry: a scrollbar next to the list when there are more matches than rows. Click the track to jump, drag the thumb, or use the wheel.
