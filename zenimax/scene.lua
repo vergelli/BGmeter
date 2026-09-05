@@ -23,11 +23,18 @@ local function ensure_hooks(s)
     if hooked then return end
     if type(ZO_PreHook) ~= "function" or type(ZO_PostHook) ~= "function" then return end
     hooked = true
-    ZO_PreHook(s, "OnToggleGameMenuBinding", function() escape_pressed = true end)
+    ZO_PreHook(s, "OnToggleGameMenuBinding", function()
+        escape_pressed = true
+        if BGMeter.Log then BGMeter.Log.debug("escape binding") end
+    end)
     ZO_PostHook(s, "OnToggleGameMenuBinding", function() escape_pressed = false end)
     ZO_PreHook(s, "HideTopLevel", function(_, control)
         local on_escape = owned[control]
         if not on_escape then return false end
+        if BGMeter.Log then
+            BGMeter.Log.debug("HideTopLevel %s escape=%s hidden=%s",
+                tostring(control.GetName and control:GetName() or "?"), tostring(escape_pressed), tostring(control:IsHidden()))
+        end
         if escape_pressed and not control:IsHidden() then on_escape() end
         return true
     end)
