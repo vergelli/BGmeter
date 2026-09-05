@@ -48,7 +48,6 @@ local rows = {}
 local offset = 0
 local on_hud = true
 local reopen_after_report = false
-local hiding = false
 local hover_index = nil
 local armed_index = nil
 local DISARM_MS = 3000
@@ -504,10 +503,9 @@ local function build()
         end
     end)
     pw:SetHandler("OnMouseDoubleClick", function() M.on_double_click() end)
-    pw:SetHandler("OnEffectivelyHidden", function() M.on_external_hide() end)
     pw:SetKeyboardEnabled(true)
     pw:SetHandler("OnKeyDown", function(_, key) return M.on_key(key) end)
-    Scene.register_top_level(pw)
+    Scene.register_top_level(pw, function() M.hide_menu() end)
     panel = { win = pw }
 
     local bg = P.rect(pw, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.97 })
@@ -1049,7 +1047,8 @@ function M.show_menu()
     else
         panel.win:SetAnchor(TOPLEFT, launcher.win, BOTTOMRIGHT, 2, 2)
     end
-    Scene.show_top_level(panel.win)
+    panel.win:SetHidden(false)
+    if Prefs.get("cursor_on_open") then Scene.enter_ui_mode() end
     offset = 0
     auto_height()
     apply_art_cover()
@@ -1066,18 +1065,9 @@ function M.hide_menu(silent)
     if not built then return end
     local was_visible = not panel.win:IsHidden()
     M.disarm_delete()
-    hiding = true
-    Scene.hide_top_level(panel.win)
-    hiding = false
+    panel.win:SetHidden(true)
     if not silent and was_visible then Sound.play("close") end
     queue_ticker_sync(false)
-end
-
-function M.on_external_hide()
-    if hiding or not built then return end
-    M.disarm_delete()
-    queue_ticker_sync(false)
-    Sound.play("close")
 end
 
 function M.toggle()
