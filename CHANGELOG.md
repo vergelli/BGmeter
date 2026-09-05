@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.2]
+
+- Fixed: toggling the cursor no longer closes the menu or the post-battle report. Opening the menu with `/bgmeter` now turns the cursor on by itself. Reported by unit220.
+- Fixed: above veterancy rank 100 the haul showed a "?" icon. The icon and title now stay at the last base rank. Reported by unit220.
+- API version updated for the current game patch.
+
 ## [0.1.1]
 
 - Fixed: after a competitive leaderboard period reset, the menu kept showing the previous period's rank. It now shows "unranked" (with your current rating on hover) until you place again.
