@@ -287,7 +287,7 @@ end
 local function share_set(s, mine, team, name, what, fmt)
     if not team or team <= 0 then share_hide(s) return end
     mine = math.min(mine, team)
-    s.donut:set({ mine }, SHARE_COLORS)
+    s.donut:set({ mine }, SHARE_COLORS, team)
     set_text(s.pct, string.format("%d%%", math.floor(mine / team * 100 + 0.5)))
     set_text(s.name, name)
     W.tips[s.hit] = what .. "\n" .. fmt(mine) .. " of " .. fmt(team)

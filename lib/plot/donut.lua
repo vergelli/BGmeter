@@ -45,18 +45,20 @@ local function slice(self, i)
     return c
 end
 
-function Donut:set(values, colors)
-    local total = 0
-    for i = 1, #values do
-        local v = values[i] or 0
-        if v > 0 then total = total + v end
+function Donut:set(values, colors, total)
+    if not total then
+        total = 0
+        for i = 1, #values do
+            local v = values[i] or 0
+            if v > 0 then total = total + v end
+        end
     end
     local start = 0
     local n = 0
     local count = #values
     for i = 1, count do
         local v = values[i] or 0
-        local share = (total > 0 and v > 0) and (v / total) or 0
+        local share = (total > 0 and v > 0) and math.min(1, v / total) or 0
         if share > 0 then
             n = n + 1
             local c = slice(self, n)
