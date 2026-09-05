@@ -298,9 +298,23 @@ local function refresh_panel()
             (sess.streak or 0) >= 2 and string.format("\n%d wins in a row", sess.streak) or "",
             F.commas(sess.ap), F.commas(sess.xp))
     else
-        set_text(st.label, "no battles yet")
-        S.color(st.label, K.COLOR.text_dim)
-        st.tip = "This play session (since login)"
+        local Hist = BGMeter.History
+        local n, aw, al = Hist.count(), 0, 0
+        for i = 1, n do
+            local m = Hist.get(i)
+            if m.result == "WIN" then aw = aw + 1 elseif m.result == "LOSS" then al = al + 1 end
+        end
+        if n > 0 then
+            set_text(st.label, string.format("%dW-%dL all time", aw, al))
+            local col = K.COLOR.text_dim
+            if aw > al then col = K.COLOR.heal elseif al > aw then col = K.COLOR.accent end
+            S.color(st.label, col)
+            st.tip = string.format("All recorded battlegrounds\n%d battles\nNo battles yet this session", n)
+        else
+            set_text(st.label, "no battles yet")
+            S.color(st.label, K.COLOR.text_dim)
+            st.tip = "This play session (since login)"
+        end
     end
     st.c:SetHidden(false)
 end
@@ -926,7 +940,7 @@ function M.refresh()
         set_text(r.mode, mode_tag(m))
         set_text(r.ago, ago_label(m.capturedAt))
         local lr = BGMeter.Match.local_row(m)
-        set_text(r.kda, lr and string.format("%d/%d/%d", lr.kills or 0, lr.deaths or 0, lr.assists or 0) or "")
+        set_text(r.kda, lr and string.format("|c%s%d|r/%d/%d", U.hexc(K.COLOR.you), lr.kills or 0, lr.deaths or 0, lr.assists or 0) or "")
         local score = m.result or ""
         if m.teams and #m.teams >= 2 then
             score = string.format("%s  %d - %d", m.result or "", m.teams[1].score or 0, m.teams[2].score or 0)
@@ -976,6 +990,9 @@ function M.request_delete(index)
 end
 
 function M.armed_index() return armed_index end
+
+function M.stat_text(key) return panel and panel.stats[key] and panel.stats[key].label:GetText() or nil end
+function M.row_kda(i) return rows[i] and rows[i].kda:GetText() or nil end
 
 function M.on_key(key)
     if not built or panel.win:IsHidden() then return false end

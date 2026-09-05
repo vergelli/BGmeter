@@ -45,6 +45,7 @@ lib/plot/style.lua
 lib/plot/primitives.lua
 lib/plot/pool.lua
 lib/plot/bar.lua
+lib/plot/donut.lua
 
 pipeline/acquisition.lua
 pipeline/presentation.lua
