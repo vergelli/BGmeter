@@ -4,6 +4,10 @@
 
 - Fixed: toggling the cursor no longer closes the menu or the post-battle report. Opening the menu with `/bgmeter` now turns the cursor on by itself. Reported by unit220.
 - Fixed: above veterancy rank 100 the haul showed a "?" icon. The icon and title now stay at the last base rank. Reported by unit220.
+- Escape closes the registry, the report and the export window, like any game window.
+- Report: left and right arrow keys, or the mouse wheel over the title bar, move between matches. Double-click on the title bar restores the default size. The registry title bar does the same.
+- Registry: deleting a match now takes two clicks on the cross, or two presses of the Delete key over the row. The first press turns the cross red for three seconds.
+- Registry: an arrow next to your veterancy rank opens the game's veterancy screen.
 - API version updated for the current game patch.
 
 ## [0.1.1]
