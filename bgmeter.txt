@@ -59,5 +59,6 @@ ui/win_chart.lua
 ui/win_haul.lua
 ui/win_shell.lua
 ui/win_menu.lua
+ui/ring_probe.lua
 
 bgmeter.lua

@@ -25,21 +25,6 @@ local Scene = BGMeter.zenimax.scene
 local settings_open = false
 local user_visible = false
 local in_combat = false
-local tl_shown = false
-
-local function tl_show()
-    if tl_shown then return end
-    tl_shown = true
-    if not W.win:IsHidden() then W.win:SetHidden(true) end
-    Scene.show_top_level(W.win)
-end
-
-local function tl_hide()
-    if not tl_shown then return end
-    tl_shown = false
-    if W.win:IsHidden() then W.win:SetHidden(false) end
-    Scene.hide_top_level(W.win)
-end
 
 local function in_header()
     if not W.built then return false end
@@ -62,6 +47,7 @@ local SETTINGS_SECTIONS = {
         { kind = "cycle",  key = "auto_open_mode", label = "Auto-open results",
           states = AUTO_OPEN_STATES, labels = AUTO_OPEN_LABELS },
         { kind = "toggle", key = "show_launcher",  label = "Launcher icon" },
+        { kind = "toggle", key = "cursor_on_open", label = "Registry opens with cursor" },
         { kind = "toggle", key = "sounds",         label = "Sound cues" },
         { kind = "toggle", key = "animate",        label = "Animations" },
         { kind = "cycle",  key = "max_history",    label = "Matches kept",
@@ -251,12 +237,11 @@ local function build()
     win:SetDimensionConstraints(L.min_w, L.min_h, L.max_w, L.max_h)
     win:SetHandler("OnMoveStop", function() W.on_move_stop() end)
     win:SetHandler("OnResizeStop", function() W.on_resize_stop() end)
-    win:SetHandler("OnEffectivelyHidden", function() W.on_external_hide() end)
     win:SetHandler("OnMouseWheel", function(_, delta) W.on_wheel(delta) end)
     win:SetHandler("OnMouseDoubleClick", function() W.on_double_click() end)
     win:SetKeyboardEnabled(true)
     win:SetHandler("OnKeyDown", function(_, key) return W.on_key(key) end)
-    Scene.register_top_level(win)
+    Scene.register_top_level(win, function() W.on_escape() end)
 
     W.bg = P.rect(win, K.COLOR.bg)
     W.bg:SetAnchorFill(win)
@@ -577,7 +562,6 @@ function W.show_match(index)
     settings_open = false
     W.settings.window:SetHidden(true)
     user_visible = true
-    tl_show()
     apply_visibility()
     if W.win:IsHidden() then return end
     W.render(true)
@@ -628,19 +612,15 @@ function W.hide()
     if not W.built then return end
     local was_visible = not W.win:IsHidden()
     user_visible = false
-    tl_hide()
+    W.win:SetHidden(true)
     after_hide(was_visible)
 end
 
-function W.on_external_hide()
-    if not (tl_shown and user_visible and W.on_hud and not in_combat) then return end
-    tl_shown = false
-    user_visible = false
+function W.on_escape()
+    if not W.built or W.win:IsHidden() then return end
     if BGMeter.UI.menu and BGMeter.UI.menu.forget_reopen then BGMeter.UI.menu.forget_reopen() end
-    after_hide(true)
+    W.hide()
 end
-
-function W.top_level_shown() return tl_shown end
 
 function W.toggle()
     build()
