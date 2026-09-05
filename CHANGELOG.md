@@ -8,6 +8,9 @@
 - Report: left and right arrow keys, or the mouse wheel over the title bar, move between matches. Double-click on the title bar restores the default size. The registry title bar does the same.
 - Registry: deleting a match now takes two clicks on the cross, or two presses of the Delete key over the row. The first press turns the cross red for three seconds.
 - Registry: an arrow next to your veterancy rank opens the game's veterancy screen.
+- Haul: two rings under the AP line show your share of your team's damage and healing. They need a little vertical room, so the veterancy block above them is slightly tighter.
+- Registry: before your first battle of the session, the record slot shows your all-time wins and losses.
+- Registry: kills are highlighted in each row's K/D/A.
 - API version updated for the current game patch.
 
 ## [0.1.1]
