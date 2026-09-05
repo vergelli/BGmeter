@@ -11,6 +11,7 @@
 - Haul: two rings under the AP line show your share of your team's damage and healing. They need a little vertical room, so the veterancy block above them is slightly tighter.
 - Registry: before your first battle of the session, the record slot shows your all-time wins and losses.
 - Registry: kills are highlighted in each row's K/D/A.
+- Registry: a scrollbar next to the list when there are more matches than rows. Click the track to jump, drag the thumb, or use the wheel.
 - API version updated for the current game patch.
 
 ## [0.1.1]

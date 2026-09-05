@@ -21,6 +21,14 @@ function M.new(name, parent, size, opts)
     self.texture = opts.texture or RING_TEXTURE
     self.root = ui.create_control(name, parent, CT_CONTROL)
     self.root:SetDimensions(size, size)
+    if opts.track then
+        local t = ui.create_control(name .. "Track", self.root, CT_TEXTURE)
+        t:SetAnchorFill(self.root)
+        t:SetTexture(self.texture)
+        t:SetColor(opts.track[1], opts.track[2], opts.track[3], opts.track[4] or 1)
+        t:SetDrawLevel(0)
+        self.track = t
+    end
     self.slices = {}
     self.n = 0
     return self
@@ -56,6 +64,7 @@ function Donut:set(values, colors)
             c:SetFillColor(col[1], col[2], col[3], col[4] or 1)
             c:SetDrawLevel(count - i + 1)
             c:StartFixedCooldown(start + share, CD_TYPE_RADIAL, CD_TIME_TYPE_TIME_REMAINING, false)
+            c:SetFillColor(col[1], col[2], col[3], col[4] or 1)
             c:SetHidden(false)
             start = start + share
         end
