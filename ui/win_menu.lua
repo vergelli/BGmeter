@@ -35,12 +35,14 @@ local PANEL_H = 128
 local QUEUE_H = 36
 local FOOT_H = 34
 local INSET_PAD = 20
+local SCROLL_W = 6
 local MIN_H, MAX_AUTO_H = 390, 764
 
 local TELVAR = CURT_TELVAR_STONES
 
 local Scene = BGMeter.zenimax.scene
 
+local layout_scrollbar
 local built = false
 local launcher = nil
 local panel = nil
@@ -48,8 +50,7 @@ local rows = {}
 local offset = 0
 local on_hud = true
 local reopen_after_report = false
-local hiding = false
-local hover_index = nil
+local drag = { on = false, y0 = 0, off0 = 0 }
 local armed_index = nil
 local DISARM_MS = 3000
 
@@ -364,18 +365,16 @@ local function make_row(i)
 
     r.del = mk_button(r.container, TX.close, 14, function()
         M.request_delete(r.index)
-    end, "Delete this match\nClick twice, or press Delete twice")
+    end, "Delete this match\nClick twice")
     r.del:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
 
     r.container:SetHandler("OnMouseEnter", function()
-        hover_index = r.index
         r.highlight:SetHidden(false)
         if r.tip and ZO_Tooltips_ShowTextTooltip then
             ZO_Tooltips_ShowTextTooltip(r.container, BOTTOM, r.tip)
         end
     end)
     r.container:SetHandler("OnMouseExit", function()
-        if hover_index == r.index then hover_index = nil end
         r.highlight:SetHidden(true)
         if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
     end)
@@ -493,21 +492,10 @@ local function build()
         apply_art_cover()
         M.refresh()
     end)
-    pw:SetHandler("OnMouseWheel", function(_, delta)
-        local count = BGMeter.History.count()
-        local maxOff = math.max(0, count - (panel.vis or 1))
-        local want = math.max(0, math.min(offset - delta, maxOff))
-        if want ~= offset then
-            offset = want
-            M.disarm_delete()
-            M.refresh()
-        end
-    end)
+    pw:SetHandler("OnMouseWheel", function(_, delta) M.scroll_to(offset - delta) end)
+    pw:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
     pw:SetHandler("OnMouseDoubleClick", function() M.on_double_click() end)
-    pw:SetHandler("OnEffectivelyHidden", function() M.on_external_hide() end)
-    pw:SetKeyboardEnabled(true)
-    pw:SetHandler("OnKeyDown", function(_, key) return M.on_key(key) end)
-    Scene.register_top_level(pw)
+    Scene.register_top_level(pw, function() M.hide_menu() end)
     panel = { win = pw }
 
     local bg = P.rect(pw, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.97 })
@@ -639,6 +627,27 @@ local function build()
     panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
     panel.insetBg:SetAnchorFill(panel.inset)
     P.frame(panel.inset):SetAnchorFill(panel.inset)
+
+    panel.scroll = {}
+    local track = BGMeter.zenimax.ui.create_control(nil, panel.inset, CT_CONTROL)
+    track:SetAnchor(TOPRIGHT, panel.inset, TOPRIGHT, -4, 6)
+    track:SetAnchor(BOTTOMRIGHT, panel.inset, BOTTOMRIGHT, -4, -6)
+    track:SetWidth(SCROLL_W)
+    track:SetMouseEnabled(true)
+    track:SetHidden(true)
+    track:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then M.on_track_click() end end)
+    panel.scroll.track = track
+    panel.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
+    panel.scroll.trackBg:SetAnchorFill(track)
+    local thumb = P.rect(track, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
+    thumb:SetWidth(SCROLL_W)
+    thumb:SetMouseEnabled(true)
+    thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
+    thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
+    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    panel.scroll.thumb = thumb
 
     panel.empty = P.label(panel.inset, S.FONT.small, K.COLOR.text_dim)
     panel.empty:SetText("no battlegrounds recorded yet\nqueue up below to record your first battle")
@@ -896,6 +905,74 @@ function M.queue_click()
     end
 end
 
+local function max_offset()
+    return math.max(0, BGMeter.History.count() - (panel.vis or 1))
+end
+
+function layout_scrollbar(count, maxOff)
+    local sc = panel.scroll
+    if maxOff <= 0 then sc.track:SetHidden(true) return end
+    local th = sc.track:GetHeight()
+    if th <= 0 then sc.track:SetHidden(true) return end
+    local thumbH = math.floor(th * panel.vis / count + 0.5)
+    if thumbH < 16 then thumbH = 16 end
+    if thumbH > th then thumbH = th end
+    local y = math.floor((th - thumbH) * offset / maxOff + 0.5)
+    sc.thumb:SetHeight(thumbH)
+    sc.thumb:ClearAnchors()
+    sc.thumb:SetAnchor(TOPLEFT, sc.track, TOPLEFT, 0, y)
+    sc.track:SetHidden(false)
+end
+
+function M.scroll_to(want)
+    if not built then return end
+    want = math.max(0, math.min(want, max_offset()))
+    if want == offset then return end
+    offset = want
+    M.disarm_delete()
+    M.refresh()
+end
+
+function M.on_track_click()
+    if drag.on then return end
+    local track = panel.scroll.track
+    local _, my = BGMeter.zenimax.api.get_ui_mouse()
+    local th = track:GetHeight()
+    if not my or th <= 0 then return end
+    local rel = (my - track:GetTop()) / th
+    M.scroll_to(math.floor(rel * (max_offset() + 1)))
+end
+
+local function drag_update()
+    if not drag.on then return end
+    local track, thumb = panel.scroll.track, panel.scroll.thumb
+    local free = track:GetHeight() - thumb:GetHeight()
+    local maxOff = max_offset()
+    if free <= 0 or maxOff <= 0 then return end
+    local _, my = BGMeter.zenimax.api.get_ui_mouse()
+    if not my then return end
+    M.scroll_to(drag.off0 + math.floor((my - drag.y0) * maxOff / free + 0.5))
+end
+
+function M.on_thumb_down()
+    local _, my = BGMeter.zenimax.api.get_ui_mouse()
+    drag.on, drag.y0, drag.off0 = true, my or 0, offset
+    panel.win:SetHandler("OnUpdate", drag_update)
+end
+
+function M.on_thumb_up()
+    if not drag.on then return end
+    drag.on = false
+    panel.win:SetHandler("OnUpdate", nil)
+    P.set_rect_color(panel.scroll.thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+end
+
+function M.window() return panel and panel.win end
+
+function M.scroll_state()
+    return offset, panel and panel.scroll and not panel.scroll.track:IsHidden(), panel and panel.scroll and panel.scroll.thumb:GetHeight() or 0
+end
+
 function M.refresh()
     if not built or panel.win:IsHidden() then return end
     local H = BGMeter.History
@@ -915,8 +992,10 @@ function M.refresh()
     if offset > maxOff then offset = maxOff end
     local vis = math.min(count - offset, panel.vis)
 
-    local roww = w - 2 * INSET_PAD - 10
+    local scrolling = maxOff > 0
+    local roww = w - 2 * INSET_PAD - 10 - (scrolling and (SCROLL_W + 6) or 0)
     panel.empty:SetHidden(count > 0)
+    layout_scrollbar(count, maxOff)
 
     for i = 1, vis do
         local r = rows[i]
@@ -994,18 +1073,6 @@ function M.armed_index() return armed_index end
 function M.stat_text(key) return panel and panel.stats[key] and panel.stats[key].label:GetText() or nil end
 function M.row_kda(i) return rows[i] and rows[i].kda:GetText() or nil end
 
-function M.on_key(key)
-    if not built or panel.win:IsHidden() then return false end
-    local C = BGMeter.zenimax.constants
-    if key == C.KEY_DELETE and hover_index then
-        M.request_delete(hover_index)
-        return true
-    end
-    return false
-end
-
-function M.set_hover(index) hover_index = index end
-
 function M.on_double_click()
     if not built then return end
     local _, y = BGMeter.zenimax.api.get_ui_mouse()
@@ -1049,7 +1116,8 @@ function M.show_menu()
     else
         panel.win:SetAnchor(TOPLEFT, launcher.win, BOTTOMRIGHT, 2, 2)
     end
-    Scene.show_top_level(panel.win)
+    panel.win:SetHidden(false)
+    if Prefs.get("cursor_on_open") then Scene.enter_ui_mode() end
     offset = 0
     auto_height()
     apply_art_cover()
@@ -1066,18 +1134,9 @@ function M.hide_menu(silent)
     if not built then return end
     local was_visible = not panel.win:IsHidden()
     M.disarm_delete()
-    hiding = true
-    Scene.hide_top_level(panel.win)
-    hiding = false
+    panel.win:SetHidden(true)
     if not silent and was_visible then Sound.play("close") end
     queue_ticker_sync(false)
-end
-
-function M.on_external_hide()
-    if hiding or not built then return end
-    M.disarm_delete()
-    queue_ticker_sync(false)
-    Sound.play("close")
 end
 
 function M.toggle()

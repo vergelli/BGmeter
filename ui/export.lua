@@ -22,7 +22,7 @@ local function build()
     win:SetClampedToScreen(true)
     win:SetHidden(true)
     win:SetDrawTier(DT_HIGH)
-    BGMeter.zenimax.scene.register_top_level(win)
+    BGMeter.zenimax.scene.register_top_level(win, function() E.hide() end)
 
     local bg = P.rect(win, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
     bg:SetAnchorFill(win)
@@ -77,14 +77,14 @@ end
 function E.show_text(text)
     build()
     controls.edit:SetText(text or "")
-    BGMeter.zenimax.scene.show_top_level(controls.window)
+    controls.window:SetHidden(false)
     controls.edit:TakeFocus()
     controls.edit:SelectAll()
 end
 
 function E.hide()
     if not controls or controls.window:IsHidden() then return end
-    BGMeter.zenimax.scene.hide_top_level(controls.window)
+    controls.window:SetHidden(true)
     if BGMeter.Sound then BGMeter.Sound.play("close") end
 end
 
