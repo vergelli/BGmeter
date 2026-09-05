@@ -39,6 +39,8 @@ local MIN_H, MAX_AUTO_H = 390, 764
 
 local TELVAR = CURT_TELVAR_STONES
 
+local Scene = BGMeter.zenimax.scene
+
 local built = false
 local launcher = nil
 local panel = nil
@@ -46,6 +48,10 @@ local rows = {}
 local offset = 0
 local on_hud = true
 local reopen_after_report = false
+local hiding = false
+local hover_index = nil
+local armed_index = nil
+local DISARM_MS = 3000
 
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
@@ -173,6 +179,7 @@ local function refresh_panel()
 
     st = panel.stats.vet
     local snap = BGMeter.Veterancy and BGMeter.Veterancy.snapshot()
+    if st.link then st.link:SetHidden(not (snap and snap.rank)) end
     if snap and snap.rank then
         st.c:SetHidden(false)
         if st.icon then
@@ -336,18 +343,25 @@ local function make_row(i)
     r.ago:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     U.clamp_line(r.ago)
 
+    r.delArm = P.rect(r.container, { K.COLOR.accent[1], K.COLOR.accent[2], K.COLOR.accent[3], 0.55 })
+    r.delArm:SetDimensions(20, 20)
+    r.delArm:SetAnchor(RIGHT, r.container, RIGHT, -3, 0)
+    r.delArm:SetHidden(true)
+
     r.del = mk_button(r.container, TX.close, 14, function()
-        M.delete(r.index)
-    end, "Delete this match")
+        M.request_delete(r.index)
+    end, "Delete this match\nClick twice, or press Delete twice")
     r.del:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
 
     r.container:SetHandler("OnMouseEnter", function()
+        hover_index = r.index
         r.highlight:SetHidden(false)
         if r.tip and ZO_Tooltips_ShowTextTooltip then
             ZO_Tooltips_ShowTextTooltip(r.container, BOTTOM, r.tip)
         end
     end)
     r.container:SetHandler("OnMouseExit", function()
+        if hover_index == r.index then hover_index = nil end
         r.highlight:SetHidden(true)
         if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
     end)
@@ -471,9 +485,15 @@ local function build()
         local want = math.max(0, math.min(offset - delta, maxOff))
         if want ~= offset then
             offset = want
+            M.disarm_delete()
             M.refresh()
         end
     end)
+    pw:SetHandler("OnMouseDoubleClick", function() M.on_double_click() end)
+    pw:SetHandler("OnEffectivelyHidden", function() M.on_external_hide() end)
+    pw:SetKeyboardEnabled(true)
+    pw:SetHandler("OnKeyDown", function(_, key) return M.on_key(key) end)
+    Scene.register_top_level(pw)
     panel = { win = pw }
 
     local bg = P.rect(pw, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.97 })
@@ -505,7 +525,7 @@ local function build()
     panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
-    local function make_stat(rowi, right, withIcon, withBar)
+    local function make_stat(rowi, right, withIcon, withBar, withLink)
         local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
         local rowH = right and 28 or 38
         local iconS = right and 26 or 38
@@ -531,8 +551,13 @@ local function build()
         U.clamp_line(st.label)
         if withBar then
             st.label:SetAnchor(TOPLEFT, c, TOPLEFT, textX, 3)
-            st.label:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 3)
+            st.label:SetAnchor(TOPRIGHT, c, TOPRIGHT, withLink and -20 or 0, 3)
             st.label:SetHeight(20)
+            if withLink then
+                st.link = mk_button(c, TX.nextb, 16, function() M.open_veterancy() end, "View veterancy")
+                st.link:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 5)
+                st.link:SetHidden(true)
+            end
             st.bar = U.inset_bar(c)
             st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
             st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -3)
@@ -554,7 +579,7 @@ local function build()
 
     panel.stats = {
         ava     = make_stat(1, false, true, true),
-        vet     = make_stat(2, false, true, true),
+        vet     = make_stat(2, false, true, true, true),
         stand   = make_stat(3, false, true),
         ap      = make_stat(1, true, true),
         telvar  = make_stat(2, true, true),
@@ -893,6 +918,7 @@ function M.refresh()
         r.container:SetDimensions(roww, ROW_H)
         r.container:SetHidden(false)
         r.highlight:SetHidden(true)
+        r.delArm:SetHidden(armed_index ~= idx)
         r.name:SetWidth(math.max(72, roww - 232))
         P.set_rect_color(r.pip, result_color(m.result))
         set_text(r.name, m.name or "Battleground")
@@ -919,12 +945,66 @@ function M.refresh()
 end
 
 function M.delete(index)
+    M.disarm_delete()
     if not BGMeter.History.delete(index) then return end
     Sound.play("nav")
     W.on_history_changed(index)
     auto_height()
     apply_art_cover()
     M.refresh()
+end
+
+function M.disarm_delete()
+    if not armed_index then return end
+    armed_index = nil
+    BGMeter.zenimax.events.unregister_update("BGMeterDisarm")
+    for _, r in ipairs(rows) do r.delArm:SetHidden(true) end
+end
+
+function M.request_delete(index)
+    if not index or not BGMeter.History.get(index) then return false end
+    if armed_index == index then
+        M.delete(index)
+        return true
+    end
+    M.disarm_delete()
+    armed_index = index
+    for _, r in ipairs(rows) do r.delArm:SetHidden(r.index ~= index) end
+    Sound.play("nav")
+    BGMeter.zenimax.events.register_update("BGMeterDisarm", DISARM_MS, M.disarm_delete)
+    return false
+end
+
+function M.armed_index() return armed_index end
+
+function M.on_key(key)
+    if not built or panel.win:IsHidden() then return false end
+    local C = BGMeter.zenimax.constants
+    if key == C.KEY_DELETE and hover_index then
+        M.request_delete(hover_index)
+        return true
+    end
+    return false
+end
+
+function M.set_hover(index) hover_index = index end
+
+function M.on_double_click()
+    if not built then return end
+    local _, y = BGMeter.zenimax.api.get_ui_mouse()
+    local top = panel.win:GetTop()
+    if y == nil or y < top or y > top + HEAD_H then return end
+    local mg = sv_menu()
+    mg.w, mg.h = 0, 0
+    panel.win:SetDimensions(MENU_W, MENU_H)
+    auto_height()
+    apply_art_cover()
+    Sound.play("nav")
+    M.refresh()
+end
+
+function M.open_veterancy()
+    if Scene.push("VeterancySceneKeyboard") then Sound.play("nav") end
 end
 
 local DEMO_RANKS = { 96, 42, 7, 1 }
@@ -944,8 +1024,6 @@ end
 
 function M.show_menu()
     if not built then return end
-    local A = BGMeter.zenimax.api
-    if not safe(A.is_ui_mode) then safe(A.set_ui_mode, true) end
     M.clear_unread()
     local mg = sv_menu()
     panel.win:ClearAnchors()
@@ -954,13 +1032,14 @@ function M.show_menu()
     else
         panel.win:SetAnchor(TOPLEFT, launcher.win, BOTTOMRIGHT, 2, 2)
     end
-    panel.win:SetHidden(false)
+    Scene.show_top_level(panel.win)
     offset = 0
     auto_height()
     apply_art_cover()
     populate_queue_sets()
     M.update_queue()
     M.refresh()
+    local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
     Sound.play("menu")
@@ -968,9 +1047,20 @@ end
 
 function M.hide_menu(silent)
     if not built then return end
-    if not silent and not panel.win:IsHidden() then Sound.play("close") end
-    panel.win:SetHidden(true)
+    local was_visible = not panel.win:IsHidden()
+    M.disarm_delete()
+    hiding = true
+    Scene.hide_top_level(panel.win)
+    hiding = false
+    if not silent and was_visible then Sound.play("close") end
     queue_ticker_sync(false)
+end
+
+function M.on_external_hide()
+    if hiding or not built then return end
+    M.disarm_delete()
+    queue_ticker_sync(false)
+    Sound.play("close")
 end
 
 function M.toggle()
@@ -981,6 +1071,8 @@ end
 function M.is_hidden()
     return not built or panel.win:IsHidden()
 end
+
+function M.forget_reopen() reopen_after_report = false end
 
 function M.on_report_closed()
     if not reopen_after_report then return end
