@@ -239,8 +239,6 @@ local function build()
     win:SetHandler("OnResizeStop", function() W.on_resize_stop() end)
     win:SetHandler("OnMouseWheel", function(_, delta) W.on_wheel(delta) end)
     win:SetHandler("OnMouseDoubleClick", function() W.on_double_click() end)
-    win:SetKeyboardEnabled(true)
-    win:SetHandler("OnKeyDown", function(_, key) return W.on_key(key) end)
     Scene.register_top_level(win, function() W.on_escape() end)
 
     W.bg = P.rect(win, K.COLOR.bg)
@@ -485,14 +483,6 @@ function W.step(dir)
     W.current_index = want
     W.selected_row = nil
     Sound.play("match"); W.render(true)
-end
-
-function W.on_key(key)
-    if not W.built or W.win:IsHidden() then return false end
-    local C = BGMeter.zenimax.constants
-    if key == C.KEY_LEFTARROW then W.step(-1) return true end
-    if key == C.KEY_RIGHTARROW then W.step(1) return true end
-    return false
 end
 
 function W.on_wheel(delta)

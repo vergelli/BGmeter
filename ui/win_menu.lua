@@ -48,7 +48,6 @@ local rows = {}
 local offset = 0
 local on_hud = true
 local reopen_after_report = false
-local hover_index = nil
 local armed_index = nil
 local DISARM_MS = 3000
 
@@ -363,18 +362,16 @@ local function make_row(i)
 
     r.del = mk_button(r.container, TX.close, 14, function()
         M.request_delete(r.index)
-    end, "Delete this match\nClick twice, or press Delete twice")
+    end, "Delete this match\nClick twice")
     r.del:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
 
     r.container:SetHandler("OnMouseEnter", function()
-        hover_index = r.index
         r.highlight:SetHidden(false)
         if r.tip and ZO_Tooltips_ShowTextTooltip then
             ZO_Tooltips_ShowTextTooltip(r.container, BOTTOM, r.tip)
         end
     end)
     r.container:SetHandler("OnMouseExit", function()
-        if hover_index == r.index then hover_index = nil end
         r.highlight:SetHidden(true)
         if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
     end)
@@ -503,8 +500,6 @@ local function build()
         end
     end)
     pw:SetHandler("OnMouseDoubleClick", function() M.on_double_click() end)
-    pw:SetKeyboardEnabled(true)
-    pw:SetHandler("OnKeyDown", function(_, key) return M.on_key(key) end)
     Scene.register_top_level(pw, function() M.hide_menu() end)
     panel = { win = pw }
 
@@ -991,18 +986,6 @@ function M.armed_index() return armed_index end
 
 function M.stat_text(key) return panel and panel.stats[key] and panel.stats[key].label:GetText() or nil end
 function M.row_kda(i) return rows[i] and rows[i].kda:GetText() or nil end
-
-function M.on_key(key)
-    if not built or panel.win:IsHidden() then return false end
-    local C = BGMeter.zenimax.constants
-    if key == C.KEY_DELETE and hover_index then
-        M.request_delete(hover_index)
-        return true
-    end
-    return false
-end
-
-function M.set_hover(index) hover_index = index end
 
 function M.on_double_click()
     if not built then return end
