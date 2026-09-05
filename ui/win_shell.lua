@@ -505,6 +505,11 @@ function W.on_scene(onHud)
     apply_visibility()
 end
 
+function W.on_scene_state(newState)
+    if newState == SCENE_SHOWN then W.on_scene(true)
+    elseif newState == SCENE_HIDDEN and not BGMeter.zenimax.scene.next_is_hud() then W.on_scene(false) end
+end
+
 function W.on_combat(_, inCombat)
     in_combat = inCombat and true or false
     apply_visibility()
@@ -603,10 +608,7 @@ function W.init()
         BGMeter.zenimax.events.register("BGMeterWinCombat", zc.EVENT_PLAYER_COMBAT_STATE, W.on_combat)
     end
     if SCENE_MANAGER then
-        local function handler(_, newState)
-            if newState == SCENE_SHOWN then W.on_scene(true)
-            elseif newState == SCENE_HIDDEN then W.on_scene(false) end
-        end
+        local function handler(_, newState) W.on_scene_state(newState) end
         for _, name in ipairs({ "hud", "hudui" }) do
             local sc = safe_m(SCENE_MANAGER, "GetScene", name)
             if sc and type(sc.RegisterCallback) == "function" then

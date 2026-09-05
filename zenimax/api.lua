@@ -113,5 +113,9 @@ A.get_ref_track_index        = GetReferenceTrackIndex
 A.get_reward_track_id_from_ref = GetRewardTrackIdFromReferenceTrackId
 A.get_info_for_reward_track  = GetInfoForRewardTrack
 A.get_tier_total_progress    = GetTotalProgressAtRewardTrackTier
+A.get_num_base_tiers         = GetNumBaseTiersForRewardTrack
+
+A.is_ui_mode  = IsGameCameraUIModeActive
+A.set_ui_mode = SetGameCameraUIMode
 
 BGMeter.zenimax.api = A
