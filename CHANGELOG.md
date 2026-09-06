@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.3]
+
+- Fixed: with the launcher icon turned off, toggling the cursor (or changing the launcher setting) closed the registry. The registry now closes only when you leave the HUD. Reported by unit220.
+
 ## [0.1.2]
 
 - Fixed: toggling the cursor no longer closes the menu or the post-battle report. Reported by unit220.
