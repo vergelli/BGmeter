@@ -1,6 +1,6 @@
 # BGmeter
 
-![Version](https://img.shields.io/badge/version-0.1.2-blue)
+![Version](https://img.shields.io/badge/version-0.1.3-blue)
 ![Lua](https://img.shields.io/badge/Lua-5.1-2C2D72?logo=lua&logoColor=white)
 ![ESO](https://img.shields.io/badge/ESO-Update%2050%20%C2%B7%20API%20101050-orange)
 ![ESO](https://img.shields.io/badge/ESO-Update%2051%20%C2%B7%20API%20101051-orange)
