@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Registry: an arrow next to your competitive standing opens the game's Battlegrounds > Competitive leaderboard, like the veterancy arrow does for the veterancy screen.
+
 ## [0.1.3]
 
 - Fixed: with the launcher icon turned off, toggling the cursor (or changing the launcher setting) closed the registry. The registry now closes only when you leave the HUD. Reported by unit220.
