@@ -2,7 +2,13 @@
 
 ## [Unreleased]
 
+## [Unreleased]
+
+- Fixed: past veterancy rank 100 the haul bar stayed full and the progress read above the tier total (for example 218,527 / 168,000). Progress now wraps per repeatable reward, the bar resets each time, and the icon and title stay at the last base rank. Reported by unit220.
+- Haul and registry show how many repeatable rewards you have earned past max rank, and completing one during a match counts as a rank up.
+- `/bgmeter vet` opens a copyable dump of every raw veterancy value the game reports. If your veterancy display looks wrong, paste it in a report.
 - Registry: an arrow next to your competitive standing opens the game's Battlegrounds > Competitive leaderboard, like the veterancy arrow does for the veterancy screen.
+
 
 ## [0.1.3]
 

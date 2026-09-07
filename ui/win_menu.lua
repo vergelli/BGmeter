@@ -187,12 +187,16 @@ local function refresh_panel()
             st.icon:SetTexture(safe(A.get_veterancy_rank_icon, snap.iconRank or snap.rank, snap.seasonId)
                 or snap.rankIcon or "")
         end
-        set_text(st.label, string.format("%s  %d", clean(snap.rankTitle) or "Veterancy", snap.rank))
+        local laps = snap.laps or 0
+        set_text(st.label, string.format("%s  %d%s", clean(snap.rankTitle) or "Veterancy", snap.rank,
+            laps > 0 and (" ×" .. laps) or ""))
         local season = clean(snap.seasonName)
         local seasonLine = season and ("\n" .. season) or ""
         if snap.tierTotal and snap.tierTotal > 0 then
-            st.tip = string.format("Veterancy rank %d\n%s / %s to the next rank%s",
-                snap.rank, F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal), seasonLine)
+            st.tip = string.format("Veterancy rank %d%s\n%s / %s to the next %s%s",
+                snap.rank, laps > 0 and string.format("  ·  max rank, reward ×%d", laps) or "",
+                F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal),
+                snap.pastMax and "reward" or "rank", seasonLine)
         else
             st.tip = string.format("Veterancy rank %d%s", snap.rank, seasonLine)
         end
