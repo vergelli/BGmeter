@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Registry: the top three competitive standings are Champions now, not only the first, and their trophy wears a fast chrome rainbow glow. The glow stays still with animations off.
+
 ## [0.1.6]
 
 - Fixed: the satchel only looked at the repeatable reward past rank 100. It now covers every unclaimed veterancy reward on the track, from the first claimable rank on, ranks with more than one reward included, and one click claims them all.

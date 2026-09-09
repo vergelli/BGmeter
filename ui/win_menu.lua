@@ -145,6 +145,49 @@ local function auto_height()
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
+local PODIUM = { name = "BGMeterPodiumGlow", ms = 40, period_ms = 1200, on = false, t0 = 0 }
+
+local function podium_now()
+    if GetGameTimeMilliseconds then return GetGameTimeMilliseconds() end
+    return os.clock() * 1000
+end
+
+local function hue_rgb(h)
+    local x = (h % 1) * 6
+    local i = math.floor(x)
+    local f = x - i
+    if i == 0 then return 1, f, 0 end
+    if i == 1 then return 1 - f, 1, 0 end
+    if i == 2 then return 0, 1, f end
+    if i == 3 then return 0, 1 - f, 1 end
+    if i == 4 then return f, 0, 1 end
+    return 1, 0, 1 - f
+end
+
+local function podium_stop()
+    if not PODIUM.on then return end
+    PODIUM.on = false
+    BGMeter.zenimax.events.unregister_update(PODIUM.name)
+end
+
+local function podium_tick()
+    local st = panel and panel.stats.stand
+    if not (st and st.glow) or panel.win:IsHidden() then podium_stop() return end
+    local t = ((podium_now() - PODIUM.t0) % PODIUM.period_ms) / PODIUM.period_ms
+    local r, g, b = hue_rgb(t)
+    st.glow:SetColor(0.45 + 0.55 * r, 0.45 + 0.55 * g, 0.45 + 0.55 * b, 0.90)
+    local r2, g2, b2 = hue_rgb(t + 0.5)
+    st.icon:SetColor(0.80 + 0.20 * r2, 0.80 + 0.20 * g2, 0.80 + 0.20 * b2, 1)
+end
+
+local function podium_start()
+    if PODIUM.on then return end
+    PODIUM.on = true
+    PODIUM.t0 = podium_now()
+    BGMeter.zenimax.events.register_update(PODIUM.name, PODIUM.ms, podium_tick)
+    podium_tick()
+end
+
 local function refresh_panel()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
@@ -223,7 +266,7 @@ local function refresh_panel()
 
     st = panel.stats.stand
     local function trophy_tier(rank)
-        if rank == 1 then return { 1.00, 0.97, 0.82 }, 0.75, "Champion!" end
+        if rank <= 3 then return { 0.97, 0.97, 1.00 }, 0.90, "Champion!" end
         if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60, "Mythic!" end
         if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50, "Legendary" end
         return { 0.72, 0.53, 0.98 }, 0.42, "Epic"
@@ -252,10 +295,12 @@ local function refresh_panel()
                 end
                 st.glow:SetColor(col[1], col[2], col[3], glowA)
                 st.glow:SetHidden(false)
+                if standing.rank <= 3 and Prefs.get("animate") then podium_start() else podium_stop() end
                 tierTag = string.format("  ·  |c%02X%02X%02X%s|r",
                     math.floor(col[1] * 255 + 0.5), math.floor(col[2] * 255 + 0.5),
                     math.floor(col[3] * 255 + 0.5), word)
             else
+                podium_stop()
                 st.icon:SetColor(1, 1, 1, 1)
                 if st.glow then st.glow:SetHidden(true) end
             end
@@ -265,6 +310,7 @@ local function refresh_panel()
         S.color(st.label, K.COLOR.gold)
         st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
     else
+        podium_stop()
         if st.icon then
             st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
             st.icon:SetColor(1, 1, 1, 1)
@@ -1146,7 +1192,7 @@ function M.open_leaderboard()
     if Scene.push_bg_leaderboard(C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE) then Sound.play("nav") end
 end
 
-local DEMO_RANKS = { 96, 42, 7, 1 }
+local DEMO_RANKS = { 96, 42, 7, 3, 1 }
 function M.demo_trophy()
     if not built then build() end
     local idx = M._demo_idx or 0
@@ -1185,7 +1231,10 @@ function M.show_menu()
     Sound.play("menu")
 end
 
+function M.podium_on() return PODIUM.on end
+
 function M.hide_menu(silent)
+    podium_stop()
     if not built then return end
     local was_visible = not panel.win:IsHidden()
     M.disarm_delete()
