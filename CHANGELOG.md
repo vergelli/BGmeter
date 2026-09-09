@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.5]
+
+- Registry: past veterancy rank 100, a satchel icon appears next to your rank whenever a repeatable reward is waiting. Click it to claim the reward without leaving the window; the tooltip says how many are waiting. The arrow to the game's veterancy screen stays.
+- `/bgmeter vet` now reports how many repeatable rewards are claimable.
+
 ## [0.1.4]
 
 - Fixed: past veterancy rank 100 the haul bar stayed full and the progress read above the tier total (for example 218,527 / 168,000). Progress now wraps per repeatable reward, the bar resets each time, and the icon and title stay at the last base rank. Reported by unit220.

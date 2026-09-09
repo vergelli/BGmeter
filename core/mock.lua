@@ -391,9 +391,9 @@ end
 local VET_PRESETS = {
     below = { rank = 37,  cur = 37,  prog = 120000, total = 168000, claimed = 0 },
     cap   = { rank = 100, cur = 100, prog = 150000, total = 168000, claimed = 0 },
-    h1    = { rank = 104, cur = 104, prog = 50627,  total = 168000, claimed = 3 },
-    h2    = { rank = 101, cur = 101, prog = 218527, total = 168000, claimed = 1 },
-    h3    = { rank = 101, cur = 101, prog = 50627,  total = 168000, claimed = 3 },
+    h1    = { rank = 104, cur = 104, prog = 50627,  total = 168000, claimed = 3, claimable = 1 },
+    h2    = { rank = 101, cur = 101, prog = 218527, total = 168000, claimed = 1, claimable = 0 },
+    h3    = { rank = 101, cur = 101, prog = 50627,  total = 168000, claimed = 3, claimable = 2 },
 }
 local VET_ORDER = { "below", "cap", "h1", "h2", "h3" }
 local vet_saved = nil
@@ -406,7 +406,8 @@ local function vet_install(p)
             "get_season_time_remaining", "is_in_veterancy_zone", "get_unit_veterancy_rank",
             "get_veterancy_rank_title", "get_active_ref_track_ids", "get_ref_track_index",
             "get_reward_track_id_from_ref", "get_info_for_reward_track", "get_tier_total_progress",
-            "get_num_base_tiers", "has_repeatable_tier", "get_repeatable_tier", "get_repeatable_claimed" }) do
+            "get_num_base_tiers", "has_repeatable_tier", "get_repeatable_tier", "get_repeatable_claimed",
+            "claim_reward_track_reward" }) do
             vet_saved[k] = A[k]
         end
     end
@@ -425,7 +426,13 @@ local function vet_install(p)
     A.get_num_base_tiers         = function() return 100 end
     A.has_repeatable_tier        = function() return true end
     A.get_repeatable_tier        = function() return 101 end
-    A.get_repeatable_claimed     = function() return p.claimed, 0 end
+    A.get_repeatable_claimed     = function() return p.claimed, p.claimable or 0 end
+    A.claim_reward_track_reward  = function()
+        if (p.claimable or 0) <= 0 then return end
+        p.claimed = p.claimed + 1
+        p.claimable = p.claimable - 1
+        if BGMeter.UI and BGMeter.UI.menu then BGMeter.UI.menu.refresh_if_visible() end
+    end
 end
 
 local function vet_restore()
