@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.7]
 
 - Registry: the top three competitive standings are Champions now, not only the first, and their trophy wears a fast chrome rainbow glow. The glow stays still with animations off.
 
