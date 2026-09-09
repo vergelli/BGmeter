@@ -452,7 +452,7 @@ local function on_slash(args)
     elseif args == "trophy" then
         BGMeter.UI.menu.demo_trophy()
     else
-        Log.say("dev: show, hide, toggle, last, demo, demo2, ap, dump, clear, debug, layers, mock <dm/dom/ck/ball/relic>, vet, vet claim, vetmock <below/cap/h1/h2/h3/off>, perf, gcprobe [sec], sound [name], csa [rank], trophy")
+        Log.say("dev: show, hide, toggle, last, demo, demo2, ap, dump, clear, debug, layers, mock <dm/dom/ck/ball/relic>, vet, vet claim, vetmock <below/r34/cap/h1/h2/h3/off>, perf, gcprobe [sec], sound [name], csa [rank], trophy")
     end
 end
 

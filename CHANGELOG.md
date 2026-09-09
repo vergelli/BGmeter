@@ -1,8 +1,13 @@
 # Changelog
 
+## [0.1.6]
+
+- Fixed: the satchel only looked at the repeatable reward past rank 100. It now covers every unclaimed veterancy reward on the track, from the first claimable rank on, ranks with more than one reward included, and one click claims them all.
+- `/bgmeter vet` reports whether the track holds unclaimed rewards and how many are waiting.
+
 ## [0.1.5]
 
-- Registry: past veterancy rank 100, a satchel icon appears next to your rank whenever a repeatable reward is waiting. Click it to claim the reward without leaving the window; the tooltip says how many are waiting. The arrow to the game's veterancy screen stays.
+- Registry: a satchel icon appears next to your veterancy rank whenever a reward is waiting. Click it to claim without leaving the window; the tooltip says how many are waiting. The arrow to the game's veterancy screen stays.
 - `/bgmeter vet` now reports how many repeatable rewards are claimable.
 
 ## [0.1.4]
