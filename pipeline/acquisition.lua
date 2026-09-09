@@ -76,6 +76,11 @@ function Acquisition.init()
         E.register(PREFIX .. "Ball", C.EVENT_MURDERBALL_STATE_CHANGED, Capture.on_murderball)
     end
     E.register(PREFIX .. "Board", C.EVENT_BATTLEGROUND_LEADERBOARD_DATA_RECEIVED, BGMeter.Standing.on_data)
+    if C.EVENT_REWARD_TRACK_REWARD_CLAIMED then
+        E.register(PREFIX .. "Claim", C.EVENT_REWARD_TRACK_REWARD_CLAIMED, function()
+            if BGMeter.UI and BGMeter.UI.menu then BGMeter.UI.menu.refresh_if_visible() end
+        end)
+    end
 
     on_player_activated()
 

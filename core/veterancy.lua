@@ -36,9 +36,9 @@ local function read_track()
         tierTotal = safe(A.get_tier_total_progress, rewardTrackId, currentRank)
     end
 
-    local claimed = nil
+    local claimed, claimable = nil, nil
     if pastMax then
-        claimed = safe(A.get_repeatable_claimed, ttype, refIdx, repeatIdx, C.REWARD_TRACK_COMPONENT_PRIMARY)
+        claimed, claimable = safe(A.get_repeatable_claimed, ttype, refIdx, repeatIdx, C.REWARD_TRACK_COMPONENT_PRIMARY)
     end
 
     return {
@@ -51,6 +51,8 @@ local function read_track()
         repeatIdx      = repeatIdx,
         pastMax        = pastMax,
         claimed        = claimed,
+        claimable      = claimable,
+        refIdx         = refIdx,
     }
 end
 
@@ -102,12 +104,30 @@ function V.snapshot()
         snap.tierTotal      = track.tierTotal
         snap.pastMax        = track.pastMax
         snap.laps           = laps
+        snap.claimable      = track.claimable or 0
         if track.tierTotal == nil then snap.percent = nil
         elseif track.tierTotal == 0 then snap.percent = 1
         else snap.percent = math.min(1, within / track.tierTotal) end
     end
 
     return snap
+end
+
+function V.claimable()
+    local track = read_track()
+    if not track or not track.pastMax then return 0 end
+    return track.claimable or 0
+end
+
+function V.claim()
+    local A = BGMeter.zenimax.api
+    local C = BGMeter.zenimax.constants
+    local track = read_track()
+    if not track or not track.pastMax or (track.claimable or 0) <= 0 then return false end
+    if type(A.claim_reward_track_reward) ~= "function" then return false end
+    local ok = pcall(A.claim_reward_track_reward, C.REWARD_TRACK_TYPE_AVA_VETERANCY,
+        track.refIdx, track.repeatIdx, C.REWARD_TRACK_COMPONENT_PRIMARY, 1)
+    return ok == true
 end
 
 function V.progress_value(snap)
@@ -174,6 +194,7 @@ function V.raw_lines()
     add("snap.percent", s.percent)
     add("snap.past_max", s.pastMax)
     add("snap.laps", s.laps)
+    add("snap.claimable", s.claimable)
     add("snap.icon_rank", s.iconRank)
     add("snap.title", s.rankTitle)
     return out

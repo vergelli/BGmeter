@@ -190,6 +190,14 @@ local function refresh_panel()
         local laps = snap.laps or 0
         set_text(st.label, string.format("%s  %d%s", clean(snap.rankTitle) or "Veterancy", snap.rank,
             laps > 0 and (" ×" .. laps) or ""))
+        local waiting = snap.claimable or 0
+        if st.claim then
+            st.claim:SetHidden(waiting <= 0)
+            st.claim_tip = string.format("Claim your veterancy reward (%d waiting)", waiting)
+            st.label:ClearAnchors()
+            st.label:SetAnchor(TOPLEFT, st.c, TOPLEFT, st.textX, 3)
+            st.label:SetAnchor(TOPRIGHT, st.c, TOPRIGHT, waiting > 0 and -42 or -20, 3)
+        end
         local season = clean(snap.seasonName)
         local seasonLine = season and ("\n" .. season) or ""
         if snap.tierTotal and snap.tierTotal > 0 then
@@ -564,6 +572,18 @@ local function build()
                 st.link = mk_button(c, TX.nextb, 16, link.fn, link.tip)
                 st.link:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 5)
                 st.link:SetHidden(true)
+                if link.claim then
+                    st.textX = textX
+                    st.claim = mk_button(c, TX.satchel, 20, link.claim, nil)
+                    st.claim:SetAnchor(TOPRIGHT, c, TOPRIGHT, -20, 3)
+                    st.claim:SetHidden(true)
+                    st.claim:SetHandler("OnMouseEnter", function(b)
+                        if ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(b, BOTTOM, st.claim_tip or "") end
+                    end)
+                    st.claim:SetHandler("OnMouseExit", function()
+                        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+                    end)
+                end
             end
             st.bar = U.inset_bar(c)
             st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
@@ -591,7 +611,8 @@ local function build()
 
     panel.stats = {
         ava     = make_stat(1, false, true, true),
-        vet     = make_stat(2, false, true, true, { fn = function() M.open_veterancy() end, tip = "View veterancy" }),
+        vet     = make_stat(2, false, true, true, { fn = function() M.open_veterancy() end, tip = "View veterancy",
+                                                  claim = function() M.claim_veterancy() end }),
         stand   = make_stat(3, false, true, false, { fn = function() M.open_leaderboard() end, tip = "View competitive leaderboard" }),
         ap      = make_stat(1, true, true),
         telvar  = make_stat(2, true, true),
@@ -1099,6 +1120,21 @@ function M.on_double_click()
     apply_art_cover()
     Sound.play("nav")
     M.refresh()
+end
+
+function M.claim_veterancy()
+    if BGMeter.Veterancy.claim() then Sound.play("nav") end
+    M.refresh_if_visible()
+end
+
+function M.stat_claim_hidden(key)
+    local st = panel and panel.stats[key]
+    return not (st and st.claim) or st.claim:IsHidden()
+end
+
+function M.stat_claim_tip(key)
+    local st = panel and panel.stats[key]
+    return st and st.claim_tip or nil
 end
 
 function M.open_veterancy()

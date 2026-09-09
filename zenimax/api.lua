@@ -117,5 +117,6 @@ A.get_num_base_tiers         = GetNumBaseTiersForRewardTrack
 A.has_repeatable_tier        = HasInfinitelyRepeatableTierForRewardTrack
 A.get_repeatable_tier        = GetInfinitelyRepeatableTierForRewardTrack
 A.get_repeatable_claimed     = GetRewardTrackInfinitelyRepeatableRewardClaimedState
+A.claim_reward_track_reward  = ClaimRewardTrackReward
 
 BGMeter.zenimax.api = A
