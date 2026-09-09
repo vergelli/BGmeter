@@ -41,6 +41,23 @@ local function read_track()
         claimed, claimable = safe(A.get_repeatable_claimed, ttype, refIdx, repeatIdx, C.REWARD_TRACK_COMPONENT_PRIMARY)
     end
 
+    local waiting = 0
+    local component = C.REWARD_TRACK_COMPONENT_PRIMARY
+    if rewardTrackId and baseTiers and baseTiers > 0 then
+        local top = currentRank
+        if top > baseTiers then top = baseTiers end
+        for tier = 1, top do
+            local n = safe(A.get_num_rewards_at_tier, rewardTrackId, tier, component) or 0
+            if n > 0 then
+                local isClaimed = safe(A.get_reward_claimed_state, ttype, refIdx, tier, component, 1)
+                if isClaimed == false then waiting = waiting + n end
+            end
+        end
+    end
+    if pastMax and claimable and claimable > 0 then waiting = waiting + claimable end
+    local has_unclaimed = safe(A.has_unclaimed_rewards, ttype, refIdx) == true
+    if has_unclaimed and waiting == 0 then waiting = 1 end
+
     return {
         tier           = currentRank,
         progressToNext = progressToNext or 0,
@@ -52,6 +69,7 @@ local function read_track()
         pastMax        = pastMax,
         claimed        = claimed,
         claimable      = claimable,
+        waiting        = waiting,
         refIdx         = refIdx,
     }
 end
@@ -104,7 +122,7 @@ function V.snapshot()
         snap.tierTotal      = track.tierTotal
         snap.pastMax        = track.pastMax
         snap.laps           = laps
-        snap.claimable      = track.claimable or 0
+        snap.claimable      = track.waiting or 0
         if track.tierTotal == nil then snap.percent = nil
         elseif track.tierTotal == 0 then snap.percent = 1
         else snap.percent = math.min(1, within / track.tierTotal) end
@@ -115,18 +133,17 @@ end
 
 function V.claimable()
     local track = read_track()
-    if not track or not track.pastMax then return 0 end
-    return track.claimable or 0
+    if not track then return 0 end
+    return track.waiting or 0
 end
 
 function V.claim()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     local track = read_track()
-    if not track or not track.pastMax or (track.claimable or 0) <= 0 then return false end
-    if type(A.claim_reward_track_reward) ~= "function" then return false end
-    local ok = pcall(A.claim_reward_track_reward, C.REWARD_TRACK_TYPE_AVA_VETERANCY,
-        track.refIdx, track.repeatIdx, C.REWARD_TRACK_COMPONENT_PRIMARY, 1)
+    if not track or (track.waiting or 0) <= 0 then return false end
+    if type(A.claim_all_rewards) ~= "function" then return false end
+    local ok = pcall(A.claim_all_rewards, C.REWARD_TRACK_TYPE_AVA_VETERANCY, track.refIdx)
     return ok == true
 end
 
@@ -194,7 +211,8 @@ function V.raw_lines()
     add("snap.percent", s.percent)
     add("snap.past_max", s.pastMax)
     add("snap.laps", s.laps)
-    add("snap.claimable", s.claimable)
+    add("has_unclaimed", refIdx and safe(A.has_unclaimed_rewards, ttype, refIdx))
+    add("snap.waiting", s.claimable)
     add("snap.icon_rank", s.iconRank)
     add("snap.title", s.rankTitle)
     return out

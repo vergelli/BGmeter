@@ -193,7 +193,7 @@ local function refresh_panel()
         local waiting = snap.claimable or 0
         if st.claim then
             st.claim:SetHidden(waiting <= 0)
-            st.claim_tip = string.format("Claim your veterancy reward (%d waiting)", waiting)
+            st.claim_tip = string.format("Claim your veterancy rewards (%d waiting)", waiting)
             st.label:ClearAnchors()
             st.label:SetAnchor(TOPLEFT, st.c, TOPLEFT, st.textX, 3)
             st.label:SetAnchor(TOPRIGHT, st.c, TOPRIGHT, waiting > 0 and -42 or -20, 3)
