@@ -119,21 +119,28 @@ function Match.flag_lanes(m, tspan)
             local t = math.min(math.max(ob.t[i] or 0, 0), tspan)
             local evl = CZ.OBJ_EVENT_LABEL[ob.ev[i]] or (ob.ev[i] == -1 and "initial") or "?"
             local own = ob.own[i] or 0
+            local absent = evl == "deactivated" or evl == "hidden" or ob.st[i] == CZ.OBJ_STATE_INACTIVE
             local ep = cur_ep[li]
-            if not ep then
-                local w0 = (packed or seen[li]) and t or 0
+            if absent then
+                if ep then
+                    close_seg(ep, t)
+                    ep.cur, ep.w1 = nil, t
+                    cur_ep[li] = nil
+                end
+                ep = nil
+            elseif not ep then
                 ep = { letter = tostring(info.letter), name = info.name, li = li,
-                       segs = {}, ticks = {}, cur = 0, t0 = w0, w0 = w0, w1 = nil }
+                       segs = {}, ticks = {}, cur = 0, t0 = t, w0 = t, w1 = nil }
                 episodes[#episodes + 1] = ep
                 cur_ep[li] = ep
                 seen[li] = true
             end
-            if evl == "initial" then
+            if ep and evl == "initial" then
                 if own ~= ep.cur then
                     close_seg(ep, t)
                     ep.cur, ep.t0 = own, t
                 end
-            elseif evl == "captured" or evl == "recaptured" then
+            elseif ep and (evl == "captured" or evl == "recaptured") then
                 if own ~= ep.cur then
                     close_seg(ep, t)
                     ep.cur, ep.t0 = own, t
@@ -141,15 +148,11 @@ function Match.flag_lanes(m, tspan)
                 else
                     ep.ticks[#ep.ticks + 1] = { t = t, own = own, kind = "def" }
                 end
-            elseif evl == "neutral" then
+            elseif ep and evl == "neutral" then
                 if ep.cur ~= 0 then
                     close_seg(ep, t)
                     ep.cur, ep.t0 = 0, t
                 end
-            elseif evl == "deactivated" then
-                close_seg(ep, t)
-                ep.cur, ep.w1 = nil, t
-                cur_ep[li] = nil
             end
         end
     end
@@ -177,10 +180,6 @@ function Match.flag_lanes(m, tspan)
             end
         end
         for _, lane in ipairs(lanes) do
-            if #lane.segs == 0 and #lane.ticks == 0 then
-                lane.segs[1] = { t0 = 0, t1 = tspan, own = 0 }
-                lane.covered = tspan
-            end
             if lane.covered > tspan then lane.covered = tspan end
         end
         return lanes
