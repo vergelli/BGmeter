@@ -116,7 +116,7 @@ function Faces.list(filter, limit)
     local needle = filter and filter ~= "" and filter:lower() or nil
     for k, e in pairs(L) do
         if not needle or k:lower():find(needle, 1, true) or (e.chr and e.chr:lower():find(needle, 1, true)) then
-            out[#out + 1] = { name = k, chr = e.chr, w = e.w or 0, a = e.a or 0, last = e.last or 0 }
+            out[#out + 1] = { name = k, chr = e.chr, w = e.w or 0, a = e.a or 0, last = e.last or 0, k = e.k or 0, dk = e.dk or 0 }
         end
     end
     table.sort(out, function(x, y)
