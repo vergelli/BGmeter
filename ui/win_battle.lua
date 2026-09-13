@@ -30,7 +30,7 @@ local COLS = {
 }
 local CAPS_SHIFT = 40
 local caps_shown = false
-local FACE_ICON = "EsoUI/Art/Contacts/social_note_up.dds"
+local FACE_ICON = "EsoUI/Art/Help/help_tabIcon_overview_up.dds"
 
 local function hexc(c)
     return string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))

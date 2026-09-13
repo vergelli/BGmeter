@@ -385,7 +385,7 @@ function Match.combat_momentum(killfeed, tspan, windowMs, stepMs)
         if s.mag > maxMag then maxMag = s.mag end
     end
     if #segs == 0 then return nil end
-    return segs, maxMag
+    return segs, maxMag, samples
 end
 
 function Match.lead_stats(tl)

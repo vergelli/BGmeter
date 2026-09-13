@@ -47,6 +47,20 @@ local function lane_pin(b, i)
     return ic
 end
 
+local VP_LEFT  = (VERTEX_POINTS_TOPLEFT or 1) + (VERTEX_POINTS_BOTTOMLEFT or 4)
+local VP_RIGHT = (VERTEX_POINTS_TOPRIGHT or 2) + (VERTEX_POINTS_BOTTOMRIGHT or 8)
+
+local function grad_rect(pool, parent, x0, x1, y, h, c0, a0, c1, a1)
+    if x1 - x0 < 1 then return nil end
+    local r = pool:acquire()
+    r:SetAnchor(TOPLEFT, parent, TOPLEFT, x0, y)
+    r:SetDimensions(x1 - x0, h)
+    r:SetVertexColors(VP_LEFT, c0[1], c0[2], c0[3], a0)
+    r:SetVertexColors(VP_RIGHT, c1[1], c1[2], c1[3], a1)
+    r:SetHidden(false)
+    return r
+end
+
 function SEC.occupation(b, occ, neutralPct, stats, w)
     b.occ:SetHeight(L.occ_h)
     b.occ:SetHidden(false)
@@ -122,23 +136,42 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
     local lh, lg = U.lane_metrics(#lanes)
     local pinS = math.max(16, math.floor(L.pin_size * lh / L.lane_h))
     local function rx(t) return math.floor((t / tspan) * (w - 6) + 0.5) end
+    local TIP = 10
+    local edge = K.COLOR.text_dim
     for li, lane in ipairs(lanes) do
         local y = L.ribbon_top + (li - 1) * (lh + lg)
         for _, seg in ipairs(lane.segs) do
             local x0, x1 = rx(seg.t0), rx(seg.t1)
             if x1 > x0 then
-                local r = b.ribbon_pool:acquire()
-                r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, x0, y)
-                r:SetDimensions(x1 - x0, lh)
                 if seg.own and seg.own ~= 0 then
                     local tc = S.team_color(seg.own)
-                    P.set_rect_color(r, { tc[1], tc[2], tc[3], K.ALPHA.ribbon_fill })
+                    local fa = K.ALPHA.ribbon_fill
+                    if x1 - x0 > TIP * 2 then
+                        local r = b.ribbon_pool:acquire()
+                        r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, x0, y)
+                        r:SetDimensions(x1 - x0 - TIP, lh)
+                        P.set_rect_color(r, { tc[1], tc[2], tc[3], fa })
+                        r:SetHidden(false)
+                        grad_rect(b.ribbon_pool, b.ribbon, x1 - TIP, x1, y, lh, tc, fa, tc, fa * 0.12)
+                    else
+                        grad_rect(b.ribbon_pool, b.ribbon, x0, x1, y, lh, tc, fa, tc, fa * 0.35)
+                    end
                 else
                     local nc = neutral_color()
+                    local r = b.ribbon_pool:acquire()
+                    r:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, x0, y)
+                    r:SetDimensions(x1 - x0, lh)
                     P.set_rect_color(r, { nc[1], nc[2], nc[3], K.ALPHA.ribbon_neutral })
+                    r:SetHidden(false)
                 end
-                r:SetHidden(false)
             end
+        end
+        for _, ly in ipairs({ y - 1, y + lh }) do
+            local ln = b.ribbon_pool:acquire()
+            ln:SetAnchor(TOPLEFT, b.ribbon, TOPLEFT, 0, ly)
+            ln:SetDimensions(w - 6, 1)
+            P.set_rect_color(ln, { edge[1], edge[2], edge[3], 0.16 })
+            ln:SetHidden(false)
         end
         for _, tick in ipairs(lane.ticks) do
             local ic = b.pin_pool:acquire()
@@ -226,33 +259,55 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
         b.momTitle:SetText("COMBAT MOMENTUM")
         W.tips[b.momTitle] = "Who was winning the FIGHT, minute by minute.\nColor = team ahead on kills in the last 60s  ·  brighter = more dominant\nWhen this disagrees with the score chart above, kills were not buying points."
         local peak = math.max(3, math.ceil(math.max(cmomMax or 1, 1) * 0.75))
+        local top, bar_h = 18, 10
+        local nc = neutral_color()
+        local base = b.mom_pool:acquire()
+        base:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 0, top)
+        base:SetDimensions(w - 6, bar_h)
+        P.set_rect_color(base, { nc[1], nc[2], nc[3], 0.10 })
+        base:SetHidden(false)
+        local samples = W._derived and W._derived.cmomS
+        local denom = math.max(cmomMax or 1, 1)
+        local function alpha_of(s)
+            if not s.team or (s.mag or 0) <= 0 then return 0 end
+            return 0.18 + 0.72 * math.min(1, s.mag / denom)
+        end
+        if samples then
+            for i = 1, #samples - 1 do
+                local s0, s1 = samples[i], samples[i + 1]
+                local x0, x1 = mx(s0.t), mx(math.min(s1.t, tspan))
+                local a0, a1 = alpha_of(s0), alpha_of(s1)
+                if a0 > 0 or a1 > 0 then
+                    if a0 == 0 or a1 == 0 or s0.team == s1.team then
+                        local c = S.team_color((a0 > 0) and s0.team or s1.team)
+                        grad_rect(b.mom_pool, b.mom, x0, x1, top, bar_h, c, a0, c, a1)
+                    else
+                        local xm = math.floor((x0 + x1) / 2)
+                        local c0, c1 = S.team_color(s0.team), S.team_color(s1.team)
+                        grad_rect(b.mom_pool, b.mom, x0, xm, top, bar_h, c0, a0, c0, 0)
+                        grad_rect(b.mom_pool, b.mom, xm, x1, top, bar_h, c1, 0, c1, a1)
+                    end
+                end
+            end
+        end
         for _, sg in ipairs(cmom) do
             local x0, x1 = mx(sg.t0), mx(sg.t1)
-            if x1 > x0 then
-                local r = b.mom_pool:acquire()
-                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 18)
-                r:SetDimensions(x1 - x0, 10)
-                if sg.team then
-                    local tc = S.team_color(sg.team)
-                    local a = 0.18 + 0.62 * math.min(1, sg.mag / math.max(cmomMax or 1, 1))
-                    P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
-                    local hit = b.tick_hit_pool:acquire()
-                    hit:SetAnchorFill(r)
-                    hit:SetHidden(false)
-                    W.tips[hit] = string.format("%s +%d kills", team_name(sg.team), sg.mag)
-                    if sg.mag >= peak and (x1 - x0) >= 26 then
-                        local ic = b.pin_pool:acquire()
-                        ic:SetTexture("EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
-                        ic:SetDimensions(18, 18)
-                        ic:SetColor(tc[1], tc[2], tc[3], 1)
-                        ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), 23)
-                        ic:SetHidden(false)
-                    end
-                else
-                    local nc = neutral_color()
-                    P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
+            if x1 > x0 and sg.team then
+                local tc = S.team_color(sg.team)
+                local hit = b.tick_hit_pool:acquire()
+                hit:ClearAnchors()
+                hit:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, top)
+                hit:SetDimensions(x1 - x0, bar_h)
+                hit:SetHidden(false)
+                W.tips[hit] = string.format("%s +%d kills", team_name(sg.team), sg.mag)
+                if sg.mag >= peak and (x1 - x0) >= 26 then
+                    local ic = b.pin_pool:acquire()
+                    ic:SetTexture("EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
+                    ic:SetDimensions(18, 18)
+                    ic:SetColor(tc[1], tc[2], tc[3], 1)
+                    ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), top + 5)
+                    ic:SetHidden(false)
                 end
-                r:SetHidden(false)
             end
         end
     elseif lead then
@@ -374,7 +429,7 @@ function SEC.timeline(m)
         end
         dc.lead = BGMeter.Match.lead_stats(tl)
         dc.bm = BGMeter.Match.bloodiest_minute(m.killfeed)
-        dc.cmom, dc.cmomMax = BGMeter.Match.combat_momentum(m.killfeed, tspan)
+        dc.cmom, dc.cmomMax, dc.cmomS = BGMeter.Match.combat_momentum(m.killfeed, tspan)
         W._derived = dc
     end
     local lanes, relicMode = dc.lanes, dc.relicMode

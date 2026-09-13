@@ -19,10 +19,14 @@ local SEARCH_H = 28
 local ROW_H = 26
 local FOOT_H = 26
 local PAD = 12
-local ICON = "EsoUI/Art/Contacts/social_note_up.dds"
+local ICON = "EsoUI/Art/Help/help_tabIcon_emotes_up.dds"
+local ICON_DOWN = "EsoUI/Art/Help/help_tabIcon_emotes_down.dds"
+local ICON_OVER = "EsoUI/Art/Help/help_tabIcon_emotes_over.dds"
+local DRAG_NAME = "BGMeterFacesDrag"
 local ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
 local ART_ALPHA = 0.30
-local SCROLL_W = 6
+local SCROLL_W = 8
+local ARROW = 16
 local drag = { on = false, y0 = 0, off0 = 0 }
 
 local drawer, tab, rows, offset = nil, nil, {}, 0
@@ -118,6 +122,8 @@ end
 local function layout_scrollbar()
     local sc = drawer.scroll
     local maxOff = max_offset()
+    sc.up:SetHidden(offset <= 0)
+    sc.down:SetHidden(maxOff - offset <= 0)
     if maxOff <= 0 then sc.track:SetHidden(true) return end
     local th = sc.track:GetHeight()
     if th <= 0 then sc.track:SetHidden(true) return end
@@ -232,15 +238,20 @@ end
 function M.on_thumb_down()
     local _, my = BGMeter.zenimax.api.get_ui_mouse()
     drag.on, drag.y0, drag.off0 = true, my or 0, offset
-    drawer.root:SetHandler("OnUpdate", drag_update)
+    local ac = K.COLOR.accent
+    P.set_rect_color(drawer.scroll.thumb, { ac[1], ac[2], ac[3], 0.95 })
+    BGMeter.zenimax.events.register_update(DRAG_NAME, 16, drag_update)
 end
 
 function M.on_thumb_up()
     if not drag.on then return end
     drag.on = false
-    drawer.root:SetHandler("OnUpdate", nil)
-    P.set_rect_color(drawer.scroll.thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    BGMeter.zenimax.events.unregister_update(DRAG_NAME)
+    local ac = K.COLOR.accent
+    P.set_rect_color(drawer.scroll.thumb, { ac[1], ac[2], ac[3], 0.55 })
 end
+
+function M.drag_active() return drag.on end
 
 function M.on_host_resized()
     if drawer then apply_art() end
@@ -253,7 +264,7 @@ end
 local function apply_open(open, silent)
     if not drawer then return end
     drawer.root:SetHidden(not open)
-    tab.icon:SetColor(1, 1, 1, open and 1 or 0.55)
+    tab.icon:SetAlpha(open and 1 or 0.7)
     sv_menu().faces_open = open and true or false
     if open then
         offset = 0
@@ -301,20 +312,21 @@ function M.init(pw)
     tab.strip:SetAnchor(TOPLEFT, tab.root, TOPLEFT, 3, 3)
     tab.strip:SetAnchor(BOTTOMLEFT, tab.root, BOTTOMLEFT, 3, -3)
     tab.strip:SetWidth(2)
-    tab.icon = P.icon(tab.root, ICON)
-    tab.icon:SetDimensions(16, 16)
+    tab.icon = P.button(tab.root, ICON, ICON_DOWN, ICON_OVER)
+    tab.icon:SetDimensions(20, 20)
     tab.icon:SetAnchor(CENTER, tab.root, CENTER, 1, 0)
-    tab.icon:SetColor(1, 1, 1, 0.55)
-    tab.root:SetHandler("OnMouseUp", function(_, button, upInside)
-        if upInside and button == (MOUSE_BUTTON_INDEX_LEFT or 1) then M.toggle() end
-    end)
-    tab.root:SetHandler("OnMouseEnter", function()
-        tab.icon:SetColor(1, 1, 1, 1)
+    tab.icon:SetAlpha(0.7)
+    tab.icon:SetHandler("OnClicked", function() M.toggle() end)
+    tab.icon:SetHandler("OnMouseEnter", function()
+        tab.icon:SetAlpha(1)
         if ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(tab.root, RIGHT, "Familiar faces") end
     end)
-    tab.root:SetHandler("OnMouseExit", function()
-        tab.icon:SetColor(1, 1, 1, M.is_open() and 1 or 0.55)
+    tab.icon:SetHandler("OnMouseExit", function()
+        tab.icon:SetAlpha(M.is_open() and 1 or 0.7)
         if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+    end)
+    tab.root:SetHandler("OnMouseUp", function(_, button, upInside)
+        if upInside and button == (MOUSE_BUTTON_INDEX_LEFT or 1) then M.toggle() end
     end)
 
     drawer = { root = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL) }
@@ -363,28 +375,45 @@ function M.init(pw)
 
     drawer.list = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
     drawer.list:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, HEAD_H + SEARCH_H + 8)
-    drawer.list:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD + SCROLL_W + 4), -FOOT_H)
+    drawer.list:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD + SCROLL_W + 6), -FOOT_H)
     drawer.list:SetMouseEnabled(false)
+    d:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
 
     drawer.scroll = {}
+    local ac = K.COLOR.accent
+    local up = P.button(d, "EsoUI/Art/Buttons/scrollbox_upArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_upArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_upArrow_over.dds")
+    up:SetDimensions(ARROW, ARROW)
+    up:SetAnchor(TOPRIGHT, d, TOPRIGHT, -(PAD - 4), HEAD_H + SEARCH_H + 6)
+    up:SetHandler("OnClicked", function() M.scroll(1) end)
+    up:SetHidden(true)
+    drawer.scroll.up = up
+    local down = P.button(d, "EsoUI/Art/Buttons/scrollbox_downArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_over.dds")
+    down:SetDimensions(ARROW, ARROW)
+    down:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD - 4), -(FOOT_H - 2))
+    down:SetHandler("OnClicked", function() M.scroll(-1) end)
+    down:SetHidden(true)
+    drawer.scroll.down = down
     local track = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
-    track:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, HEAD_H + SEARCH_H + 8)
-    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -FOOT_H)
+    track:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, HEAD_H + SEARCH_H + 8 + ARROW + 4)
+    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -(FOOT_H + ARROW + 2))
     track:SetWidth(SCROLL_W)
     track:SetMouseEnabled(true)
     track:SetHidden(true)
-    track:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then M.on_track_click() end end)
+    track:SetHandler("OnMouseUp", function(_, _, upInside)
+        if drag.on then M.on_thumb_up() return end
+        if upInside then M.on_track_click() end
+    end)
     drawer.scroll.track = track
-    drawer.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
+    drawer.scroll.trackBg = P.rect(track, { ac[1], ac[2], ac[3], 0.12 })
     drawer.scroll.trackBg:SetAnchorFill(track)
-    local thumb = P.rect(track, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    local thumb = P.rect(track, { ac[1], ac[2], ac[3], 0.55 })
     thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
     thumb:SetWidth(SCROLL_W)
     thumb:SetMouseEnabled(true)
     thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
     thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
-    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
-    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    thumb:SetHandler("OnMouseEnter", function() if not drag.on then P.set_rect_color(thumb, { ac[1], ac[2], ac[3], 0.85 }) end end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { ac[1], ac[2], ac[3], 0.55 }) end end)
     drawer.scroll.thumb = thumb
 
     drawer.foot = P.label(d, S.FONT.small, K.COLOR.text_dim)
