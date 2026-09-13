@@ -22,8 +22,11 @@ local PAD = 12
 local ICON = "EsoUI/Art/Contacts/social_note_up.dds"
 local ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
 local ART_ALPHA = 0.30
-local SCROLL_W = 6
+local SCROLL_W = 8
+local ARROW = 16
 local drag = { on = false, y0 = 0, off0 = 0 }
+local art_path = ART
+local art_alpha = ART_ALPHA
 
 local drawer, tab, rows, offset = nil, nil, {}, 0
 local host = nil
@@ -118,6 +121,8 @@ end
 local function layout_scrollbar()
     local sc = drawer.scroll
     local maxOff = max_offset()
+    sc.up:SetHidden(offset <= 0)
+    sc.down:SetHidden(maxOff - offset <= 0)
     if maxOff <= 0 then sc.track:SetHidden(true) return end
     local th = sc.track:GetHeight()
     if th <= 0 then sc.track:SetHidden(true) return end
@@ -133,6 +138,8 @@ end
 
 local function apply_art()
     local art = drawer.art
+    art:SetTexture(art_path)
+    art:SetColor(1, 1, 1, art_alpha)
     local w, h = drawer.root:GetWidth() - 4, drawer.root:GetHeight() - 4
     if w <= 0 or h <= 0 then return end
     local tw, th
@@ -142,7 +149,7 @@ local function apply_art()
     if ta > ca then
         local uw = ca / ta
         local host_w, host_h = host:GetWidth() - 4, host:GetHeight() - 4
-        local host_uw = (host_w > 0 and host_h > 0) and math.min(1, (host_w / host_h) / ta) or 0
+        local host_uw = (host_w > 0 and host_h > 0 and art_path == ART) and math.min(1, (host_w / host_h) / ta) or 0
         local u0 = (1 - host_uw) / 2 + host_uw
         if u0 + uw > 1 then u0 = (1 - uw) / 2 end
         art:SetTextureCoords(u0, u0 + uw, 0, 1)
@@ -150,6 +157,25 @@ local function apply_art()
         local vh = ta / ca
         local v0 = (1 - vh) / 2
         art:SetTextureCoords(0, 1, v0, v0 + vh)
+    end
+end
+
+function M.set_texture(slot, value)
+    if not drawer then return end
+    if slot == "tab" then
+        tab.icon:SetTexture(value)
+    elseif slot == "title" then
+        drawer.icon:SetTexture(value)
+    elseif slot == "bg" then
+        art_path = value
+        apply_art()
+    elseif slot == "alpha" then
+        art_alpha = tonumber(value) or ART_ALPHA
+        drawer.art:SetColor(1, 1, 1, art_alpha)
+    elseif slot == "frame" and type(value) == "table" then
+        for _, f in ipairs({ drawer.frame, tab.frame }) do
+            f:SetEdgeTexture(value[1], value[2], value[3], value[4])
+        end
     end
 end
 
@@ -239,7 +265,7 @@ function M.on_thumb_up()
     if not drag.on then return end
     drag.on = false
     drawer.root:SetHandler("OnUpdate", nil)
-    P.set_rect_color(drawer.scroll.thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    P.set_rect_color(drawer.scroll.thumb, { K.COLOR.accent[1], K.COLOR.accent[2], K.COLOR.accent[3], 0.55 })
 end
 
 function M.on_host_resized()
@@ -367,24 +393,37 @@ function M.init(pw)
     drawer.list:SetMouseEnabled(false)
 
     drawer.scroll = {}
+    local ac = K.COLOR.accent
+    local up = P.button(d, "EsoUI/Art/Buttons/scrollbox_upArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_upArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_upArrow_over.dds")
+    up:SetDimensions(ARROW, ARROW)
+    up:SetAnchor(TOPRIGHT, d, TOPRIGHT, -(PAD - 4), HEAD_H + SEARCH_H + 6)
+    up:SetHandler("OnClicked", function() M.scroll(1) end)
+    up:SetHidden(true)
+    drawer.scroll.up = up
+    local down = P.button(d, "EsoUI/Art/Buttons/scrollbox_downArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_over.dds")
+    down:SetDimensions(ARROW, ARROW)
+    down:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD - 4), -(FOOT_H - 2))
+    down:SetHandler("OnClicked", function() M.scroll(-1) end)
+    down:SetHidden(true)
+    drawer.scroll.down = down
     local track = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
-    track:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, HEAD_H + SEARCH_H + 8)
-    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -FOOT_H)
+    track:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, HEAD_H + SEARCH_H + 8 + ARROW + 4)
+    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -(FOOT_H + ARROW + 2))
     track:SetWidth(SCROLL_W)
     track:SetMouseEnabled(true)
     track:SetHidden(true)
     track:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then M.on_track_click() end end)
     drawer.scroll.track = track
-    drawer.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
+    drawer.scroll.trackBg = P.rect(track, { ac[1], ac[2], ac[3], 0.12 })
     drawer.scroll.trackBg:SetAnchorFill(track)
-    local thumb = P.rect(track, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    local thumb = P.rect(track, { ac[1], ac[2], ac[3], 0.55 })
     thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
     thumb:SetWidth(SCROLL_W)
     thumb:SetMouseEnabled(true)
     thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
     thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
-    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
-    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { ac[1], ac[2], ac[3], 0.85 }) end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { ac[1], ac[2], ac[3], 0.55 }) end end)
     drawer.scroll.thumb = thumb
 
     drawer.foot = P.label(d, S.FONT.small, K.COLOR.text_dim)
@@ -393,6 +432,7 @@ function M.init(pw)
     drawer.foot:SetHeight(14)
     drawer.foot:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     U.clamp_line(drawer.foot)
+    if BGMeter.UI.texlab then BGMeter.UI.texlab.apply_all() end
 end
 
 function M.controls() return drawer, tab, rows end

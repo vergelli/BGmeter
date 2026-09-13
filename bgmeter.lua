@@ -442,6 +442,8 @@ local function on_slash(args)
         cmd_demo(true)
     elseif args == "faces" then
         cmd_faces()
+    elseif args:find("^tex") == 1 and K.dev_tools() then
+        BGMeter.UI.export.show_text(BGMeter.UI.texlab.command(args:match("^tex%s*(.*)$") or ""))
     elseif args == "forget faces" then
         local n = BGMeter.Faces.forget()
         BGMeter.UI.export.show_text(string.format("familiar faces forgotten: %d names dropped", n))
@@ -473,7 +475,7 @@ local function on_slash(args)
     elseif args == "trophy" then
         BGMeter.UI.menu.demo_trophy()
     else
-        Log.say("dev: show, hide, toggle, last, demo, demo2, ap, dump, clear, debug, layers, mock <dm/dom/ck/ball/relic>, vet, vet claim, vetmock <below/r34/cap/h1/h2/h3/off>, perf, gcprobe [sec], sound [name], csa [rank], trophy")
+        Log.say("dev: show, hide, toggle, last, demo, demo2, ap, dump, clear, debug, layers, mock <dm/dom/ck/ball/relic>, vet, vet claim, vetmock <below/r34/cap/h1/h2/h3/off>, tex [slot next|prev|n|reset], perf, gcprobe [sec], sound [name], csa [rank], trophy")
     end
 end
 
