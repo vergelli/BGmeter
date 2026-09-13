@@ -13,7 +13,7 @@ local set_text = U.set_text
 local M = {}
 
 local DRAWER_W = 236
-local TAB_W, TAB_H = 22, 64
+local TAB_W, TAB_H = 26, 64
 local HEAD_H = 46
 local SEARCH_H = 28
 local ROW_H = 26
@@ -239,7 +239,7 @@ function M.on_thumb_down()
     local _, my = BGMeter.zenimax.api.get_ui_mouse()
     drag.on, drag.y0, drag.off0 = true, my or 0, offset
     local ac = K.COLOR.accent
-    P.set_rect_color(drawer.scroll.thumb, { ac[1], ac[2], ac[3], 0.95 })
+    P.set_rect_color(drawer.scroll.thumbTex, { ac[1], ac[2], ac[3], 0.95 })
     BGMeter.zenimax.events.register_update(DRAG_NAME, 16, drag_update)
 end
 
@@ -248,7 +248,7 @@ function M.on_thumb_up()
     drag.on = false
     BGMeter.zenimax.events.unregister_update(DRAG_NAME)
     local ac = K.COLOR.accent
-    P.set_rect_color(drawer.scroll.thumb, { ac[1], ac[2], ac[3], 0.55 })
+    P.set_rect_color(drawer.scroll.thumbTex, { ac[1], ac[2], ac[3], 0.55 })
 end
 
 function M.drag_active() return drag.on end
@@ -313,7 +313,7 @@ function M.init(pw)
     tab.strip:SetAnchor(BOTTOMLEFT, tab.root, BOTTOMLEFT, 3, -3)
     tab.strip:SetWidth(2)
     tab.icon = P.button(tab.root, ICON, ICON_DOWN, ICON_OVER)
-    tab.icon:SetDimensions(20, 20)
+    tab.icon:SetDimensions(22, 22)
     tab.icon:SetAnchor(CENTER, tab.root, CENTER, 1, 0)
     tab.icon:SetAlpha(0.7)
     tab.icon:SetHandler("OnClicked", function() M.toggle() end)
@@ -352,8 +352,8 @@ function M.init(pw)
     drawer.strip:SetHeight(3)
 
     drawer.icon = P.icon(d, ICON)
-    drawer.icon:SetDimensions(18, 18)
-    drawer.icon:SetAnchor(TOPLEFT, d, TOPLEFT, PAD + 2, 15)
+    drawer.icon:SetDimensions(28, 28)
+    drawer.icon:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, 10)
     drawer.title = P.label(d, S.FONT.title, K.COLOR.text)
     drawer.title:SetAnchor(LEFT, drawer.icon, RIGHT, 8, 0)
     set_text(drawer.title, "Familiar faces")
@@ -406,15 +406,18 @@ function M.init(pw)
     drawer.scroll.track = track
     drawer.scroll.trackBg = P.rect(track, { ac[1], ac[2], ac[3], 0.12 })
     drawer.scroll.trackBg:SetAnchorFill(track)
-    local thumb = P.rect(track, { ac[1], ac[2], ac[3], 0.55 })
+    local thumb = BGMeter.zenimax.ui.create_control(nil, track, CT_CONTROL)
     thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
     thumb:SetWidth(SCROLL_W)
     thumb:SetMouseEnabled(true)
+    local thumbTex = P.rect(thumb, { ac[1], ac[2], ac[3], 0.55 })
+    thumbTex:SetAnchorFill(thumb)
     thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
     thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
-    thumb:SetHandler("OnMouseEnter", function() if not drag.on then P.set_rect_color(thumb, { ac[1], ac[2], ac[3], 0.85 }) end end)
-    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { ac[1], ac[2], ac[3], 0.55 }) end end)
+    thumb:SetHandler("OnMouseEnter", function() if not drag.on then P.set_rect_color(thumbTex, { ac[1], ac[2], ac[3], 0.85 }) end end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumbTex, { ac[1], ac[2], ac[3], 0.55 }) end end)
     drawer.scroll.thumb = thumb
+    drawer.scroll.thumbTex = thumbTex
 
     drawer.foot = P.label(d, S.FONT.small, K.COLOR.text_dim)
     drawer.foot:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, PAD, -8)

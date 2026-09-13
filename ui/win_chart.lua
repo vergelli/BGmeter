@@ -266,6 +266,14 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
         base:SetDimensions(w - 6, bar_h)
         P.set_rect_color(base, { nc[1], nc[2], nc[3], 0.10 })
         base:SetHidden(false)
+        local edge = K.COLOR.text_dim
+        for _, ly in ipairs({ top - 1, top + bar_h }) do
+            local ln = b.mom_pool:acquire()
+            ln:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 0, ly)
+            ln:SetDimensions(w - 6, 1)
+            P.set_rect_color(ln, { edge[1], edge[2], edge[3], 0.16 })
+            ln:SetHidden(false)
+        end
         local samples = W._derived and W._derived.cmomS
         local denom = math.max(cmomMax or 1, 1)
         local function alpha_of(s)
@@ -378,6 +386,12 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
         sp[#sp + 1] = string.format("best streak |c%s%s x%d|r", hexc(tc), tostring(best.name), best.n)
     end
     b.momStats:SetText(table.concat(sp, "    "))
+end
+
+function W.repaint_chart()
+    if not W.built or not W.win or W.win:IsHidden() then return end
+    local m = BGMeter.History.get(W.current_index)
+    if m then SEC.timeline(m) end
 end
 
 function SEC.timeline(m)

@@ -144,7 +144,7 @@ function Faces.describe(e)
 end
 
 function Faces.brief(e)
-    local parts = { string.format("×%d  ·  %d with  ·  %d against", Faces.total(e), e.w or 0, e.a or 0) }
+    local parts = { string.format("%d with  ·  %d against", e.w or 0, e.a or 0) }
     local when = ago(e.last)
     if when then parts[#parts + 1] = when end
     return table.concat(parts, "  ·  ")

@@ -556,7 +556,12 @@ function W.show_match(index)
     apply_visibility()
     if W.win:IsHidden() then return end
     W.render(true)
-    if Prefs.get("animate") then W.win:SetAlpha(0); Anim.value(0, 1, K.ANIM.window_fade_ms, function(v) W.win:SetAlpha(v) end)
+    if Prefs.get("animate") then
+        W.win:SetAlpha(0)
+        Anim.value(0, 1, K.ANIM.window_fade_ms, function(v) W.win:SetAlpha(v) end, function()
+            W.win:SetAlpha(1)
+            if W.repaint_chart then W.repaint_chart() end
+        end)
     else W.win:SetAlpha(1) end
     W._persist_hidden(false)
 end

@@ -584,7 +584,7 @@ local function build()
     panel.close = mk_button(pw, TX.close, 20, function() M.hide_menu() end, "Close")
     panel.close:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -14, 15)
 
-    panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
+    panel.gear = mk_button(pw, TX.gear, 28, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
     local function make_stat(rowi, right, withIcon, withBar, link)
@@ -717,15 +717,18 @@ local function build()
     panel.scroll.track = track
     panel.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
     panel.scroll.trackBg:SetAnchorFill(track)
-    local thumb = P.rect(track, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    local thumb = BGMeter.zenimax.ui.create_control(nil, track, CT_CONTROL)
     thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
     thumb:SetWidth(SCROLL_W)
     thumb:SetMouseEnabled(true)
+    local thumbTex = P.rect(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    thumbTex:SetAnchorFill(thumb)
     thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
     thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
-    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
-    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumbTex, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumbTex, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
     panel.scroll.thumb = thumb
+    panel.scroll.thumbTex = thumbTex
 
     panel.empty = P.label(panel.inset, S.FONT.small, K.COLOR.text_dim)
     panel.empty:SetText("no battlegrounds recorded yet\nqueue up below to record your first battle")
@@ -1043,7 +1046,7 @@ function M.on_thumb_up()
     if not drag.on then return end
     drag.on = false
     panel.win:SetHandler("OnUpdate", nil)
-    P.set_rect_color(panel.scroll.thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    P.set_rect_color(panel.scroll.thumbTex, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
 end
 
 function M.window() return panel and panel.win end
