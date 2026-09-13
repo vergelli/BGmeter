@@ -317,7 +317,6 @@ function W._make_row(parent)
         row.cells[col.key] = lbl
     end
     row.capsLayout = false
-    row.ticks = {}
 
     row.container:SetHandler("OnMouseEnter", function()
         if W._last_row_log ~= row then
@@ -334,51 +333,6 @@ function W._make_row(parent)
         if row.face and U.card_hide then U.card_hide() end
     end)
     return row
-end
-
-local MAX_TICKS = 48
-
-local function row_tick(row, i)
-    local t = row.ticks[i]
-    if not t then
-        t = P.rect(row.bar.container, { 1, 1, 1, 1 })
-        if t.SetDrawLevel then t:SetDrawLevel(3) end
-        row.ticks[i] = t
-    end
-    return t
-end
-
-local function draw_row_ticks(row, prow, m, bar_w)
-    local used = 0
-    local kf = m.killfeed
-    local name = prow.displayName or prow.charName
-    local tspan = m.durationMs or 0
-    if kf and name and tspan > 0 and bar_w > 8 then
-        local tc = S.team_color(prow.team)
-        local dim = K.COLOR.text_dim
-        local h = L.row_h - 8
-        for _, k in ipairs(kf) do
-            if used >= MAX_TICKS then break end
-            local kind = (k.kn == name) and "kill" or ((k.dn == name) and "death" or nil)
-            if kind then
-                used = used + 1
-                local t = row_tick(row, used)
-                local x = math.floor(math.min(math.max(k.t or 0, 0), tspan) / tspan * (bar_w - 2) + 0.5)
-                t:ClearAnchors()
-                if kind == "kill" then
-                    t:SetAnchor(TOPLEFT, row.bar.container, TOPLEFT, x, 0)
-                    t:SetDimensions(2, h)
-                    P.set_rect_color(t, { tc[1], tc[2], tc[3], 0.95 })
-                else
-                    t:SetAnchor(BOTTOMLEFT, row.bar.container, BOTTOMLEFT, x, 0)
-                    t:SetDimensions(2, math.floor(h / 2))
-                    P.set_rect_color(t, { dim[1], dim[2], dim[3], 0.75 })
-                end
-                t:SetHidden(false)
-            end
-        end
-    end
-    for i = used + 1, #row.ticks do row.ticks[i]:SetHidden(true) end
 end
 
 local function apply_dynamic_min_width(m)
@@ -577,7 +531,6 @@ function SEC.battle(m, animate)
         local pct = (maxVal > 0) and ((prow[barKey] or 0) / maxVal) or 0
         local bc = prow.isLocal and K.COLOR.you or barBase
         set_bar(row.bar, pct, { bc[1], bc[2], bc[3], K.ALPHA.bar_fill }, listW - BAR_X - BAR_RIGHT, animate)
-        draw_row_ticks(row, prow, m, listW - BAR_X - BAR_RIGHT)
 
         local hl = { 0, 0, 0, 0 }
         if awards.mvp == prow then hl = { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], K.ALPHA.row_mvp } end
