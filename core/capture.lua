@@ -373,9 +373,8 @@ local function sample_players(tl, i, round)
         local nm = clean_name(displayName or charName)
         if nm then
             local rec = tl.p[nm]
-            if not rec then rec = { d = {}, h = {} }; tl.p[nm] = rec end
+            if not rec then rec = { d = {} }; tl.p[nm] = rec end
             rec.d[i] = read_score(e, C.SCORE_TRACKER_TYPE_DAMAGE_DONE, round)
-            rec.h[i] = read_score(e, C.SCORE_TRACKER_TYPE_HEALING_DONE, round)
         end
     end
 end

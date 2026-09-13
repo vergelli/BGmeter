@@ -36,7 +36,7 @@ end
 
 local D = Drawer.new({
     key = "marks",
-    index = 3,
+    index = 1,
     title = "Marks",
     icon = "EsoUI/Art/Journal/journal_tabIcon_achievements_up.dds",
     icon_down = "EsoUI/Art/Journal/journal_tabIcon_achievements_down.dds",

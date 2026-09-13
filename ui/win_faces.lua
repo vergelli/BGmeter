@@ -18,7 +18,7 @@ end
 
 local D = Drawer.new({
     key = "faces",
-    index = 1,
+    index = 3,
     title = "Familiar faces",
     icon = "EsoUI/Art/Help/help_tabIcon_emotes_up.dds",
     icon_down = "EsoUI/Art/Help/help_tabIcon_emotes_down.dds",
@@ -26,6 +26,7 @@ local D = Drawer.new({
     drag_name = "BGMeterFacesDrag",
     search = true,
     search_hint = "search a name",
+    credit = "Feature credit goes to unit220",
     cache_key = function(self) return self:query() .. "|" .. tostring(BGMeter.Faces.count()) end,
     fetch = function(self) return BGMeter.Faces.list(self:query(), 400) end,
     row_make = function(self, r)

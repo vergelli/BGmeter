@@ -412,10 +412,11 @@ function Drawer:init(pw)
         bar_h = BAR_H - 4
     end
     local list_top = HEAD_H + bar_h + 8
+    local foot_h = FOOT_H + (spec.credit and 12 or 0)
 
     drawer.list = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
     drawer.list:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, list_top)
-    drawer.list:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD + SCROLL_W + 6), -FOOT_H)
+    drawer.list:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD + SCROLL_W + 6), -foot_h)
     drawer.list:SetMouseEnabled(false)
 
     drawer.scroll = {}
@@ -428,13 +429,13 @@ function Drawer:init(pw)
     drawer.scroll.up = up
     local down = P.button(d, "EsoUI/Art/Buttons/scrollbox_downArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_over.dds")
     down:SetDimensions(ARROW, ARROW)
-    down:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD - 4), -(FOOT_H - 2))
+    down:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD - 4), -(foot_h - 2))
     down:SetHandler("OnClicked", function() self:scroll(-1) end)
     down:SetHidden(true)
     drawer.scroll.down = down
     local track = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
     track:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, list_top + ARROW + 4)
-    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -(FOOT_H + ARROW + 2))
+    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -(foot_h + ARROW + 2))
     track:SetWidth(SCROLL_W)
     track:SetMouseEnabled(true)
     track:SetHidden(true)
@@ -458,9 +459,21 @@ function Drawer:init(pw)
     drawer.scroll.thumb = thumb
     drawer.scroll.thumbTex = thumbTex
 
+    local foot_y = -8
+    if spec.credit then
+        drawer.credit = P.label(d, S.FONT.small, K.COLOR.text_dim)
+        drawer.credit:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, PAD, -6)
+        drawer.credit:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -6)
+        drawer.credit:SetHeight(12)
+        drawer.credit:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+        drawer.credit:SetAlpha(0.7)
+        U.clamp_line(drawer.credit)
+        set_text(drawer.credit, spec.credit)
+        foot_y = -20
+    end
     drawer.foot = P.label(d, S.FONT.small, K.COLOR.text_dim)
-    drawer.foot:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, PAD, -8)
-    drawer.foot:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -8)
+    drawer.foot:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, PAD, foot_y)
+    drawer.foot:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, foot_y)
     drawer.foot:SetHeight(14)
     drawer.foot:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     U.clamp_line(drawer.foot)
