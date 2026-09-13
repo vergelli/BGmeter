@@ -550,6 +550,8 @@ local function build()
         mg.w, mg.h = pw:GetWidth(), pw:GetHeight()
         apply_art_cover()
         BGMeter.UI.faces.on_host_resized()
+        BGMeter.UI.arenas.on_host_resized()
+        BGMeter.UI.marks.on_host_resized()
         M.refresh()
     end)
     pw:SetHandler("OnMouseWheel", function(_, delta) M.scroll_to(offset - delta) end)
@@ -743,6 +745,8 @@ local function build()
     panel.footer:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     U.clamp_line(panel.footer)
     BGMeter.UI.faces.init(pw)
+    BGMeter.UI.arenas.init(pw)
+    BGMeter.UI.marks.init(pw)
 
     built = true
 end
@@ -1062,6 +1066,8 @@ function M.refresh()
 
     refresh_panel()
     BGMeter.UI.faces.refresh()
+    BGMeter.UI.arenas.refresh()
+    BGMeter.UI.marks.refresh()
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
@@ -1232,6 +1238,8 @@ function M.show_menu()
     M.update_queue()
     M.refresh()
     BGMeter.UI.faces.on_menu_shown()
+    BGMeter.UI.arenas.on_menu_shown()
+    BGMeter.UI.marks.on_menu_shown()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)

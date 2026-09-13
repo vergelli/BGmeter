@@ -18,6 +18,8 @@ function Presentation.publish(match)
     BGMeter.Faces.record(match)
     BGMeter.Ledger.record(match)
     if BGMeter.UI and BGMeter.UI.faces then BGMeter.UI.faces.invalidate() end
+    if BGMeter.UI and BGMeter.UI.arenas then BGMeter.UI.arenas.invalidate() end
+    if BGMeter.UI and BGMeter.UI.marks then BGMeter.UI.marks.invalidate() end
     BGMeter.Records.evaluate(match)
     BGMeter.Session.record(match)
     if BGMeter.UI and BGMeter.UI.menu then
