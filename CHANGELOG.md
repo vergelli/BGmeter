@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+- A ledger of aggregates fills in at the end of every match and once from the matches already stored: per arena and per game mode it keeps matches, wins, losses, your damage, healing, kills and deaths, and your best damage there; plus personal marks for damage, healing, kills, assists, AP and win streak, each with the match it came from. It stays a few kilobytes no matter how many matches you play.
+- Two more drawers on the Registry edge, above Familiar faces: Marks and Arenas. Arenas, with a MAPS / MODES switch, one row per map or game mode with matches and win rate, and a hover card with your averages and best match, click to open it; and Marks, your personal bests with where and when they happened, click to open the match. Only one drawer opens at a time.
+- Familiar faces remember how many times you killed each of them and how many times they killed you; the hover says so.
+- The recorder now samples every player's damage along with the team scores, stored as a compact string per player so a match costs a few kilobytes, and the report draws a DAMAGE RACE strip under the score chart: one line per team and your own line in gold. Matches recorded before this have no strip.
+- The score chart shades the gap between the leading team and the runner-up in the leader's colour, fading toward the line below.
+- Combat momentum is a smooth gradient now: one bar, the leading team's colour rising and falling with its kill margin instead of flat blocks, fading through neutral when the lead changes hands.
+- Flag control lanes end in a fade instead of a hard cut, and every lane wears a faint top and bottom edge; the momentum bar wears the same edge.
+- The emblem grew three times and leans out of the top-left corner of the Registry and the result window, a quarter of it past the edge.
+- Hover cards are the addon's own now, framed like its windows with the accent strip, instead of the game's default tooltip. The familiar-faces drawer darkens its cover art toward the top and bottom so the names stay readable.
+- Icons: the veterancy satchel uses the item-assistance glyph, the familiar-faces bookmark and drawer use the emotes face, and the badge in the result rows the written page.
+- Familiar faces: the result window marks players you have met before with a written-page glyph and a count next to their name, green when they were mostly on your side, red when mostly against, grey when mixed. Hover the row for the split and when you last met. The Registry grows a faces glyph straddling its right edge, half in and half out, that opens a drawer listing everyone you have met, most matches first, with a search box and a scrollbar; each row carries a split pip, green for the share of matches on your side and red for the rest; the drawer wears the same cover art as the Registry and remembers whether it was open. In the result window the row hover is a single line. On first load the ledger is seeded from the matches already stored. A "Familiar faces" toggle in Settings hides the badges in the result window; `/bgmeter faces` and `/bgmeter forget faces` open the copybox with the list or the confirmation. The ledger keeps the 1500 most recent names.
+- Fixed: flag occupation counted the time before a flag existed as neutral, so Crazy King showed a grey share far bigger than what happened. A flag's lane now opens when the flag activates and closes when it deactivates; the time it did not exist is left empty and stays out of every percentage.
+
 ## [0.1.7]
 
 - Registry: the top three competitive standings are Champions now, not only the first, and their trophy wears a fast chrome rainbow glow. The glow stays still with animations off.
