@@ -340,44 +340,6 @@ function Match.relic_lanes(m, tspan)
     return lanes
 end
 
-function Match.combat_heat(killfeed, tspan, windowMs, stepMs)
-    if not killfeed or #killfeed < 4 or not tspan or tspan <= 0 then return nil end
-    windowMs = windowMs or 60000
-    stepMs = stepMs or 5000
-    local cur, cells, teams, seen = {}, {}, {}, {}
-    local lo, hi, n, maxc = 1, 0, 0, 1
-    local t = 0
-    while t <= tspan do
-        while hi < #killfeed and (killfeed[hi + 1].t or 0) <= t do
-            hi = hi + 1
-            local team = killfeed[hi].kt
-            if team then
-                cur[team] = (cur[team] or 0) + 1
-                if not seen[team] then seen[team] = true; teams[#teams + 1] = team; cells[team] = {} end
-            end
-        end
-        while lo <= hi and (killfeed[lo].t or 0) < t - windowMs do
-            local team = killfeed[lo].kt
-            if team then cur[team] = (cur[team] or 0) - 1 end
-            lo = lo + 1
-        end
-        n = n + 1
-        for _, team in ipairs(teams) do
-            local c = cur[team] or 0
-            cells[team][n] = c
-            if c > maxc then maxc = c end
-        end
-        t = t + stepMs
-    end
-    if #teams == 0 then return nil end
-    table.sort(teams)
-    for _, team in ipairs(teams) do
-        local row = cells[team]
-        for i = 1, n do if row[i] == nil then row[i] = 0 end end
-    end
-    return { teams = teams, cells = cells, n = n, step = stepMs, max = maxc }
-end
-
 function Match.combat_momentum(killfeed, tspan, windowMs, stepMs)
     if not killfeed or #killfeed < 4 or not tspan or tspan <= 0 then return nil end
     windowMs = windowMs or 60000
