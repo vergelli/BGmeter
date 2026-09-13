@@ -71,6 +71,8 @@ local function card_build()
     local wm = BGMeter.zenimax.ui.wm
     local root = wm:CreateTopLevelWindow("BGMeterHoverCard")
     root:SetDrawTier(DT_HIGH)
+    if DL_OVERLAY then root:SetDrawLayer(DL_OVERLAY) end
+    root:SetDrawLevel(5000)
     root:SetClampedToScreen(true)
     root:SetMouseEnabled(false)
     root:SetHidden(true)
@@ -107,6 +109,7 @@ function U.card_show(anchor, side, message)
     elseif side == RIGHT then c.root:SetAnchor(LEFT, anchor, RIGHT, 6, 0)
     else c.root:SetAnchor(TOP, anchor, BOTTOM, 0, 6) end
     c.root:SetHidden(false)
+    if c.root.BringWindowToTop then c.root:BringWindowToTop() end
     U.card_last = message
 end
 
