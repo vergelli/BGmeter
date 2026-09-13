@@ -264,6 +264,14 @@ function Drawer:apply_open(open, silent)
     if not silent then Sound.play(open and "menu" or "close") end
 end
 
+function Drawer:blur()
+    if self.drawer and self.drawer.edit and self.drawer.edit.LoseFocus then self.drawer.edit:LoseFocus() end
+end
+
+function Drawer.blur_all()
+    for _, d in ipairs(all) do d:blur() end
+end
+
 function Drawer:toggle()
     self:apply_open(not self:is_open())
 end
@@ -327,8 +335,8 @@ function Drawer:init(pw)
     self.drawer = drawer
     local d = drawer.root
     d:SetWidth(DRAWER_W)
-    d:SetAnchor(TOPLEFT, pw, TOPRIGHT, MEDAL / 2 + 6, 0)
-    d:SetAnchor(BOTTOMLEFT, pw, BOTTOMRIGHT, MEDAL / 2 + 6, 0)
+    d:SetAnchor(TOPLEFT, pw, TOPRIGHT, MEDAL / 2 - 6, 0)
+    d:SetAnchor(BOTTOMLEFT, pw, BOTTOMRIGHT, MEDAL / 2 - 6, 0)
     d:SetMouseEnabled(true)
     d:SetHidden(true)
     d:SetHandler("OnMouseWheel", function(_, delta) self:scroll(delta) end)

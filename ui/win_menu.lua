@@ -1253,6 +1253,7 @@ function M.hide_menu(silent)
     if not built then return end
     local was_visible = not panel.win:IsHidden()
     M.disarm_delete()
+    BGMeter.UI.Drawer.blur_all()
     panel.win:SetHidden(true)
     if not silent and was_visible then Sound.play("close") end
     queue_ticker_sync(false)
