@@ -143,6 +143,13 @@ function Faces.describe(e)
     return line
 end
 
+function Faces.brief(e)
+    local parts = { string.format("×%d  ·  %d with  ·  %d against", Faces.total(e), e.w or 0, e.a or 0) }
+    local when = ago(e.last)
+    if when then parts[#parts + 1] = when end
+    return table.concat(parts, "  ·  ")
+end
+
 function Faces.backfill()
     local data = sv()
     if not data or data.faces_seeded then return 0 end

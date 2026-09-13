@@ -310,7 +310,7 @@ function W._make_row(parent)
         end
         P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
         if row.face and ZO_Tooltips_ShowTextTooltip then
-            ZO_Tooltips_ShowTextTooltip(row.container, BOTTOM, Faces.describe(row.face))
+            ZO_Tooltips_ShowTextTooltip(row.container, BOTTOM, Faces.brief(row.face))
         end
     end)
     row.container:SetHandler("OnMouseExit", function()

@@ -20,6 +20,10 @@ local ROW_H = 26
 local FOOT_H = 26
 local PAD = 12
 local ICON = "EsoUI/Art/Contacts/social_note_up.dds"
+local ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
+local ART_ALPHA = 0.30
+local SCROLL_W = 6
+local drag = { on = false, y0 = 0, off0 = 0 }
 
 local drawer, tab, rows, offset = nil, nil, {}, 0
 local host = nil
@@ -66,9 +70,12 @@ local function make_row(i)
     r.container:SetMouseEnabled(true)
     r.base, r.highlight = U.row_chrome(r.container)
 
-    r.pip = P.rect(r.container, K.COLOR.face_mixed)
-    r.pip:SetDimensions(3, ROW_H - 10)
-    r.pip:SetAnchor(LEFT, r.container, LEFT, 3, 0)
+    r.pipW = P.rect(r.container, K.COLOR.face_with)
+    r.pipW:SetWidth(3)
+    r.pipW:SetAnchor(TOPLEFT, r.container, TOPLEFT, 3, 5)
+    r.pipA = P.rect(r.container, K.COLOR.face_vs)
+    r.pipA:SetWidth(3)
+    r.pipA:SetAnchor(BOTTOMLEFT, r.container, BOTTOMLEFT, 3, -5)
 
     r.name = P.label(r.container, S.FONT.row, K.COLOR.text)
     r.name:SetAnchor(LEFT, r.container, LEFT, 12, 0)
@@ -102,6 +109,50 @@ local function visible_rows()
     return math.max(0, math.floor(h / (ROW_H + 2)))
 end
 
+local last_count, last_vis = 0, 0
+
+local function max_offset()
+    return math.max(0, last_count - last_vis)
+end
+
+local function layout_scrollbar()
+    local sc = drawer.scroll
+    local maxOff = max_offset()
+    if maxOff <= 0 then sc.track:SetHidden(true) return end
+    local th = sc.track:GetHeight()
+    if th <= 0 then sc.track:SetHidden(true) return end
+    local thumbH = math.floor(th * last_vis / last_count + 0.5)
+    if thumbH < 16 then thumbH = 16 end
+    if thumbH > th then thumbH = th end
+    local y = math.floor((th - thumbH) * offset / maxOff + 0.5)
+    sc.thumb:SetHeight(thumbH)
+    sc.thumb:ClearAnchors()
+    sc.thumb:SetAnchor(TOPLEFT, sc.track, TOPLEFT, 0, y)
+    sc.track:SetHidden(false)
+end
+
+local function apply_art()
+    local art = drawer.art
+    local w, h = drawer.root:GetWidth() - 4, drawer.root:GetHeight() - 4
+    if w <= 0 or h <= 0 then return end
+    local tw, th
+    pcall(function() tw, th = art:GetTextureFileDimensions() end)
+    if not tw or tw <= 0 or not th or th <= 0 then art:SetTextureCoords(0, 1, 0, 1) return end
+    local ca, ta = w / h, tw / th
+    if ta > ca then
+        local uw = ca / ta
+        local host_w, host_h = host:GetWidth() - 4, host:GetHeight() - 4
+        local host_uw = (host_w > 0 and host_h > 0) and math.min(1, (host_w / host_h) / ta) or 0
+        local u0 = (1 - host_uw) / 2 + host_uw
+        if u0 + uw > 1 then u0 = (1 - uw) / 2 end
+        art:SetTextureCoords(u0, u0 + uw, 0, 1)
+    else
+        local vh = ta / ca
+        local v0 = (1 - vh) / 2
+        art:SetTextureCoords(0, 1, v0, v0 + vh)
+    end
+end
+
 function M.refresh()
     if not drawer or drawer.root:IsHidden() then return end
     local Faces = BGMeter.Faces
@@ -120,7 +171,12 @@ function M.refresh()
             r.container:SetAnchor(TOPLEFT, drawer.list, TOPLEFT, 0, (i - 1) * (ROW_H + 2))
             r.container:SetAnchor(TOPRIGHT, drawer.list, TOPRIGHT, 0, (i - 1) * (ROW_H + 2))
             local c = lean_color(e)
-            P.set_rect_color(r.pip, c)
+            local span = ROW_H - 10
+            local wh = math.floor(span * e.w / math.max(1, e.w + e.a) + 0.5)
+            r.pipW:SetHeight(wh)
+            r.pipW:SetHidden(wh <= 0)
+            r.pipA:SetHeight(span - wh)
+            r.pipA:SetHidden(span - wh <= 0)
             local nm = e.name
             if e.chr and e.chr ~= "" and e.chr ~= e.name then nm = nm .. "  |c" .. hexc(K.COLOR.text_dim) .. e.chr .. "|r" end
             set_text(r.name, nm)
@@ -130,6 +186,8 @@ function M.refresh()
             r.container:SetHidden(true)
         end
     end
+    last_count, last_vis = #list, vis
+    layout_scrollbar()
     local known = Faces.count()
     if #list == 0 then
         set_text(drawer.foot, known == 0 and "no one yet  ·  faces fill in as you play" or "no match")
@@ -145,6 +203,49 @@ function M.scroll(delta)
     M.refresh()
 end
 
+function M.scroll_to(want)
+    offset = want
+    M.refresh()
+end
+
+function M.on_track_click()
+    if drag.on then return end
+    local track = drawer.scroll.track
+    local _, my = BGMeter.zenimax.api.get_ui_mouse()
+    local th = track:GetHeight()
+    if not my or th <= 0 then return end
+    local rel = (my - track:GetTop()) / th
+    M.scroll_to(math.floor(rel * (max_offset() + 1)))
+end
+
+local function drag_update()
+    if not drag.on then return end
+    local track, thumb = drawer.scroll.track, drawer.scroll.thumb
+    local free = track:GetHeight() - thumb:GetHeight()
+    local maxOff = max_offset()
+    if free <= 0 or maxOff <= 0 then return end
+    local _, my = BGMeter.zenimax.api.get_ui_mouse()
+    if not my then return end
+    M.scroll_to(drag.off0 + math.floor((my - drag.y0) * maxOff / free + 0.5))
+end
+
+function M.on_thumb_down()
+    local _, my = BGMeter.zenimax.api.get_ui_mouse()
+    drag.on, drag.y0, drag.off0 = true, my or 0, offset
+    drawer.root:SetHandler("OnUpdate", drag_update)
+end
+
+function M.on_thumb_up()
+    if not drag.on then return end
+    drag.on = false
+    drawer.root:SetHandler("OnUpdate", nil)
+    P.set_rect_color(drawer.scroll.thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+end
+
+function M.on_host_resized()
+    if drawer then apply_art() end
+end
+
 function M.is_open()
     return drawer ~= nil and not drawer.root:IsHidden()
 end
@@ -156,6 +257,7 @@ local function apply_open(open, silent)
     sv_menu().faces_open = open and true or false
     if open then
         offset = 0
+        apply_art()
         M.invalidate()
         M.refresh()
     elseif drawer.edit and drawer.edit.LoseFocus then
@@ -226,6 +328,10 @@ function M.init(pw)
 
     drawer.bg = P.rect(d, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.97 })
     drawer.bg:SetAnchorFill(d)
+    drawer.art = P.icon(d, ART)
+    drawer.art:SetAnchor(TOPLEFT, d, TOPLEFT, 2, 2)
+    drawer.art:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -2, -2)
+    drawer.art:SetColor(1, 1, 1, ART_ALPHA)
     drawer.frame = P.frame(d)
     drawer.frame:SetAnchorFill(d)
     drawer.strip = P.rect(d, K.COLOR.accent)
@@ -257,8 +363,29 @@ function M.init(pw)
 
     drawer.list = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
     drawer.list:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, HEAD_H + SEARCH_H + 8)
-    drawer.list:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -FOOT_H)
+    drawer.list:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -(PAD + SCROLL_W + 4), -FOOT_H)
     drawer.list:SetMouseEnabled(false)
+
+    drawer.scroll = {}
+    local track = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
+    track:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, HEAD_H + SEARCH_H + 8)
+    track:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -FOOT_H)
+    track:SetWidth(SCROLL_W)
+    track:SetMouseEnabled(true)
+    track:SetHidden(true)
+    track:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then M.on_track_click() end end)
+    drawer.scroll.track = track
+    drawer.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
+    drawer.scroll.trackBg:SetAnchorFill(track)
+    local thumb = P.rect(track, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
+    thumb:SetWidth(SCROLL_W)
+    thumb:SetMouseEnabled(true)
+    thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
+    thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
+    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    drawer.scroll.thumb = thumb
 
     drawer.foot = P.label(d, S.FONT.small, K.COLOR.text_dim)
     drawer.foot:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, PAD, -8)
