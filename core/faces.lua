@@ -118,8 +118,42 @@ end
 
 function Faces.forget()
     local data = sv()
-    if not data then return end
+    if not data then return 0 end
+    local n = Faces.count()
     data.faces = {}
+    return n
+end
+
+local function ago(ts)
+    local A = BGMeter.zenimax.api
+    local now = (type(A.get_timestamp) == "function") and A.get_timestamp() or nil
+    if not ts or ts <= 0 or not now or now <= ts then return nil end
+    local s = now - ts
+    if s < 3600 then return math.floor(s / 60) .. " min ago" end
+    if s < 86400 then return math.floor(s / 3600) .. " h ago" end
+    return math.floor(s / 86400) .. " d ago"
+end
+
+function Faces.describe(e)
+    local t = Faces.total(e)
+    local line = string.format("Familiar face: %d %s, %d with you, %d against", t, (t == 1) and "match" or "matches", e.w or 0, e.a or 0)
+    local when = ago(e.last)
+    if when then line = line .. "\nLast met " .. when end
+    if e.chr and e.chr ~= "" then line = line .. "\nLast seen as " .. e.chr end
+    return line
+end
+
+function Faces.backfill()
+    local data = sv()
+    if not data or data.faces_seeded then return 0 end
+    data.faces_seeded = true
+    local matches = data.matches or {}
+    local n = 0
+    for i = #matches, 1, -1 do
+        n = n + Faces.record(matches[i])
+    end
+    BGMeter.Log.debug("faces: seeded from %d stored matches, %d rows", #matches, n)
+    return n
 end
 
 BGMeter.Faces = Faces

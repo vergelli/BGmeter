@@ -189,15 +189,19 @@ local function cmd_demo(two_teams)
 end
 
 local function cmd_faces()
-    local Log = BGMeter.Log
     local Faces = BGMeter.Faces
-    local list = Faces.list(nil, 15)
-    if #list == 0 then Log.say("no familiar faces yet") return end
-    Log.say("familiar faces: %d known, top %d", Faces.count(), #list)
-    for i, e in ipairs(list) do
-        Log.say("%2d. %s  x%d  (%d with, %d against)%s", i, e.name, e.w + e.a, e.w, e.a,
-            (e.chr and e.chr ~= "") and ("  as " .. e.chr) or "")
+    local list = Faces.list(nil, 30)
+    local lines = {}
+    if #list == 0 then
+        lines[1] = "no familiar faces yet -- they fill in as you finish battlegrounds"
+    else
+        lines[1] = string.format("familiar faces: %d known, top %d by matches", Faces.count(), #list)
+        for i, e in ipairs(list) do
+            lines[#lines + 1] = string.format("%2d. %s  x%d  (%d with, %d against)%s", i, e.name, e.w + e.a, e.w, e.a,
+                (e.chr and e.chr ~= "") and ("  as " .. e.chr) or "")
+        end
     end
+    BGMeter.UI.export.show_text(table.concat(lines, "\n"))
 end
 
 local function cmd_ap()
@@ -439,8 +443,8 @@ local function on_slash(args)
     elseif args == "faces" then
         cmd_faces()
     elseif args == "forget faces" then
-        BGMeter.Faces.forget()
-        Log.say("familiar faces forgotten")
+        local n = BGMeter.Faces.forget()
+        BGMeter.UI.export.show_text(string.format("familiar faces forgotten: %d names dropped", n))
     elseif args == "last" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.window.show_match(1) end
@@ -475,6 +479,7 @@ end
 
 local function on_addon_loaded()
     BGMeter.zenimax.savedvars.init(K.SAVED_VARS, 1)
+    BGMeter.Faces.backfill()
 
     if K.dev_tools() and BGMeter.Diag then BGMeter.Diag.install() end
 

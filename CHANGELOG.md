@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- Familiar faces: the result window marks players you have met before with a note glyph and a count next to their name, green when they were mostly on your side, red when mostly against, grey when mixed. Hover the row for the split and when you last met. A "Familiar faces" toggle in Settings hides it; `/bgmeter faces` lists the top names, `/bgmeter forget faces` wipes the ledger. The ledger keeps the 1500 most recent names.
+- Familiar faces: the result window marks players you have met before with a note glyph and a count next to their name, green when they were mostly on your side, red when mostly against, grey when mixed. Hover the row for the split and when you last met. The Registry grows a bookmark on its right edge that opens a drawer listing everyone you have met, most matches first, with a search box; the drawer remembers whether it was open. On first load the ledger is seeded from the matches already stored. A "Familiar faces" toggle in Settings hides the badges in the result window; `/bgmeter faces` and `/bgmeter forget faces` open the copybox with the list or the confirmation. The ledger keeps the 1500 most recent names.
 - Fixed: flag occupation counted the time before a flag existed as neutral, so Crazy King showed a grey share far bigger than what happened. A flag's lane now opens when the flag activates and closes when it deactivates; the time it did not exist is left empty and stays out of every percentage.
 
 ## [0.1.7]

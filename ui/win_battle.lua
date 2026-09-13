@@ -47,24 +47,6 @@ local function face_badge(e)
     return string.format("  %s|c%s×%d|r", F.icon(FACE_ICON, 14), hexc(c), Faces.total(e))
 end
 
-local function ago(ts)
-    local A = BGMeter.zenimax.api
-    local now = (type(A.get_timestamp) == "function") and A.get_timestamp() or nil
-    if not ts or ts <= 0 or not now or now <= ts then return nil end
-    local s = now - ts
-    if s < 3600 then return math.floor(s / 60) .. " min ago" end
-    if s < 86400 then return math.floor(s / 3600) .. " h ago" end
-    return math.floor(s / 86400) .. " d ago"
-end
-
-local function face_tooltip(e)
-    local t = Faces.total(e)
-    local line = string.format("Familiar face: %d %s, %d with you, %d against", t, (t == 1) and "match" or "matches", e.w or 0, e.a or 0)
-    local when = ago(e.last)
-    if when then line = line .. "\nLast met " .. when end
-    if e.chr and e.chr ~= "" then line = line .. "\nLast seen as " .. e.chr end
-    return line
-end
 
 local function col_right(col)
     if not col.flag and caps_shown and col.shift then return col.right + CAPS_SHIFT end
@@ -328,7 +310,7 @@ function W._make_row(parent)
         end
         P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
         if row.face and ZO_Tooltips_ShowTextTooltip then
-            ZO_Tooltips_ShowTextTooltip(row.container, BOTTOM, face_tooltip(row.face))
+            ZO_Tooltips_ShowTextTooltip(row.container, BOTTOM, Faces.describe(row.face))
         end
     end)
     row.container:SetHandler("OnMouseExit", function()

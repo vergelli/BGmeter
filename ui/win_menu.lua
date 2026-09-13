@@ -738,6 +738,7 @@ local function build()
     panel.footer:SetHeight(14)
     panel.footer:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     U.clamp_line(panel.footer)
+    BGMeter.UI.faces.init(pw)
 
     built = true
 end
@@ -1056,6 +1057,7 @@ function M.refresh()
     local count = H.count()
 
     refresh_panel()
+    BGMeter.UI.faces.refresh()
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
@@ -1225,6 +1227,7 @@ function M.show_menu()
     populate_queue_sets()
     M.update_queue()
     M.refresh()
+    BGMeter.UI.faces.on_menu_shown()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
