@@ -15,6 +15,7 @@ end
 
 function Presentation.publish(match)
     BGMeter.History.push(match)
+    BGMeter.Faces.record(match)
     BGMeter.Records.evaluate(match)
     BGMeter.Session.record(match)
     if BGMeter.UI and BGMeter.UI.menu then

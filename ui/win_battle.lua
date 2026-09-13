@@ -17,6 +17,7 @@ local Bar = BGMeter.Plot.bar
 local Icons = BGMeter.Icons
 local Awards = BGMeter.Awards
 local Prefs = BGMeter.Prefs
+local Faces = BGMeter.Faces
 
 local COLS = {
     { key = "damage",  right = 230, w = 56, label = "DMG", shift = true },
@@ -29,6 +30,41 @@ local COLS = {
 }
 local CAPS_SHIFT = 40
 local caps_shown = false
+local FACE_ICON = "EsoUI/Art/Contacts/social_note_up.dds"
+
+local function hexc(c)
+    return string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+end
+
+local function face_color(lean)
+    if lean == "with" then return K.COLOR.face_with end
+    if lean == "against" then return K.COLOR.face_vs end
+    return K.COLOR.face_mixed
+end
+
+local function face_badge(e)
+    local c = face_color(Faces.lean(e))
+    return string.format("  %s|c%s×%d|r", F.icon(FACE_ICON, 14), hexc(c), Faces.total(e))
+end
+
+local function ago(ts)
+    local A = BGMeter.zenimax.api
+    local now = (type(A.get_timestamp) == "function") and A.get_timestamp() or nil
+    if not ts or ts <= 0 or not now or now <= ts then return nil end
+    local s = now - ts
+    if s < 3600 then return math.floor(s / 60) .. " min ago" end
+    if s < 86400 then return math.floor(s / 3600) .. " h ago" end
+    return math.floor(s / 86400) .. " d ago"
+end
+
+local function face_tooltip(e)
+    local t = Faces.total(e)
+    local line = string.format("Familiar face: %d %s, %d with you, %d against", t, (t == 1) and "match" or "matches", e.w or 0, e.a or 0)
+    local when = ago(e.last)
+    if when then line = line .. "\nLast met " .. when end
+    if e.chr and e.chr ~= "" then line = line .. "\nLast seen as " .. e.chr end
+    return line
+end
 
 local function col_right(col)
     if not col.flag and caps_shown and col.shift then return col.right + CAPS_SHIFT end
@@ -291,8 +327,14 @@ function W._make_row(parent)
             BGMeter.Log.debug("row enter: %s", tostring(row.prow and (row.prow.displayName or row.prow.charName) or "?"))
         end
         P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
+        if row.face and ZO_Tooltips_ShowTextTooltip then
+            ZO_Tooltips_ShowTextTooltip(row.container, BOTTOM, face_tooltip(row.face))
+        end
     end)
-    row.container:SetHandler("OnMouseExit", function() P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 }) end)
+    row.container:SetHandler("OnMouseExit", function()
+        P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 })
+        if row.face and ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+    end)
     return row
 end
 
@@ -431,6 +473,7 @@ function SEC.battle(m, animate)
     end
 
     local awards = Prefs.get("show_awards") and Awards.compute(m) or { leaders = {}, mvp = nil }
+    local show_faces = Prefs.get("show_faces") ~= false
     local barKey = (key == "name" or key == "deaths") and "damage" or key
     local maxVal = BGMeter.Match.column_max(m, barKey)
     local barBase = (barKey == "healing") and K.COLOR.heal or K.COLOR.accent
@@ -452,6 +495,13 @@ function SEC.battle(m, animate)
 
         local nm = U.player_ident(prow)
         if awards.mvp == prow then nm = F.icon(ICON_STAR, 20) .. " " .. nm end
+        local face = (show_faces and not prow.isLocal) and Faces.get(prow) or nil
+        if face and Faces.is_familiar(face) then
+            row.face = face
+            nm = nm .. face_badge(face)
+        else
+            row.face = nil
+        end
         set_text(row.name, nm)
         S.color(row.name, prow.isLocal and K.COLOR.you or S.team_color(prow.team))
 

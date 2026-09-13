@@ -188,6 +188,18 @@ local function cmd_demo(two_teams)
     BGMeter.Log.say("demo match injected -- window shown")
 end
 
+local function cmd_faces()
+    local Log = BGMeter.Log
+    local Faces = BGMeter.Faces
+    local list = Faces.list(nil, 15)
+    if #list == 0 then Log.say("no familiar faces yet") return end
+    Log.say("familiar faces: %d known, top %d", Faces.count(), #list)
+    for i, e in ipairs(list) do
+        Log.say("%2d. %s  x%d  (%d with, %d against)%s", i, e.name, e.w + e.a, e.w, e.a,
+            (e.chr and e.chr ~= "") and ("  as " .. e.chr) or "")
+    end
+end
+
 local function cmd_ap()
     local Ava = BGMeter.Ava
     local Log = BGMeter.Log
@@ -424,6 +436,11 @@ local function on_slash(args)
         cmd_demo(false)
     elseif args == "demo2" or args == "demo 2" then
         cmd_demo(true)
+    elseif args == "faces" then
+        cmd_faces()
+    elseif args == "forget faces" then
+        BGMeter.Faces.forget()
+        Log.say("familiar faces forgotten")
     elseif args == "last" then
         if BGMeter.History.count() == 0 then Log.say("no matches recorded yet")
         else BGMeter.UI.window.show_match(1) end

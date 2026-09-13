@@ -33,6 +33,7 @@ core/veterancy.lua
 core/match.lua
 core/capture.lua
 core/history.lua
+core/faces.lua
 core/standing.lua
 core/awards.lua
 core/records.lua
