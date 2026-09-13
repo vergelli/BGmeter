@@ -67,14 +67,15 @@ local D = Drawer.new({
         set_text(r.count, string.format("|c%s×%d|r", hexc(K.COLOR.text_dim), e.n))
     end,
     describe = function(self, e)
+        local g, b, gold = hexc(K.COLOR.face_with), hexc(K.COLOR.face_vs), hexc(K.COLOR.gold)
         local lines = {
             string.format("%s  ·  %d %s", pretty(e, self.mode), e.n, (e.n == 1) and "match" or "matches"),
-            string.format("%d won  ·  %d lost%s", e.w, e.l, (e.t > 0) and string.format("  ·  %d tied", e.t) or ""),
-            string.format("avg  %s dmg  ·  %s heal  ·  %.1f K / %.1f D", F.abbrev(e.avg_dmg), F.abbrev(e.avg_heal), e.avg_kills, e.avg_deaths),
+            string.format("|c%s%d won|r  ·  |c%s%d lost|r%s", g, e.w, b, e.l, (e.t > 0) and string.format("  ·  %d tied", e.t) or ""),
+            string.format("avg  %s dmg  ·  %s heal  ·  |c%s%.1f K|r / |c%s%.1f D|r", F.abbrev(e.avg_dmg), F.abbrev(e.avg_heal), g, e.avg_kills, b, e.avg_deaths),
         }
         if e.best > 0 then
             local when = ago(e.bestAt)
-            lines[#lines + 1] = string.format("best  %s dmg%s", F.abbrev(e.best), when and ("  ·  " .. when) or "")
+            lines[#lines + 1] = string.format("best  |c%s%s dmg|r%s", gold, F.abbrev(e.best), when and ("  ·  " .. when) or "")
             lines[#lines + 1] = BGMeter.Ledger.find_match(e.bestAt) and "click to open that match" or "that match has left the registry"
         end
         return table.concat(lines, "\n")

@@ -149,21 +149,28 @@ local function ago(ts)
     return math.floor(s / 86400) .. " d ago"
 end
 
+local function hexc(c)
+    return string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+end
+
+local function good(v) return "|c" .. hexc(BGMeter.Constants.COLOR.face_with) .. tostring(v) .. "|r" end
+local function bad(v) return "|c" .. hexc(BGMeter.Constants.COLOR.face_vs) .. tostring(v) .. "|r" end
+
 function Faces.describe(e)
     local t = Faces.total(e)
-    local line = string.format("Familiar face: %d %s, %d with you, %d against", t, (t == 1) and "match" or "matches", e.w or 0, e.a or 0)
+    local line = string.format("Familiar face: %d %s, %s with you, %s against", t, (t == 1) and "match" or "matches", good(e.w or 0), bad(e.a or 0))
     local when = ago(e.last)
     if when then line = line .. "\nLast met " .. when end
     if e.chr and e.chr ~= "" then line = line .. "\nLast seen as " .. e.chr end
     local k, dk = e.k or 0, e.dk or 0
     if k > 0 or dk > 0 then
-        line = line .. string.format("\nYou killed them %d %s, they killed you %d", k, (k == 1) and "time" or "times", dk)
+        line = line .. string.format("\nYou killed them %s %s, they killed you %s", good(k), (k == 1) and "time" or "times", bad(dk))
     end
     return line
 end
 
 function Faces.brief(e)
-    local parts = { string.format("%d with  ·  %d against", e.w or 0, e.a or 0) }
+    local parts = { string.format("%s with  ·  %s against", good(e.w or 0), bad(e.a or 0)) }
     local when = ago(e.last)
     if when then parts[#parts + 1] = when end
     return table.concat(parts, "  ·  ")

@@ -327,8 +327,8 @@ function Drawer:init(pw)
     self.drawer = drawer
     local d = drawer.root
     d:SetWidth(DRAWER_W)
-    d:SetAnchor(TOPLEFT, pw, TOPRIGHT, -1, 0)
-    d:SetAnchor(BOTTOMLEFT, pw, BOTTOMRIGHT, -1, 0)
+    d:SetAnchor(TOPLEFT, pw, TOPRIGHT, MEDAL / 2 + 6, 0)
+    d:SetAnchor(BOTTOMLEFT, pw, BOTTOMRIGHT, MEDAL / 2 + 6, 0)
     d:SetMouseEnabled(true)
     d:SetHidden(true)
     d:SetHandler("OnMouseWheel", function(_, delta) self:scroll(delta) end)

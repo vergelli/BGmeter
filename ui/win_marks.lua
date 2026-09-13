@@ -55,7 +55,7 @@ local D = Drawer.new({
         set_text(r.count, string.format("|c%s%s|r", hexc(K.COLOR.gold), fmt(e)))
     end,
     describe = function(self, e)
-        local lines = { string.format("%s  ·  %s", LABEL[e.key] or e.key, fmt(e)) }
+        local lines = { string.format("%s  ·  |c%s%s|r", LABEL[e.key] or e.key, hexc(K.COLOR.gold), fmt(e)) }
         local where = {}
         if e.arena and e.arena ~= "" then where[#where + 1] = e.arena end
         if e.mode and MODE_LABEL[e.mode] then where[#where + 1] = MODE_LABEL[e.mode] end
