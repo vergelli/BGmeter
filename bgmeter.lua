@@ -480,6 +480,7 @@ end
 local function on_addon_loaded()
     BGMeter.zenimax.savedvars.init(K.SAVED_VARS, 1)
     BGMeter.Faces.backfill()
+    BGMeter.Ledger.backfill()
 
     if K.dev_tools() and BGMeter.Diag then BGMeter.Diag.install() end
 

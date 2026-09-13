@@ -59,6 +59,13 @@ function Faces.record(match)
             n = n + 1
         end
     end
+    for _, k in ipairs(match.killfeed or {}) do
+        if k.kind == "kill" and k.dn and L[k.dn] then
+            L[k.dn].k = (L[k.dn].k or 0) + 1
+        elseif k.kind == "death" and k.kn and L[k.kn] then
+            L[k.kn].dk = (L[k.kn].dk or 0) + 1
+        end
+    end
     local dropped = prune(L)
     BGMeter.Log.debug("faces: %d players recorded, %d pruned", n, dropped)
     return n
@@ -140,6 +147,10 @@ function Faces.describe(e)
     local when = ago(e.last)
     if when then line = line .. "\nLast met " .. when end
     if e.chr and e.chr ~= "" then line = line .. "\nLast seen as " .. e.chr end
+    local k, dk = e.k or 0, e.dk or 0
+    if k > 0 or dk > 0 then
+        line = line .. string.format("\nYou killed them %d %s, they killed you %d", k, (k == 1) and "time" or "times", dk)
+    end
     return line
 end
 

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- A ledger of aggregates fills in at the end of every match and once from the matches already stored: per arena and per game mode it keeps matches, wins, losses, your damage, healing, kills and deaths, and your best damage there; plus personal marks for damage, healing, kills, assists, AP and win streak, each with the match it came from. It stays a few kilobytes no matter how many matches you play.
+- Familiar faces remember how many times you killed each of them and how many times they killed you; the hover says so.
 - The recorder now samples every player's damage and healing along with the team scores, and the report draws a DAMAGE RACE strip under the score chart: one line per team and your own line in gold. Matches recorded before this have no strip.
 - The score chart shades the gap between the leading team and the runner-up in the leader's colour, fading toward the line below.
 - Combat momentum is a smooth gradient now: one bar, the leading team's colour rising and falling with its kill margin instead of flat blocks, fading through neutral when the lead changes hands.
