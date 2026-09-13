@@ -340,6 +340,45 @@ function Match.relic_lanes(m, tspan)
     return lanes
 end
 
+function Match.damage_race(m)
+    local tl = m and m.timeline
+    if not tl or not tl.p or not tl.t or #tl.t < 2 then return nil end
+    local n = #tl.t
+    local team_of, mine = {}, nil
+    for _, r in ipairs(m.battle or {}) do
+        local nm = r.displayName or r.charName
+        if nm then
+            nm = (nm:gsub("%^.*$", ""))
+            team_of[nm] = r.team
+            if r.isLocal then mine = nm end
+        end
+    end
+    local series, teams, seen, maxv = {}, {}, {}, 0
+    for nm, rec in pairs(tl.p) do
+        local team = team_of[nm]
+        if team then
+            if not seen[team] then seen[team] = true; teams[#teams + 1] = team; series[team] = {} end
+            local row = series[team]
+            for i = 1, n do
+                row[i] = (row[i] or 0) + (rec.d[i] or 0)
+            end
+        end
+    end
+    if #teams == 0 then return nil end
+    table.sort(teams)
+    for _, team in ipairs(teams) do
+        local row = series[team]
+        for i = 1, n do if row[i] > maxv then maxv = row[i] end end
+    end
+    local own = nil
+    if mine and tl.p[mine] then
+        own = {}
+        for i = 1, n do own[i] = tl.p[mine].d[i] or 0 end
+    end
+    if maxv <= 0 then return nil end
+    return { n = n, teams = teams, series = series, mine = own, max = maxv }
+end
+
 function Match.combat_momentum(killfeed, tspan, windowMs, stepMs)
     if not killfeed or #killfeed < 4 or not tspan or tspan <= 0 then return nil end
     windowMs = windowMs or 60000

@@ -388,6 +388,44 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
     b.momStats:SetText(table.concat(sp, "    "))
 end
 
+function SEC.race(b, race, tl, n, tspan, w, race_h, race_off)
+    b.race:ClearAnchors()
+    b.race:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -race_off)
+    b.race:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -race_off)
+    b.race:SetHeight(race_h)
+    b.race:SetHidden(false)
+    W.tips[b.raceTitle] = "Damage dealt over the match, one line per team.\nYour own damage runs in gold."
+    local plot_h = race_h - 20
+    local function px(i) return math.floor((math.min(tl.t[i] or 0, tspan) / tspan) * (w - 6) + 0.5) end
+    local function py(arr, i) return 16 + math.floor((1 - (arr[i] or 0) / race.max) * plot_h + 0.5) end
+    local function draw(arr, color, thick, alpha)
+        if b.lines_ok then
+            for i = 2, math.min(n, race.n) do
+                local ln = b.line_pool:acquire()
+                ln:ClearAnchors()
+                ln:SetAnchor(TOPLEFT, b.race, TOPLEFT, px(i - 1), py(arr, i - 1))
+                ln:SetAnchor(TOPRIGHT, b.race, TOPLEFT, px(i), py(arr, i))
+                ln:SetColor(color[1], color[2], color[3], alpha)
+                if ln.SetThickness then ln:SetThickness(thick) end
+                ln:SetHidden(false)
+            end
+        else
+            for i = 1, math.min(n, race.n) do
+                local dot = b.dot_pool:acquire()
+                dot:ClearAnchors()
+                dot:SetAnchor(TOPLEFT, b.race, TOPLEFT, px(i), py(arr, i))
+                dot:SetDimensions(2, 2)
+                P.set_rect_color(dot, { color[1], color[2], color[3], alpha })
+                dot:SetHidden(false)
+            end
+        end
+    end
+    for _, team in ipairs(race.teams) do
+        draw(race.series[team], S.team_color(team), 2, 0.9)
+    end
+    if race.mine then draw(race.mine, K.COLOR.you, 1, 0.95) end
+end
+
 function W.repaint_chart()
     if not W.built or not W.win or W.win:IsHidden() then return end
     local m = BGMeter.History.get(W.current_index)
@@ -405,6 +443,7 @@ function SEC.timeline(m)
     for _, lbl in ipairs(b.ribbon_letters) do lbl:SetHidden(true) end
     for _, ic in ipairs(b.lane_pins) do ic:SetHidden(true) end
     b.ribbon:SetHidden(true)
+    b.race:SetHidden(true)
     b.occ_pool:release_all()
     b.occ:SetHidden(true)
     b.mom_pool:release_all()
@@ -444,6 +483,7 @@ function SEC.timeline(m)
         dc.lead = BGMeter.Match.lead_stats(tl)
         dc.bm = BGMeter.Match.bloodiest_minute(m.killfeed)
         dc.cmom, dc.cmomMax, dc.cmomS = BGMeter.Match.combat_momentum(m.killfeed, tspan)
+        dc.race = BGMeter.Match.damage_race(m)
         W._derived = dc
     end
     local lanes, relicMode = dc.lanes, dc.relicMode
@@ -462,9 +502,11 @@ function SEC.timeline(m)
     local tdm_line = (not lanes) and lead ~= nil
     local mom_h = (dc.cmom or lead) and (tdm_line and 46 or 28) or 0
 
+    local race_h = dc.race and 48 or 0
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
-    local function fits(extra) return cont_h - rows_h >= L.chart_h + extra + 8 end
+    local function fits(extra) return cont_h - rows_h >= L.chart_h + race_h + extra + 8 end
+    if race_h > 0 and cont_h - rows_h < L.chart_h + race_h + mom_h + ribbon_h + occ_h + 8 then race_h = 0 end
     if lanes and mom_h > 0 and not fits(mom_h + ribbon_h + occ_h) then
         mom_h, tdm_line = 0, false
     end
@@ -486,7 +528,8 @@ function SEC.timeline(m)
     end
     local rib_off = (occ_h > 0) and (occ_h + 2) or 0
     local mom_off = rib_off + ((ribbon_h > 0) and (ribbon_h + 2) or 0)
-    local chart_off = mom_off + ((mom_h > 0) and (mom_h + 2) or 0)
+    local race_off = mom_off + ((mom_h > 0) and (mom_h + 2) or 0)
+    local chart_off = race_off + ((race_h > 0) and (race_h + 2) or 0)
     b.chart:SetHidden(false)
     b.chart:ClearAnchors()
     b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -chart_off)
@@ -508,6 +551,35 @@ function SEC.timeline(m)
     local plot_h = h - 18
     local function px(i) return math.floor((tl.t[i] / tspan) * (w - 6) + 0.5) end
     local function py(arr, i) return 14 + math.floor((1 - (arr[i] or 0) / maxScore) * plot_h + 0.5) end
+
+    for i = 2, n do
+        local best, second, bestS = 0, 0, nil
+        for s = 1, 3 do
+            local v = (series[s] and tl.teams and tl.teams[s]) and (series[s][i] or 0) or 0
+            if v > best then second = best; best, bestS = v, s
+            elseif v > second then second = v end
+        end
+        if bestS and best > second then
+            local secS = nil
+            for s = 1, 3 do
+                if s ~= bestS and series[s] and tl.teams and tl.teams[s] and (series[s][i] or 0) == second then secS = s end
+            end
+            local top = math.min(py(series[bestS], i - 1), py(series[bestS], i))
+            local bottom = secS and math.max(py(series[secS], i - 1), py(series[secS], i)) or (14 + plot_h)
+            if bottom > top then
+                local tc = S.team_color(tl.teams[bestS])
+                local VP_T = (VERTEX_POINTS_TOPLEFT or 1) + (VERTEX_POINTS_TOPRIGHT or 2)
+                local VP_B = (VERTEX_POINTS_BOTTOMLEFT or 4) + (VERTEX_POINTS_BOTTOMRIGHT or 8)
+                local area = b.dot_pool:acquire()
+                area:ClearAnchors()
+                area:SetAnchor(TOPLEFT, b.chart, TOPLEFT, px(i - 1), top)
+                area:SetDimensions(math.max(1, px(i) - px(i - 1)), bottom - top)
+                area:SetVertexColors(VP_T, tc[1], tc[2], tc[3], 0.30)
+                area:SetVertexColors(VP_B, tc[1], tc[2], tc[3], 0.03)
+                area:SetHidden(false)
+            end
+        end
+    end
 
     for s = 1, 3 do
         local arr = series[s]
@@ -568,6 +640,11 @@ function SEC.timeline(m)
         end
     end
 
+    if race_h > 0 then
+        SEC.race(b, dc.race, tl, n, tspan, w, race_h, race_off)
+    else
+        b.race:SetHidden(true)
+    end
     if lanes then
         SEC.ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt)
     end

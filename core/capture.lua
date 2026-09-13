@@ -380,6 +380,21 @@ local function sample_scores()
     tl.s1[i] = (teams[1] ~= nil and safe(A.get_team_score, round, teams[1])) or 0
     tl.s2[i] = (teams[2] ~= nil and safe(A.get_team_score, round, teams[2])) or 0
     tl.s3[i] = (teams[3] ~= nil and safe(A.get_team_score, round, teams[3])) or 0
+    local C = BGMeter.zenimax.constants
+    local n = safe(A.get_num_entries, round) or 0
+    if n > 0 then
+        tl.p = tl.p or {}
+        for e = 1, n do
+            local charName, displayName = safe(A.get_entry_info, e, round)
+            local nm = clean_name(displayName or charName)
+            if nm then
+                local rec = tl.p[nm]
+                if not rec then rec = { d = {}, h = {} }; tl.p[nm] = rec end
+                rec.d[i] = read_score(e, C.SCORE_TRACKER_TYPE_DAMAGE_DONE, round)
+                rec.h[i] = read_score(e, C.SCORE_TRACKER_TYPE_HEALING_DONE, round)
+            end
+        end
+    end
 end
 
 local function start_sampler()

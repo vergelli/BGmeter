@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Every player row carries its own rhythm: a tick in the team's colour at each of that player's kills and a short grey tick at each death, on the match's time axis inside the bar, so you can see who fed early and who carried late.
+- The recorder now samples every player's damage and healing along with the team scores, and the report draws a DAMAGE RACE strip under the score chart: one line per team and your own line in gold. Matches recorded before this have no strip.
+- The score chart shades the gap between the leading team and the runner-up in the leader's colour, fading toward the line below.
 - Combat momentum is a smooth gradient now: one bar, the leading team's colour rising and falling with its kill margin instead of flat blocks, fading through neutral when the lead changes hands.
 - Flag control lanes end in a fade instead of a hard cut, and every lane wears a faint top and bottom edge; the momentum bar wears the same edge.
 - Hover cards are the addon's own now, framed like its windows with the accent strip, instead of the game's default tooltip. The familiar-faces drawer darkens its cover art toward the top and bottom so the names stay readable.
