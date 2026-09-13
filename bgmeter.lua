@@ -481,6 +481,10 @@ local function on_addon_loaded()
     BGMeter.zenimax.savedvars.init(K.SAVED_VARS, 1)
     BGMeter.Faces.backfill()
     BGMeter.Ledger.backfill()
+    do
+        local data = BGMeter.zenimax.savedvars.get()
+        for _, m in ipairs((data and data.matches) or {}) do pcall(BGMeter.Match.pack_timeline, m) end
+    end
 
     if K.dev_tools() and BGMeter.Diag then BGMeter.Diag.install() end
 

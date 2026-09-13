@@ -340,6 +340,53 @@ function Match.relic_lanes(m, tspan)
     return lanes
 end
 
+local CHUNK = 1500
+
+function Match.pack_series(arr, n)
+    local parts, prev = {}, 0
+    for i = 1, n do
+        local v = arr[i]
+        if v == nil then v = prev end
+        local d = v - prev
+        parts[i] = (d == 0) and "" or tostring(math.floor(d + 0.5))
+        prev = v
+    end
+    local s = table.concat(parts, ",")
+    local chunks = {}
+    for i = 1, #s, CHUNK do chunks[#chunks + 1] = s:sub(i, i + CHUNK - 1) end
+    return chunks
+end
+
+function Match.unpack_series(chunks, n)
+    if type(chunks) == "table" and type(chunks[1]) ~= "string" then return chunks end
+    local s = type(chunks) == "string" and chunks or table.concat(chunks or {})
+    local out, prev, i = {}, 0, 0
+    for tok in (s .. ","):gmatch("([^,]*),") do
+        i = i + 1
+        local d = tonumber(tok) or 0
+        prev = prev + d
+        out[i] = prev
+        if n and i >= n then break end
+    end
+    for k = i + 1, (n or i) do out[k] = prev end
+    return out
+end
+
+function Match.pack_timeline(m)
+    local tl = m and m.timeline
+    if not tl or not tl.p or not tl.t then return 0 end
+    local n, packed = #tl.t, 0
+    for _, rec in pairs(tl.p) do
+        if type(rec.d) == "table" then
+            rec.s = Match.pack_series(rec.d, n)
+            rec.d = nil
+            packed = packed + 1
+        end
+        rec.h = nil
+    end
+    return packed
+end
+
 function Match.damage_race(m)
     local tl = m and m.timeline
     if not tl or not tl.p or not tl.t or #tl.t < 2 then return nil end
@@ -354,13 +401,16 @@ function Match.damage_race(m)
         end
     end
     local series, teams, seen, maxv = {}, {}, {}, 0
+    local decoded = {}
     for nm, rec in pairs(tl.p) do
+        decoded[nm] = rec.d or Match.unpack_series(rec.s, n)
         local team = team_of[nm]
         if team then
             if not seen[team] then seen[team] = true; teams[#teams + 1] = team; series[team] = {} end
             local row = series[team]
+            local src = decoded[nm]
             for i = 1, n do
-                row[i] = (row[i] or 0) + (rec.d[i] or 0)
+                row[i] = (row[i] or 0) + (src[i] or 0)
             end
         end
     end
@@ -371,9 +421,9 @@ function Match.damage_race(m)
         for i = 1, n do if row[i] > maxv then maxv = row[i] end end
     end
     local own = nil
-    if mine and tl.p[mine] then
+    if mine and decoded[mine] then
         own = {}
-        for i = 1, n do own[i] = tl.p[mine].d[i] or 0 end
+        for i = 1, n do own[i] = decoded[mine][i] or 0 end
     end
     if maxv <= 0 then return nil end
     return { n = n, teams = teams, series = series, mine = own, max = maxv }

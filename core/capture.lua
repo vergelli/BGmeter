@@ -513,6 +513,7 @@ function Capture.finalize()
     stop_sampler()
     local ok, err = pcall(sample_scores)
     if not ok then BGMeter.Log.debug("final sample failed: %s", tostring(err)) end
+    pcall(Match.pack_timeline, active)
 
     active.endMs = safe(A.now_ms) or active.startMs
     active.capturedAt = safe(A.get_timestamp)
