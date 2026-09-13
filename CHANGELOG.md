@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0]
 
 - A ledger of aggregates fills in at the end of every match and once from the matches already stored: per arena and per game mode it keeps matches, wins, losses, your damage, healing, kills and deaths, and your best damage there; plus personal marks for damage, healing, kills, assists, AP and win streak, each with the match it came from. It stays a few kilobytes no matter how many matches you play.
 - Two more drawers on the Registry edge, above Familiar faces: Marks and Arenas. Arenas, with a MAPS / MODES switch, one row per map or game mode with matches and win rate, and a hover card with your averages and best match, click to open it; and Marks, your personal bests with where and when they happened, click to open the match. Only one drawer opens at a time.
