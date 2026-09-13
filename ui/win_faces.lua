@@ -307,6 +307,7 @@ function M.init(pw)
     tab.root:SetMouseEnabled(true)
     if tab.root.SetDrawLevel then tab.root:SetDrawLevel(10) end
     tab.icon = P.button(tab.root, ICON, ICON_DOWN, ICON_OVER)
+    if tab.icon.SetMouseOverBlendMode and TEXTURE_BLEND_MODE_ADD then tab.icon:SetMouseOverBlendMode(TEXTURE_BLEND_MODE_ADD) end
     tab.icon:SetDimensions(MEDAL_ICON, MEDAL_ICON)
     tab.icon:SetAnchor(CENTER, tab.root, CENTER, 0, 0)
     tab.icon:SetAlpha(0.85)
