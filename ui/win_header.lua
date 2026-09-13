@@ -32,12 +32,13 @@ end
 local function build_header(win)
     local h = {}
     h.emblem = P.icon(win, K.LOGO)
-    h.emblem:SetDimensions(26, 26)
-    h.emblem:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin + 2, 11)
+    h.emblem:SetDimensions(78, 78)
+    h.emblem:SetAnchor(TOPLEFT, win, TOPLEFT, -20, -20)
+    if h.emblem.SetDrawLevel then h.emblem:SetDrawLevel(20) end
 
     h.title = P.label(win, S.FONT.title, K.COLOR.text)
     h.title:SetText(K.TITLE)
-    h.title:SetAnchor(LEFT, h.emblem, RIGHT, 8, 0)
+    h.title:SetAnchor(LEFT, h.emblem, RIGHT, 2, 5)
 
     h.subtitle = P.label(win, S.FONT.small, K.COLOR.text_dim)
     U.clamp_line(h.subtitle)

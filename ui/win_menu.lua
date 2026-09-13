@@ -576,12 +576,13 @@ local function build()
     strip:SetHeight(3)
 
     panel.logo = P.icon(pw, K.LOGO)
-    panel.logo:SetDimensions(20, 20)
-    panel.logo:SetAnchor(TOPLEFT, pw, TOPLEFT, 16, 13)
+    panel.logo:SetDimensions(60, 60)
+    panel.logo:SetAnchor(TOPLEFT, pw, TOPLEFT, -15, -15)
+    if panel.logo.SetDrawLevel then panel.logo:SetDrawLevel(20) end
 
     panel.title = P.label(pw, S.FONT.title, K.COLOR.text)
     panel.title:SetText(K.TITLE .. "  ·  Registry")
-    panel.title:SetAnchor(LEFT, panel.logo, RIGHT, 8, 0)
+    panel.title:SetAnchor(LEFT, panel.logo, RIGHT, 2, 8)
 
     panel.close = mk_button(pw, TX.close, 20, function() M.hide_menu() end, "Close")
     panel.close:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -14, 15)
