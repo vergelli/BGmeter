@@ -13,7 +13,11 @@ local set_text = U.set_text
 local M = {}
 
 local DRAWER_W = 236
-local TAB_W, TAB_H = 26, 64
+local MEDAL, MEDAL_ICON = 54, 30
+local MEDAL_Y = 46 + 34
+local MEDAL_FRAME = "EsoUI/Art/ActionBar/abilityFrame64_up.dds"
+local MEDAL_INSET = "EsoUI/Art/ActionBar/abilityInset.dds"
+local MEDAL_GLOW = "EsoUI/Art/ActionBar/abilityFrame64_glow.dds"
 local HEAD_H = 46
 local SEARCH_H = 28
 local ROW_H = 26
@@ -264,7 +268,8 @@ end
 local function apply_open(open, silent)
     if not drawer then return end
     drawer.root:SetHidden(not open)
-    tab.icon:SetAlpha(open and 1 or 0.7)
+    tab.icon:SetAlpha(open and 1 or 0.85)
+    if tab.glow_to then tab.glow_to(open and 0.45 or 0) end
     sv_menu().faces_open = open and true or false
     if open then
         offset = 0
@@ -301,39 +306,46 @@ function M.init(pw)
     host = pw
 
     tab = { root = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL) }
-    tab.root:SetDimensions(TAB_W, TAB_H)
-    tab.root:SetAnchor(TOPLEFT, pw, TOPRIGHT, -1, HEAD_H + 6)
+    tab.root:SetDimensions(MEDAL, MEDAL)
+    tab.root:SetAnchor(CENTER, pw, TOPRIGHT, 0, MEDAL_Y)
     tab.root:SetMouseEnabled(true)
-    tab.bg = P.rect(tab.root, { K.COLOR.panel[1], K.COLOR.panel[2], K.COLOR.panel[3], 0.97 })
-    tab.bg:SetAnchorFill(tab.root)
-    tab.frame = P.frame(tab.root)
+    if tab.root.SetDrawLevel then tab.root:SetDrawLevel(10) end
+    local ac = K.COLOR.accent
+    tab.glow = P.icon(tab.root, MEDAL_GLOW)
+    tab.glow:SetAnchor(CENTER, tab.root, CENTER, 0, 0)
+    tab.glow:SetDimensions(MEDAL + 14, MEDAL + 14)
+    tab.glow:SetColor(ac[1], ac[2], ac[3], 0)
+    tab.inset = P.icon(tab.root, MEDAL_INSET)
+    tab.inset:SetAnchorFill(tab.root)
+    tab.inset:SetColor(1, 1, 1, 0.95)
+    tab.frame = P.icon(tab.root, MEDAL_FRAME)
     tab.frame:SetAnchorFill(tab.root)
-    tab.strip = P.rect(tab.root, K.COLOR.accent)
-    tab.strip:SetAnchor(TOPLEFT, tab.root, TOPLEFT, 3, 3)
-    tab.strip:SetAnchor(BOTTOMLEFT, tab.root, BOTTOMLEFT, 3, -3)
-    tab.strip:SetWidth(2)
     tab.icon = P.button(tab.root, ICON, ICON_DOWN, ICON_OVER)
-    tab.icon:SetDimensions(22, 22)
-    tab.icon:SetAnchor(CENTER, tab.root, CENTER, 1, 0)
-    tab.icon:SetAlpha(0.7)
+    tab.icon:SetDimensions(MEDAL_ICON, MEDAL_ICON)
+    tab.icon:SetAnchor(CENTER, tab.root, CENTER, 0, 0)
+    tab.icon:SetAlpha(0.85)
+    local function glow_to(a) tab.glow:SetColor(ac[1], ac[2], ac[3], a) end
     tab.icon:SetHandler("OnClicked", function() M.toggle() end)
     tab.icon:SetHandler("OnMouseEnter", function()
         tab.icon:SetAlpha(1)
+        glow_to(0.9)
         if U.card_show then U.card_show(tab.root, RIGHT, "Familiar faces") end
     end)
     tab.icon:SetHandler("OnMouseExit", function()
-        tab.icon:SetAlpha(M.is_open() and 1 or 0.7)
+        tab.icon:SetAlpha(M.is_open() and 1 or 0.85)
+        glow_to(M.is_open() and 0.45 or 0)
         if U.card_hide then U.card_hide() end
     end)
     tab.root:SetHandler("OnMouseUp", function(_, button, upInside)
         if upInside and button == (MOUSE_BUTTON_INDEX_LEFT or 1) then M.toggle() end
     end)
+    tab.glow_to = glow_to
 
     drawer = { root = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL) }
     local d = drawer.root
     d:SetWidth(DRAWER_W)
-    d:SetAnchor(TOPLEFT, pw, TOPRIGHT, TAB_W - 2, 0)
-    d:SetAnchor(BOTTOMLEFT, pw, BOTTOMRIGHT, TAB_W - 2, 0)
+    d:SetAnchor(TOPLEFT, pw, TOPRIGHT, -1, 0)
+    d:SetAnchor(BOTTOMLEFT, pw, BOTTOMRIGHT, -1, 0)
     d:SetMouseEnabled(true)
     d:SetHidden(true)
     d:SetHandler("OnMouseWheel", function(_, delta) M.scroll(delta) end)
