@@ -658,8 +658,8 @@ local function chart_hover_poll()
         end
     end
 
-    if ZO_Tooltips_ShowTextTooltip then
-        ZO_Tooltips_ShowTextTooltip(b.chart, TOP, table.concat(parts, "\n"))
+    if U.card_show then
+        U.card_show(b.chart, TOP, table.concat(parts, "\n"))
     end
 end
 
@@ -671,7 +671,7 @@ end
 function W._chart_hover_stop()
     BGMeter.zenimax.events.unregister_update("BGMeterChartHover")
     if W.battle and W.battle.cursor then W.battle.cursor:SetHidden(true) end
-    if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+    if U.card_hide then U.card_hide() end
 end
 
 local function ensure_duel_icons(b)

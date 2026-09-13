@@ -309,13 +309,13 @@ function W._make_row(parent)
             BGMeter.Log.debug("row enter: %s", tostring(row.prow and (row.prow.displayName or row.prow.charName) or "?"))
         end
         P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
-        if row.face and ZO_Tooltips_ShowTextTooltip then
-            ZO_Tooltips_ShowTextTooltip(row.container, BOTTOM, Faces.brief(row.face))
+        if row.face and U.card_show then
+            U.card_show(row.container, BOTTOM, Faces.brief(row.face))
         end
     end)
     row.container:SetHandler("OnMouseExit", function()
         P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 })
-        if row.face and ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+        if row.face and U.card_hide then U.card_hide() end
     end)
     return row
 end

@@ -95,13 +95,13 @@ local function make_row(i)
 
     r.container:SetHandler("OnMouseEnter", function()
         r.highlight:SetHidden(false)
-        if r.face and ZO_Tooltips_ShowTextTooltip then
-            ZO_Tooltips_ShowTextTooltip(r.container, LEFT, BGMeter.Faces.describe(r.face))
+        if r.face and U.card_show then
+            U.card_show(r.container, LEFT, BGMeter.Faces.describe(r.face))
         end
     end)
     r.container:SetHandler("OnMouseExit", function()
         r.highlight:SetHidden(true)
-        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+        if U.card_hide then U.card_hide() end
     end)
     rows[i] = r
     return r
@@ -319,11 +319,11 @@ function M.init(pw)
     tab.icon:SetHandler("OnClicked", function() M.toggle() end)
     tab.icon:SetHandler("OnMouseEnter", function()
         tab.icon:SetAlpha(1)
-        if ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(tab.root, RIGHT, "Familiar faces") end
+        if U.card_show then U.card_show(tab.root, RIGHT, "Familiar faces") end
     end)
     tab.icon:SetHandler("OnMouseExit", function()
         tab.icon:SetAlpha(M.is_open() and 1 or 0.7)
-        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+        if U.card_hide then U.card_hide() end
     end)
     tab.root:SetHandler("OnMouseUp", function(_, button, upInside)
         if upInside and button == (MOUSE_BUTTON_INDEX_LEFT or 1) then M.toggle() end
@@ -344,6 +344,22 @@ function M.init(pw)
     drawer.art:SetAnchor(TOPLEFT, d, TOPLEFT, 2, 2)
     drawer.art:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -2, -2)
     drawer.art:SetColor(1, 1, 1, ART_ALPHA)
+    local VP_TOP = (VERTEX_POINTS_TOPLEFT or 1) + (VERTEX_POINTS_TOPRIGHT or 2)
+    local VP_BOTTOM = (VERTEX_POINTS_BOTTOMLEFT or 4) + (VERTEX_POINTS_BOTTOMRIGHT or 8)
+    local bgc = K.COLOR.bg
+    local vtop = P.rect(d, { bgc[1], bgc[2], bgc[3], 1 })
+    vtop:SetAnchor(TOPLEFT, d, TOPLEFT, 2, 2)
+    vtop:SetAnchor(TOPRIGHT, d, TOPRIGHT, -2, 2)
+    vtop:SetHeight(90)
+    vtop:SetVertexColors(VP_TOP, bgc[1], bgc[2], bgc[3], 0.85)
+    vtop:SetVertexColors(VP_BOTTOM, bgc[1], bgc[2], bgc[3], 0)
+    local vbot = P.rect(d, { bgc[1], bgc[2], bgc[3], 1 })
+    vbot:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, 2, -2)
+    vbot:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -2, -2)
+    vbot:SetHeight(120)
+    vbot:SetVertexColors(VP_TOP, bgc[1], bgc[2], bgc[3], 0)
+    vbot:SetVertexColors(VP_BOTTOM, bgc[1], bgc[2], bgc[3], 0.85)
+    drawer.vignette = { vtop, vbot }
     drawer.frame = P.frame(d)
     drawer.frame:SetAnchorFill(d)
     drawer.strip = P.rect(d, K.COLOR.accent)

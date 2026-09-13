@@ -429,13 +429,13 @@ local function make_row(i)
 
     r.container:SetHandler("OnMouseEnter", function()
         r.highlight:SetHidden(false)
-        if r.tip and ZO_Tooltips_ShowTextTooltip then
-            ZO_Tooltips_ShowTextTooltip(r.container, BOTTOM, r.tip)
+        if r.tip and U.card_show then
+            U.card_show(r.container, BOTTOM, r.tip)
         end
     end)
     r.container:SetHandler("OnMouseExit", function()
         r.highlight:SetHidden(true)
-        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+        if U.card_hide then U.card_hide() end
     end)
     r.container:SetHandler("OnMouseUp", function(_, _, upInside)
         if upInside and r.index then
@@ -625,10 +625,10 @@ local function build()
                     st.claim:SetAnchor(TOPRIGHT, c, TOPRIGHT, -20, 3)
                     st.claim:SetHidden(true)
                     st.claim:SetHandler("OnMouseEnter", function(b)
-                        if ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(b, BOTTOM, st.claim_tip or "") end
+                        if U.card_show then U.card_show(b, BOTTOM, st.claim_tip or "") end
                     end)
                     st.claim:SetHandler("OnMouseExit", function()
-                        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+                        if U.card_hide then U.card_hide() end
                     end)
                 end
             end
@@ -648,10 +648,10 @@ local function build()
             end
         end
         c:SetHandler("OnMouseEnter", function()
-            if st.tip and ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(c, BOTTOM, st.tip) end
+            if st.tip and U.card_show then U.card_show(c, BOTTOM, st.tip) end
         end)
         c:SetHandler("OnMouseExit", function()
-            if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+            if U.card_hide then U.card_hide() end
         end)
         return st
     end
