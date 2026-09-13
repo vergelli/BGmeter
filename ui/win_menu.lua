@@ -145,6 +145,49 @@ local function auto_height()
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
+local PODIUM = { name = "BGMeterPodiumGlow", ms = 40, period_ms = 1200, on = false, t0 = 0 }
+
+local function podium_now()
+    if GetGameTimeMilliseconds then return GetGameTimeMilliseconds() end
+    return os.clock() * 1000
+end
+
+local function hue_rgb(h)
+    local x = (h % 1) * 6
+    local i = math.floor(x)
+    local f = x - i
+    if i == 0 then return 1, f, 0 end
+    if i == 1 then return 1 - f, 1, 0 end
+    if i == 2 then return 0, 1, f end
+    if i == 3 then return 0, 1 - f, 1 end
+    if i == 4 then return f, 0, 1 end
+    return 1, 0, 1 - f
+end
+
+local function podium_stop()
+    if not PODIUM.on then return end
+    PODIUM.on = false
+    BGMeter.zenimax.events.unregister_update(PODIUM.name)
+end
+
+local function podium_tick()
+    local st = panel and panel.stats.stand
+    if not (st and st.glow) or panel.win:IsHidden() then podium_stop() return end
+    local t = ((podium_now() - PODIUM.t0) % PODIUM.period_ms) / PODIUM.period_ms
+    local r, g, b = hue_rgb(t)
+    st.glow:SetColor(0.45 + 0.55 * r, 0.45 + 0.55 * g, 0.45 + 0.55 * b, 0.90)
+    local r2, g2, b2 = hue_rgb(t + 0.5)
+    st.icon:SetColor(0.80 + 0.20 * r2, 0.80 + 0.20 * g2, 0.80 + 0.20 * b2, 1)
+end
+
+local function podium_start()
+    if PODIUM.on then return end
+    PODIUM.on = true
+    PODIUM.t0 = podium_now()
+    BGMeter.zenimax.events.register_update(PODIUM.name, PODIUM.ms, podium_tick)
+    podium_tick()
+end
+
 local function refresh_panel()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
@@ -190,6 +233,14 @@ local function refresh_panel()
         local laps = snap.laps or 0
         set_text(st.label, string.format("%s  %d%s", clean(snap.rankTitle) or "Veterancy", snap.rank,
             laps > 0 and (" ×" .. laps) or ""))
+        local waiting = snap.claimable or 0
+        if st.claim then
+            st.claim:SetHidden(waiting <= 0)
+            st.claim_tip = string.format("Claim your veterancy rewards (%d waiting)", waiting)
+            st.label:ClearAnchors()
+            st.label:SetAnchor(TOPLEFT, st.c, TOPLEFT, st.textX, 3)
+            st.label:SetAnchor(TOPRIGHT, st.c, TOPRIGHT, waiting > 0 and -42 or -20, 3)
+        end
         local season = clean(snap.seasonName)
         local seasonLine = season and ("\n" .. season) or ""
         if snap.tierTotal and snap.tierTotal > 0 then
@@ -215,7 +266,7 @@ local function refresh_panel()
 
     st = panel.stats.stand
     local function trophy_tier(rank)
-        if rank == 1 then return { 1.00, 0.97, 0.82 }, 0.75, "Champion!" end
+        if rank <= 3 then return { 0.97, 0.97, 1.00 }, 0.90, "Champion!" end
         if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60, "Mythic!" end
         if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50, "Legendary" end
         return { 0.72, 0.53, 0.98 }, 0.42, "Epic"
@@ -244,10 +295,12 @@ local function refresh_panel()
                 end
                 st.glow:SetColor(col[1], col[2], col[3], glowA)
                 st.glow:SetHidden(false)
+                if standing.rank <= 3 and Prefs.get("animate") then podium_start() else podium_stop() end
                 tierTag = string.format("  ·  |c%02X%02X%02X%s|r",
                     math.floor(col[1] * 255 + 0.5), math.floor(col[2] * 255 + 0.5),
                     math.floor(col[3] * 255 + 0.5), word)
             else
+                podium_stop()
                 st.icon:SetColor(1, 1, 1, 1)
                 if st.glow then st.glow:SetHidden(true) end
             end
@@ -257,6 +310,7 @@ local function refresh_panel()
         S.color(st.label, K.COLOR.gold)
         st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
     else
+        podium_stop()
         if st.icon then
             st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
             st.icon:SetColor(1, 1, 1, 1)
@@ -375,13 +429,13 @@ local function make_row(i)
 
     r.container:SetHandler("OnMouseEnter", function()
         r.highlight:SetHidden(false)
-        if r.tip and ZO_Tooltips_ShowTextTooltip then
-            ZO_Tooltips_ShowTextTooltip(r.container, BOTTOM, r.tip)
+        if r.tip and U.card_show then
+            U.card_show(r.container, BOTTOM, r.tip)
         end
     end)
     r.container:SetHandler("OnMouseExit", function()
         r.highlight:SetHidden(true)
-        if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+        if U.card_hide then U.card_hide() end
     end)
     r.container:SetHandler("OnMouseUp", function(_, _, upInside)
         if upInside and r.index then
@@ -495,6 +549,9 @@ local function build()
         mg = sv_menu()
         mg.w, mg.h = pw:GetWidth(), pw:GetHeight()
         apply_art_cover()
+        BGMeter.UI.faces.on_host_resized()
+        BGMeter.UI.arenas.on_host_resized()
+        BGMeter.UI.marks.on_host_resized()
         M.refresh()
     end)
     pw:SetHandler("OnMouseWheel", function(_, delta) M.scroll_to(offset - delta) end)
@@ -519,17 +576,18 @@ local function build()
     strip:SetHeight(3)
 
     panel.logo = P.icon(pw, K.LOGO)
-    panel.logo:SetDimensions(20, 20)
-    panel.logo:SetAnchor(TOPLEFT, pw, TOPLEFT, 16, 13)
+    panel.logo:SetDimensions(60, 60)
+    panel.logo:SetAnchor(TOPLEFT, pw, TOPLEFT, -15, -15)
+    if panel.logo.SetDrawLevel then panel.logo:SetDrawLevel(20) end
 
     panel.title = P.label(pw, S.FONT.title, K.COLOR.text)
     panel.title:SetText(K.TITLE .. "  ·  Registry")
-    panel.title:SetAnchor(LEFT, panel.logo, RIGHT, 8, 0)
+    panel.title:SetAnchor(LEFT, panel.logo, RIGHT, 2, 8)
 
     panel.close = mk_button(pw, TX.close, 20, function() M.hide_menu() end, "Close")
     panel.close:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -14, 15)
 
-    panel.gear = mk_button(pw, TX.gear, 22, function() W.toggle_settings() end, "Settings")
+    panel.gear = mk_button(pw, TX.gear, 28, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
     local function make_stat(rowi, right, withIcon, withBar, link)
@@ -564,6 +622,18 @@ local function build()
                 st.link = mk_button(c, TX.nextb, 16, link.fn, link.tip)
                 st.link:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 5)
                 st.link:SetHidden(true)
+                if link.claim then
+                    st.textX = textX
+                    st.claim = mk_button(c, TX.satchel, 20, link.claim, nil)
+                    st.claim:SetAnchor(TOPRIGHT, c, TOPRIGHT, -20, 3)
+                    st.claim:SetHidden(true)
+                    st.claim:SetHandler("OnMouseEnter", function(b)
+                        if U.card_show then U.card_show(b, BOTTOM, st.claim_tip or "") end
+                    end)
+                    st.claim:SetHandler("OnMouseExit", function()
+                        if U.card_hide then U.card_hide() end
+                    end)
+                end
             end
             st.bar = U.inset_bar(c)
             st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
@@ -581,17 +651,18 @@ local function build()
             end
         end
         c:SetHandler("OnMouseEnter", function()
-            if st.tip and ZO_Tooltips_ShowTextTooltip then ZO_Tooltips_ShowTextTooltip(c, BOTTOM, st.tip) end
+            if st.tip and U.card_show then U.card_show(c, BOTTOM, st.tip) end
         end)
         c:SetHandler("OnMouseExit", function()
-            if ZO_Tooltips_HideTextTooltip then ZO_Tooltips_HideTextTooltip() end
+            if U.card_hide then U.card_hide() end
         end)
         return st
     end
 
     panel.stats = {
         ava     = make_stat(1, false, true, true),
-        vet     = make_stat(2, false, true, true, { fn = function() M.open_veterancy() end, tip = "View veterancy" }),
+        vet     = make_stat(2, false, true, true, { fn = function() M.open_veterancy() end, tip = "View veterancy",
+                                                  claim = function() M.claim_veterancy() end }),
         stand   = make_stat(3, false, true, false, { fn = function() M.open_leaderboard() end, tip = "View competitive leaderboard" }),
         ap      = make_stat(1, true, true),
         telvar  = make_stat(2, true, true),
@@ -649,15 +720,18 @@ local function build()
     panel.scroll.track = track
     panel.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
     panel.scroll.trackBg:SetAnchorFill(track)
-    local thumb = P.rect(track, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    local thumb = BGMeter.zenimax.ui.create_control(nil, track, CT_CONTROL)
     thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
     thumb:SetWidth(SCROLL_W)
     thumb:SetMouseEnabled(true)
+    local thumbTex = P.rect(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    thumbTex:SetAnchorFill(thumb)
     thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
     thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
-    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumb, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
-    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumbTex, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumbTex, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
     panel.scroll.thumb = thumb
+    panel.scroll.thumbTex = thumbTex
 
     panel.empty = P.label(panel.inset, S.FONT.small, K.COLOR.text_dim)
     panel.empty:SetText("no battlegrounds recorded yet\nqueue up below to record your first battle")
@@ -671,6 +745,9 @@ local function build()
     panel.footer:SetHeight(14)
     panel.footer:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     U.clamp_line(panel.footer)
+    BGMeter.UI.faces.init(pw)
+    BGMeter.UI.arenas.init(pw)
+    BGMeter.UI.marks.init(pw)
 
     built = true
 end
@@ -974,7 +1051,7 @@ function M.on_thumb_up()
     if not drag.on then return end
     drag.on = false
     panel.win:SetHandler("OnUpdate", nil)
-    P.set_rect_color(panel.scroll.thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    P.set_rect_color(panel.scroll.thumbTex, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
 end
 
 function M.window() return panel and panel.win end
@@ -989,6 +1066,9 @@ function M.refresh()
     local count = H.count()
 
     refresh_panel()
+    BGMeter.UI.faces.refresh()
+    BGMeter.UI.arenas.refresh()
+    BGMeter.UI.marks.refresh()
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
@@ -1101,6 +1181,21 @@ function M.on_double_click()
     M.refresh()
 end
 
+function M.claim_veterancy()
+    if BGMeter.Veterancy.claim() then Sound.play("nav") end
+    M.refresh_if_visible()
+end
+
+function M.stat_claim_hidden(key)
+    local st = panel and panel.stats[key]
+    return not (st and st.claim) or st.claim:IsHidden()
+end
+
+function M.stat_claim_tip(key)
+    local st = panel and panel.stats[key]
+    return st and st.claim_tip or nil
+end
+
 function M.open_veterancy()
     if Scene.push("VeterancySceneKeyboard") then Sound.play("nav") end
 end
@@ -1110,7 +1205,7 @@ function M.open_leaderboard()
     if Scene.push_bg_leaderboard(C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE) then Sound.play("nav") end
 end
 
-local DEMO_RANKS = { 96, 42, 7, 1 }
+local DEMO_RANKS = { 96, 42, 7, 3, 1 }
 function M.demo_trophy()
     if not built then build() end
     local idx = M._demo_idx or 0
@@ -1143,16 +1238,23 @@ function M.show_menu()
     populate_queue_sets()
     M.update_queue()
     M.refresh()
+    BGMeter.UI.faces.on_menu_shown()
+    BGMeter.UI.arenas.on_menu_shown()
+    BGMeter.UI.marks.on_menu_shown()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
     safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
     Sound.play("menu")
 end
 
+function M.podium_on() return PODIUM.on end
+
 function M.hide_menu(silent)
+    podium_stop()
     if not built then return end
     local was_visible = not panel.win:IsHidden()
     M.disarm_delete()
+    BGMeter.UI.Drawer.blur_all()
     panel.win:SetHidden(true)
     if not silent and was_visible then Sound.play("close") end
     queue_ticker_sync(false)
