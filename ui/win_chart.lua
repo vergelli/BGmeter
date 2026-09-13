@@ -224,35 +224,64 @@ function SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, cmo
     local function mx(t) return math.floor((t / tspan) * (w - 6) + 0.5) end
     if cmom then
         b.momTitle:SetText("COMBAT MOMENTUM")
-        W.tips[b.momTitle] = "Who was winning the FIGHT, minute by minute.\nColor = team ahead on kills in the last 60s  ·  brighter = more dominant\nWhen this disagrees with the score chart above, kills were not buying points."
-        local peak = math.max(3, math.ceil(math.max(cmomMax or 1, 1) * 0.75))
-        for _, sg in ipairs(cmom) do
-            local x0, x1 = mx(sg.t0), mx(sg.t1)
-            if x1 > x0 then
-                local r = b.mom_pool:acquire()
-                r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, x0, 18)
-                r:SetDimensions(x1 - x0, 10)
-                if sg.team then
-                    local tc = S.team_color(sg.team)
-                    local a = 0.18 + 0.62 * math.min(1, sg.mag / math.max(cmomMax or 1, 1))
-                    P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
+        W.tips[b.momTitle] = "Kill pressure per team, minute by minute.\nOne lane per team  ·  hotter = more kills in the last 60s\nWhen this disagrees with the score chart above, kills were not buying points."
+        local heat = W._derived and W._derived.cheat
+        local lane_h, lane_gap, top = 6, 1, 16
+        if heat then
+            for li, team in ipairs(heat.teams) do
+                local y = top + (li - 1) * (lane_h + lane_gap)
+                local row = heat.cells[team]
+                local base = b.mom_pool:acquire()
+                base:SetAnchor(TOPLEFT, b.mom, TOPLEFT, 0, y)
+                base:SetDimensions(w - 6, lane_h)
+                local tc = S.team_color(team)
+                P.set_rect_color(base, { tc[1], tc[2], tc[3], 0.06 })
+                base:SetHidden(false)
+                local run_x0, run_x1, run_lv, run_c = nil, nil, -1, 0
+                local function flush()
+                    if not run_x0 or run_x1 <= run_x0 then return end
+                    local r = b.mom_pool:acquire()
+                    r:SetAnchor(TOPLEFT, b.mom, TOPLEFT, run_x0, y)
+                    r:SetDimensions(run_x1 - run_x0, lane_h)
+                    P.set_rect_color(r, S.team_ramp(team, run_lv))
+                    r:SetHidden(false)
                     local hit = b.tick_hit_pool:acquire()
                     hit:SetAnchorFill(r)
                     hit:SetHidden(false)
-                    W.tips[hit] = string.format("%s +%d kills", team_name(sg.team), sg.mag)
-                    if sg.mag >= peak and (x1 - x0) >= 26 then
-                        local ic = b.pin_pool:acquire()
-                        ic:SetTexture("EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
-                        ic:SetDimensions(18, 18)
-                        ic:SetColor(tc[1], tc[2], tc[3], 1)
-                        ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), 23)
-                        ic:SetHidden(false)
-                    end
-                else
-                    local nc = neutral_color()
-                    P.set_rect_color(r, { nc[1], nc[2], nc[3], 0.10 })
+                    W.tips[hit] = string.format("%s  %d kill%s in the last minute", team_name(team), run_c, (run_c == 1) and "" or "s")
                 end
-                r:SetHidden(false)
+                for i = 1, heat.n do
+                    local c = row[i] or 0
+                    local lv = (c > 0) and math.sqrt(c / heat.max) or 0
+                    local q = math.floor(lv * 31 + 0.5) / 31
+                    local t0 = (i - 1) * heat.step
+                    local x0, x1 = mx(math.min(t0, tspan)), mx(math.min(t0 + heat.step, tspan))
+                    if q > 0 and run_x0 and q == run_lv and x0 <= run_x1 then
+                        run_x1 = x1
+                        if c > run_c then run_c = c end
+                    else
+                        flush()
+                        if q > 0 then run_x0, run_x1, run_lv, run_c = x0, x1, q, c else run_x0 = nil end
+                    end
+                end
+                flush()
+            end
+        end
+        local peak = math.max(3, math.ceil(math.max(cmomMax or 1, 1) * 0.75))
+        for _, sg in ipairs(cmom) do
+            if sg.team and sg.mag >= peak then
+                local x0, x1 = mx(sg.t0), mx(sg.t1)
+                if (x1 - x0) >= 26 then
+                    local li = 1
+                    if heat then for k, team in ipairs(heat.teams) do if team == sg.team then li = k end end end
+                    local tc = S.team_color(sg.team)
+                    local ic = b.pin_pool:acquire()
+                    ic:SetTexture("EsoUI/Art/DeathRecap/deathRecap_killingBlow_icon.dds")
+                    ic:SetDimensions(14, 14)
+                    ic:SetColor(tc[1], tc[2], tc[3], 1)
+                    ic:SetAnchor(CENTER, b.mom, TOPLEFT, math.floor((x0 + x1) / 2), top + (li - 1) * (lane_h + lane_gap) + 3)
+                    ic:SetHidden(false)
+                end
             end
         end
     elseif lead then
@@ -375,6 +404,7 @@ function SEC.timeline(m)
         dc.lead = BGMeter.Match.lead_stats(tl)
         dc.bm = BGMeter.Match.bloodiest_minute(m.killfeed)
         dc.cmom, dc.cmomMax = BGMeter.Match.combat_momentum(m.killfeed, tspan)
+        dc.cheat = BGMeter.Match.combat_heat(m.killfeed, tspan)
         W._derived = dc
     end
     local lanes, relicMode = dc.lanes, dc.relicMode
@@ -391,7 +421,9 @@ function SEC.timeline(m)
     end
     local occ_h = occ and L.occ_h or 0
     local tdm_line = (not lanes) and lead ~= nil
+    local heat_lanes = dc.cheat and #dc.cheat.teams or 0
     local mom_h = (dc.cmom or lead) and (tdm_line and 46 or 28) or 0
+    if dc.cmom and heat_lanes > 0 then mom_h = mom_h + 6 + (heat_lanes - 1) * 7 end
 
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
