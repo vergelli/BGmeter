@@ -38,6 +38,20 @@ local function prune(L)
     return drop
 end
 
+function Faces.count_kills(L, killfeed)
+    local n = 0
+    for _, k in ipairs(killfeed or {}) do
+        if k.kind == "kill" and k.dn and L[k.dn] then
+            L[k.dn].k = (L[k.dn].k or 0) + 1
+            n = n + 1
+        elseif k.kind == "death" and k.kn and L[k.kn] then
+            L[k.kn].dk = (L[k.kn].dk or 0) + 1
+            n = n + 1
+        end
+    end
+    return n
+end
+
 function Faces.record(match)
     local L = ledger()
     if not L or not match or not match.battle then return 0 end
@@ -59,13 +73,7 @@ function Faces.record(match)
             n = n + 1
         end
     end
-    for _, k in ipairs(match.killfeed or {}) do
-        if k.kind == "kill" and k.dn and L[k.dn] then
-            L[k.dn].k = (L[k.dn].k or 0) + 1
-        elseif k.kind == "death" and k.kn and L[k.kn] then
-            L[k.kn].dk = (L[k.kn].dk or 0) + 1
-        end
-    end
+    Faces.count_kills(L, match.killfeed)
     local dropped = prune(L)
     BGMeter.Log.debug("faces: %d players recorded, %d pruned", n, dropped)
     return n
@@ -159,6 +167,21 @@ function Faces.brief(e)
     local when = ago(e.last)
     if when then parts[#parts + 1] = when end
     return table.concat(parts, "  ·  ")
+end
+
+function Faces.backfill_kills()
+    local data = sv()
+    if not data or data.faces_kills_seeded then return 0 end
+    data.faces_kills_seeded = true
+    local L = ledger()
+    if not L then return 0 end
+    local matches = data.matches or {}
+    local n = 0
+    for i = #matches, 1, -1 do
+        n = n + Faces.count_kills(L, matches[i].killfeed)
+    end
+    BGMeter.Log.debug("faces: kill exchanges seeded from stored kill feeds, %d entries", n)
+    return n
 end
 
 function Faces.backfill()

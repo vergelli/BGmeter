@@ -480,6 +480,7 @@ end
 local function on_addon_loaded()
     BGMeter.zenimax.savedvars.init(K.SAVED_VARS, 1)
     BGMeter.Faces.backfill()
+    BGMeter.Faces.backfill_kills()
     BGMeter.Ledger.backfill()
     do
         local data = BGMeter.zenimax.savedvars.get()
