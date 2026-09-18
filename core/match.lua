@@ -87,12 +87,18 @@ function Match.column_max(m, key)
     return max
 end
 
+function Match.played_ms(m)
+    if m.playedMs and m.playedMs > 0 then return m.playedMs end
+    return m.durationMs or 0
+end
+
 function Match.derive(m)
     m.durationMs = (m.endMs and m.startMs) and math.max(0, m.endMs - m.startMs) or m.durationMs
     local h = m.haul
     local F = BGMeter.Format
-    h.apPerMin = math.floor(F.per_minute(h.apGained, m.durationMs) + 0.5)
-    h.xpPerMin = math.floor(F.per_minute(h.xpGained, m.durationMs) + 0.5)
+    local played = Match.played_ms(m)
+    h.apPerMin = math.floor(F.per_minute(h.apGained, played) + 0.5)
+    h.xpPerMin = math.floor(F.per_minute(h.xpGained, played) + 0.5)
     local lr = Match.local_row(m)
     local kills = lr and lr.kills or 0
     h.apPerKill = (kills > 0) and math.floor(h.apGained / kills + 0.5) or 0
@@ -404,7 +410,7 @@ function Match.damage_race(m)
     local decoded = {}
     for nm, rec in pairs(tl.p) do
         decoded[nm] = rec.d or Match.unpack_series(rec.s, n)
-        local team = team_of[nm]
+        local team = team_of[nm] or rec.tm
         if team then
             if not seen[team] then seen[team] = true; teams[#teams + 1] = team; series[team] = {} end
             local row = series[team]

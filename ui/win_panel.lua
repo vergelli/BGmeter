@@ -251,18 +251,23 @@ local function refresh_session()
             (sess.streak or 0) >= 2 and string.format("\n%d wins in a row", sess.streak) or "",
             F.commas(sess.ap), F.commas(sess.xp))
     else
-        local Hist = BGMeter.History
-        local n, aw, al = Hist.count(), 0, 0
-        for i = 1, n do
-            local m = Hist.get(i)
-            if m.result == "WIN" then aw = aw + 1 elseif m.result == "LOSS" then al = al + 1 end
+        local tot = BGMeter.Ledger and BGMeter.Ledger.totals() or { n = 0, w = 0, l = 0, t = 0 }
+        local n, aw, al = tot.n, tot.w, tot.l
+        if n == 0 then
+            local Hist = BGMeter.History
+            n = Hist.count()
+            for i = 1, n do
+                local m = Hist.get(i)
+                if m.result == "WIN" then aw = aw + 1 elseif m.result == "LOSS" then al = al + 1 end
+            end
         end
         if n > 0 then
             set_text(st.label, string.format("%dW-%dL all time", aw, al))
             local col = K.COLOR.text_dim
             if aw > al then col = K.COLOR.heal elseif al > aw then col = K.COLOR.accent end
             S.color(st.label, col)
-            st.tip = string.format("All recorded battlegrounds\n%d battles\nNo battles yet this session", n)
+            st.tip = string.format("Every battleground recorded since the ledger began\n%d battles%s\nNo battles yet this session", n,
+                (tot.t > 0) and string.format("  ·  %d tied", tot.t) or "")
         else
             set_text(st.label, "no battles yet")
             S.color(st.label, K.COLOR.text_dim)

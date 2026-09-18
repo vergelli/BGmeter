@@ -380,8 +380,9 @@ function W.render_detail(m)
         local prefix = ic and (F.icon(ic, 16) .. " ") or ""
         local taken = (r.taken and r.taken > 0) and string.format("  ·  %s taken", F.abbrev(r.taken)) or ""
         local eff = ""
-        if m and m.durationMs and m.durationMs > 0 then
-            local dpm = math.floor((r.damage or 0) / math.max(1, m.durationMs / 60000))
+        local played = m and BGMeter.Match.played_ms(m) or 0
+        if played > 0 then
+            local dpm = math.floor((r.damage or 0) / math.max(1, played / 60000))
             eff = string.format("  ·  %s dpm", F.abbrev(dpm))
             if r.kills and r.kills > 0 then
                 eff = eff .. string.format("  ·  %s per kill", F.abbrev(math.floor((r.damage or 0) / r.kills)))
