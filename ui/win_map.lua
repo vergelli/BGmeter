@@ -29,12 +29,32 @@ local FALLBACK_AREA = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.
 local LV = { tile = 1, heat = 2, path = 3, mark = 4, hit = 5 }
 
 local LAYERS = {
-    { key = "map_heat",   label = "Heat",       tip = "Where your team spent its time once the gates opened.\nBrighter = more presence." },
-    { key = "map_path",   label = "Your path",  tip = "Where you went, in gold, up to the scrubbed second." },
+    { key = "map_heat_mode", label = "Heat", cycle = { "presence", "deaths", "off" },
+      names = { presence = "presence", deaths = "deaths", off = "off" },
+      tip = "Click to cycle.\nPresence: where your team spent its time once the gates opened.\nDeaths: where you died and where you got kills, spread around each spot." },
+    { key = "map_path",   label = "Your path",  tip = "Where you went, gold on a halo in your team's colour, up to the scrubbed second." },
     { key = "map_team",   label = "Team paths", tip = "Your teammates' paths, faint, in the team colour." },
     { key = "map_deaths", label = "Deaths",     tip = "Red skull = where you died  ·  gold skull = where you got a kill." },
     { key = "map_pins",   label = "Objectives", tip = "Flags, relics and balls where they were at the scrubbed second." },
 }
+
+local VIRIDIS = {
+    { 0.27, 0.00, 0.33 }, { 0.28, 0.14, 0.46 }, { 0.24, 0.29, 0.54 }, { 0.19, 0.41, 0.56 },
+    { 0.13, 0.57, 0.55 }, { 0.21, 0.72, 0.47 }, { 0.53, 0.83, 0.29 }, { 0.99, 0.91, 0.14 },
+}
+local EMBER = {
+    { 0.20, 0.02, 0.10 }, { 0.45, 0.05, 0.15 }, { 0.72, 0.12, 0.12 }, { 0.90, 0.35, 0.10 },
+    { 0.98, 0.62, 0.15 }, { 1.00, 0.85, 0.40 }, { 1.00, 0.97, 0.75 }, { 1.00, 1.00, 1.00 },
+}
+
+local function ramp(lut, u)
+    u = math.max(0, math.min(1, u))
+    local pos = u * (#lut - 1) + 1
+    local i = math.floor(pos)
+    local f = pos - i
+    local a, b = lut[i], lut[math.min(#lut, i + 1)]
+    return a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f
+end
 
 local built = false
 local c = nil
@@ -114,8 +134,7 @@ local function build()
     win:SetDimensionConstraints(L.map_min, L.map_min - 120, L.max_w, L.max_h)
     win:SetHandler("OnMoveStop", on_move_stop)
     win:SetHandler("OnResizeStop", function()
-        local gg = sv_win()
-        gg.w, gg.h = win:GetWidth(), win:GetHeight()
+        M.snap_size()
         M.render()
     end)
     Scene.register_top_level(win, function() M.close() end)
@@ -177,39 +196,70 @@ local function build()
     c.close = mk_button(win, TX.close, 20, function() M.close() end, "Close")
     c.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -14, 14)
 
+    local edge = { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], K.ALPHA.chart_edge }
+    local function card(y, h, heading)
+        local box = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
+        box:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, y)
+        box:SetDimensions(LEGEND_W, h)
+        local bg = P.rect(box, { 1, 1, 1, K.ALPHA.chart_bg })
+        bg:SetAnchorFill(box)
+        P.hairline_box(box, edge)
+        local hd = P.label(box, S.FONT.small, K.COLOR.gold)
+        hd:SetText(heading)
+        hd:SetAnchor(TOPLEFT, box, TOPLEFT, 8, 5)
+        hd:SetDimensions(LEGEND_W - 16, 14)
+        local rule = P.rect(box, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 })
+        rule:SetAnchor(TOPLEFT, box, TOPLEFT, 8, 22)
+        rule:SetAnchor(TOPRIGHT, box, TOPRIGHT, -8, 22)
+        rule:SetHeight(1)
+        return box
+    end
+
+    c.layersCard = card(48, 30 + #LAYERS * 24 + 6, "LAYERS")
     c.toggles = {}
-    local y = 52
+    local y = 30
     for i, lay in ipairs(LAYERS) do
         local t = {}
-        t.hit = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
-        t.hit:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, y)
-        t.hit:SetDimensions(LEGEND_W, 22)
+        t.hit = BGMeter.zenimax.ui.create_control(nil, c.layersCard, CT_CONTROL)
+        t.hit:SetAnchor(TOPLEFT, c.layersCard, TOPLEFT, 8, y)
+        t.hit:SetDimensions(LEGEND_W - 16, 22)
         t.hit:SetMouseEnabled(true)
         t.mark = P.rect(t.hit, K.COLOR.accent)
         t.mark:SetAnchor(LEFT, t.hit, LEFT, 0, 0)
         t.mark:SetDimensions(3, 14)
         t.label = P.label(t.hit, S.FONT.row, K.COLOR.text)
         t.label:SetAnchor(LEFT, t.hit, LEFT, 12, 0)
-        t.label:SetAnchor(RIGHT, t.hit, RIGHT, 0, 0)
         t.label:SetHeight(22)
         set_text(t.label, lay.label)
+        t.value = P.label(t.hit, S.FONT.small, K.COLOR.text_dim)
+        t.value:SetAnchor(RIGHT, t.hit, RIGHT, -4, 0)
+        t.value:SetDimensions(70, 22)
+        t.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
         t.hit:SetHandler("OnMouseUp", function(_, _, upInside)
-            if upInside then
+            if not upInside then return end
+            if lay.cycle then
+                local cur = Prefs.get(lay.key)
+                local idx = 1
+                for j, v in ipairs(lay.cycle) do if v == cur then idx = j break end end
+                Prefs.set(lay.key, lay.cycle[(idx % #lay.cycle) + 1])
+            else
                 Prefs.toggle(lay.key)
-                Sound.play("nav")
-                M.render()
             end
+            Sound.play("nav")
+            M.render()
         end)
         t.hit:SetHandler("OnMouseEnter", function() if U.card_show then U.card_show(t.hit, RIGHT, lay.tip) end end)
         t.hit:SetHandler("OnMouseExit", function() if U.card_hide then U.card_hide() end end)
-        t.key = lay.key
+        t.lay = lay
         c.toggles[i] = t
         y = y + 24
     end
 
-    c.legend = P.label(win, S.FONT.small, K.COLOR.text_dim)
-    c.legend:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, y + 8)
-    c.legend:SetDimensions(LEGEND_W, 140)
+    local legendTop = 48 + 30 + #LAYERS * 24 + 6 + 10
+    c.legendCard = card(legendTop, 96, "MATCH")
+    c.legend = P.label(c.legendCard, S.FONT.small, K.COLOR.text_dim)
+    c.legend:SetAnchor(TOPLEFT, c.legendCard, TOPLEFT, 8, 28)
+    c.legend:SetAnchor(BOTTOMRIGHT, c.legendCard, BOTTOMRIGHT, -8, -6)
     c.legend:SetVerticalAlignment(TEXT_ALIGN_TOP)
 
     c.dockHint = P.label(win, S.FONT.small, K.COLOR.text_dim)
@@ -235,10 +285,24 @@ local function build()
     built = true
 end
 
+local function side_for(w, h)
+    return math.max(120, math.min(w - LEGEND_W - 3 * PAD, h - 2 * PAD - SCRUB_H - 6))
+end
+
+function M.snap_size()
+    local win = c.win
+    local side = side_for(win:GetWidth(), win:GetHeight())
+    local w, h = side + LEGEND_W + 3 * PAD, side + 2 * PAD + SCRUB_H + 6
+    win:SetDimensions(w, h)
+    local gg = sv_win()
+    gg.w, gg.h = w, h
+    return w, h
+end
+
 local function layout()
     local win = c.win
     local w, h = win:GetWidth(), win:GetHeight()
-    local side = math.max(120, math.min(w - LEGEND_W - 3 * PAD, h - 2 * PAD - SCRUB_H - 6))
+    local side = side_for(w, h)
     state.side = side
     c.map:SetDimensions(side, side)
     c.slider:SetWidth(math.max(60, side - 84))
@@ -326,21 +390,26 @@ local function release_all()
     c.hit_pool:release_all()
 end
 
-local function draw_heat(geo, m)
-    local heat = BGMeter.Match.geo_heat(geo, m, BINS)
+local function draw_heat(geo, m, mode)
+    local heat, lut
+    if mode == "deaths" then
+        heat, lut = BGMeter.Match.geo_heat_deaths(geo, m, BINS), EMBER
+    else
+        heat, lut = BGMeter.Match.geo_heat(geo, m, BINS), VIRIDIS
+    end
     if not heat then return end
     local cell = state.side / BINS
-    local tc = S.team_color(m.localTeam)
     for by = 1, BINS do
         for bx = 1, BINS do
             local v = heat.grid[(by - 1) * BINS + bx]
             if v and v > 0 then
+                local u = math.min(1, v / heat.cap)
                 local r = c.heat_pool:acquire()
                 r:ClearAnchors()
                 r:SetAnchor(TOPLEFT, c.map, TOPLEFT, (bx - 1) * cell, (by - 1) * cell)
                 r:SetDimensions(cell + 0.5, cell + 0.5)
-                local a = 0.22 + 0.62 * math.min(1, v / heat.cap) ^ 0.5
-                P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
+                local cr, cg, cb = ramp(lut, u)
+                P.set_rect_color(r, { cr, cg, cb, 0.12 + 0.70 * u ^ 0.6 })
                 r:SetHidden(false)
             end
         end
@@ -364,7 +433,8 @@ local function draw_paths(geo, m, idx, t)
         local s = me or (mine and geo.pos[mine])
         if s then
             local xs, ys, n = scaled(s, upto, me ~= nil)
-            polyline(xs, ys, n, K.COLOR.you, 6, 0.22)
+            local tc = S.team_color(m.localTeam)
+            polyline(xs, ys, n, tc, 7, 0.40)
             polyline(xs, ys, n, K.COLOR.you, 3, 1)
         end
     end
@@ -461,9 +531,12 @@ function M.render()
     release_all()
     layout()
     for _, t in ipairs(c.toggles) do
-        local on = Prefs.get(t.key)
+        local lay = t.lay
+        local v = Prefs.get(lay.key)
+        local on = lay.cycle and (v ~= "off") or (v and true or false)
         t.mark:SetHidden(not on)
         S.color(t.label, on and K.COLOR.text or K.COLOR.text_dim)
+        set_text(t.value, lay.cycle and (lay.names[v] or tostring(v)) or (on and "on" or "off"))
     end
     if state.m ~= m then state.t = nil end
     state.m = m
@@ -489,7 +562,8 @@ function M.render()
     state.applying = false
     local idx = BGMeter.Match.geo_index(geo, state.t)
     set_text(c.sub, string.format("%s  ·  %s", m.name or "Battleground", m.map and m.map.name or ""))
-    if Prefs.get("map_heat") then draw_heat(geo, m) end
+    local hm = Prefs.get("map_heat_mode")
+    if hm ~= "off" then draw_heat(geo, m, hm) end
     draw_paths(geo, m, idx, state.t)
     if Prefs.get("map_deaths") then draw_deaths(geo, m, state.t) end
     if Prefs.get("map_pins") then draw_pins(geo, idx) end

@@ -505,31 +505,88 @@ function Match.geo_index(geo, t)
     return idx
 end
 
+local function heat_blur(grid, bins, passes)
+    local src = grid
+    for _ = 1, passes or 1 do
+        local out = {}
+        for by = 1, bins do
+            for bx = 1, bins do
+                local acc, wsum = 0, 0
+                for dy = -1, 1 do
+                    local yy = by + dy
+                    if yy >= 1 and yy <= bins then
+                        local wy = (dy == 0) and 2 or 1
+                        for dx = -1, 1 do
+                            local xx = bx + dx
+                            if xx >= 1 and xx <= bins then
+                                local w = wy * ((dx == 0) and 2 or 1)
+                                local v = src[(yy - 1) * bins + xx]
+                                if v then acc = acc + v * w end
+                                wsum = wsum + w
+                            end
+                        end
+                    end
+                end
+                if acc > 0 then out[(by - 1) * bins + bx] = acc / wsum end
+            end
+        end
+        src = out
+    end
+    return src
+end
+
+local function heat_finish(grid, bins, passes, pct)
+    local blurred = heat_blur(grid, bins, passes)
+    local vals, max = {}, 0
+    for _, v in pairs(blurred) do
+        vals[#vals + 1] = v
+        if v > max then max = v end
+    end
+    if max <= 0 then return nil end
+    table.sort(vals)
+    local cap = vals[math.max(1, math.floor(#vals * (pct or 0.95)))] or max
+    if cap <= 0 then cap = max end
+    return { grid = blurred, max = max, cap = cap, bins = bins }
+end
+
+local function heat_add(grid, bins, x, y, w)
+    local bx = math.min(bins, math.floor(x / 1000 * bins) + 1)
+    local by = math.min(bins, math.floor(y / 1000 * bins) + 1)
+    local k = (by - 1) * bins + bx
+    grid[k] = (grid[k] or 0) + (w or 1)
+end
+
 function Match.geo_heat(geo, m, bins)
     if not geo then return nil end
     bins = bins or 32
-    local grid, max = {}, 0
+    local grid, any = {}, false
     for nm, s in pairs(geo.pos) do
         if geo.team[nm] == m.localTeam or nm == geo.mine then
             for i = 1, geo.n do
                 local x, y = s.x[i], s.y[i]
                 if x and y and (x > 0 or y > 0) and (geo.t[i] or 0) >= (geo.startT or 0) then
-                    local bx = math.min(bins, math.floor(x / 1000 * bins) + 1)
-                    local by = math.min(bins, math.floor(y / 1000 * bins) + 1)
-                    local k = (by - 1) * bins + bx
-                    grid[k] = (grid[k] or 0) + 1
-                    if grid[k] > max then max = grid[k] end
+                    heat_add(grid, bins, x, y, 1)
+                    any = true
                 end
             end
         end
     end
-    if max == 0 then return nil end
-    local vals = {}
-    for _, v in pairs(grid) do vals[#vals + 1] = v end
-    table.sort(vals)
-    local cap = vals[math.max(1, math.floor(#vals * 0.92))] or max
-    if cap < 1 then cap = 1 end
-    return { grid = grid, max = max, cap = cap, bins = bins }
+    if not any then return nil end
+    return heat_finish(grid, bins, 1, 0.95)
+end
+
+function Match.geo_heat_deaths(geo, m, bins)
+    if not m or not m.killfeed then return nil end
+    bins = bins or 32
+    local grid, any = {}, false
+    for _, k in ipairs(m.killfeed) do
+        if k.x and k.y and k.kind then
+            heat_add(grid, bins, k.x, k.y, 1)
+            any = true
+        end
+    end
+    if not any then return nil end
+    return heat_finish(grid, bins, 3, 1.0)
 end
 
 function Match.damage_race(m)
