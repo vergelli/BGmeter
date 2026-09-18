@@ -915,6 +915,7 @@ local function mini_prepare()
         end
     end
     for i = n + 1, #xs do xs[i], ys[i] = nil, nil end
+    if mini.line_pool then mini.line_pool:release_all() end
     mscratch.n, mscratch.drawn, mscratch.side, mscratch.geo = n, 0, mstate.side, geo
 end
 
@@ -1021,6 +1022,8 @@ function M.mini_update(m, parent, x, y, avail)
         mini.frame:SetHidden(true)
         mini_stop()
         mstate.geo, mstate.m = nil, nil
+        mscratch.geo = nil
+        mini_draw()
         return false
     end
     mstate.side = side
@@ -1029,7 +1032,10 @@ function M.mini_update(m, parent, x, y, avail)
     mini.frame:SetDimensions(outer, outer)
     mini.root:SetDimensions(side, side)
     mini.frame:SetHidden(false)
-    if mstate.m ~= m then mstate.t = 0 end
+    if mstate.m ~= m then
+        mstate.t = 0
+        mscratch.geo = nil
+    end
     mstate.m, mstate.geo = m, geo
     mini_tiles(m)
     local tspan = geo.t[geo.n] or 1
