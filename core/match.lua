@@ -485,6 +485,7 @@ function Match.lead_stats(tl)
     local leader = nil
     local maxLead = { team = nil, lead = 0, t = 0 }
     for i = 1, #tl.t do
+        if i > 1 and tl.r and tl.r[i] ~= tl.r[i - 1] then leader = nil end
         local best, second, bestTeam = 0, 0, nil
         for s = 1, 3 do
             local team = teams[s]
@@ -508,6 +509,54 @@ function Match.lead_stats(tl)
     if not maxLead.team then return nil end
     return { changes = changes, maxTeam = maxLead.team, maxLead = maxLead.lead,
              maxAt = maxLead.t, finalLeader = leader }
+end
+
+function Match.round_marks(tl)
+    if not tl or not tl.t or not tl.r or #tl.t < 2 then return nil end
+    local marks = {}
+    for i = 2, #tl.t do
+        if tl.r[i] ~= tl.r[i - 1] then
+            marks[#marks + 1] = { i = i, t = tl.t[i], r = tl.r[i] }
+        end
+    end
+    if #marks == 0 then return nil end
+    return marks
+end
+
+function Match.smooth3(arr, n)
+    n = n or #arr
+    local out = {}
+    for i = 1, n do
+        local a = arr[math.max(1, i - 1)] or 0
+        local b = arr[i] or 0
+        local c = arr[math.min(n, i + 1)] or 0
+        out[i] = (a + 2 * b + c) / 4
+    end
+    return out
+end
+
+function Match.kill_pressure(killfeed, tspan, binMs)
+    if not killfeed or #killfeed == 0 or not tspan or tspan <= 0 then return nil end
+    binMs = binMs or 60000
+    local bins = math.max(1, math.ceil(tspan / binMs))
+    local counts, teams, seen, maxv, total = {}, {}, {}, 0, 0
+    for _, k in ipairs(killfeed) do
+        local team = k.kt
+        if team then
+            local b = math.floor(math.max(0, math.min(k.t or 0, tspan - 1)) / binMs) + 1
+            if not seen[team] then
+                seen[team] = true
+                teams[#teams + 1] = team
+                counts[team] = {}
+            end
+            counts[team][b] = (counts[team][b] or 0) + 1
+            if counts[team][b] > maxv then maxv = counts[team][b] end
+            total = total + 1
+        end
+    end
+    if #teams == 0 or maxv == 0 then return nil end
+    table.sort(teams)
+    return { bins = bins, binMs = binMs, teams = teams, counts = counts, max = maxv, total = total }
 end
 
 function Match.bloodiest_minute(killfeed, windowMs)

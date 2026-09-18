@@ -9,6 +9,7 @@ local function sv()
 end
 
 local HEAVY_KEEP = 10
+History.HEAVY_KEEP = HEAVY_KEEP
 
 function History.push(match)
     local data = sv()
