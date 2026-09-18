@@ -2,12 +2,15 @@
 
 ## [0.3.0]
 
-- About drawer at the bottom edge of the Registry: version, author, AI disclosure, credits, the caps for matches and familiar faces, commands and where to send feedback, each with a hover for the details; and a STORAGE panel with two bars, matches and faces, reading bytes used over bytes available. Available is not a game limit: it is the size the store would reach at the cap the addon sets itself (Settings > Matches kept; 1500 faces), estimated the way the game writes saved variables.
+- Saved matches: a lock on every Registry row keeps that match forever, outside the "Matches kept" cap and with its charts if it still has them, up to ten. A Saved matches drawer at the bottom edge of the Registry (chest glyph) lists them, newest first, click to open; the hover says whether the charts survived. The Registry footer says so when the ten are full.
+- About drawer at the bottom edge of the Registry (overview glyph): version, author, credits, and the caps for matches and familiar faces, with a STORAGE panel of two bars, matches and faces, reading bytes used over bytes available. Available is not a game limit: it is the size the store would reach at the addon's own caps, saved matches included, estimated the way the game writes saved variables.
+- Competitive standing tiers moved up: Champion is the top 10, Mythic the top 25, Legendary the top 100, Epic the top 250, and two new tiers below, Superior (top 500, blue) and Fine (top 1000, green). Every tier's glow breathes slowly and a small glint crosses the trophy every few seconds; Champions keep the chrome rainbow, and rank 1 gets a second glint. Animations off keeps the still glow.
+- The drawer glyphs on the Registry edge show their real hover and pressed art.
 - A KILL PRESSURE strip under the damage race: kills per minute, one bar per team, the two teams mirrored around a middle line. Hover a minute for the count. It shows when the window has room, like the race.
 - The damage race lines are lightly smoothed, sit on a soft halo and fill toward the floor in their team's colour.
 - The score chart marks each new round with a dashed line and a label, ticks the minutes along the bottom, shows the top score and names the teams in colour next to the title.
 - Every chart strip wears a thin frame.
-- The veterancy link wears the campaign veterancy glyph and the leaderboard link the battlegrounds glyph, both larger, instead of the small arrow.
+- The veterancy link wears the campaign veterancy glyph and the leaderboard link the battlegrounds glyph, twice the size of the old arrow.
 - Alliance Points and experience per minute, and damage per minute in the detail line, count played minutes only: the countdown before the gates open no longer deflates them. Matches recorded before this keep their old rates.
 - Fixed: a rating drop of exactly three digits read as "-,245" on the standing panel.
 - Fixed: a player who left before the end vanished from their team's damage race line. Each sampled player now stays on the team they were sampled on.

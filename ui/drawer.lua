@@ -316,7 +316,6 @@ function Drawer:init(pw)
     tab.root:SetMouseEnabled(true)
     if tab.root.SetDrawLevel then tab.root:SetDrawLevel(10) end
     tab.icon = P.button(tab.root, spec.icon, spec.icon_down, spec.icon_over)
-    if tab.icon.SetMouseOverBlendMode and TEXTURE_BLEND_MODE_ADD then tab.icon:SetMouseOverBlendMode(TEXTURE_BLEND_MODE_ADD) end
     tab.icon:SetDimensions(MEDAL, MEDAL)
     tab.icon:SetAnchor(CENTER, tab.root, CENTER, 0, 0)
     tab.icon:SetAlpha(0.85)

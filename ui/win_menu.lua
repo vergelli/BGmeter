@@ -25,11 +25,6 @@ local LAUNCHER_IDLE = 0.90
 local MENU_ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
 local MENU_ART_ALPHA = 0.30
 
-local MODE_SHORT = {
-    deathmatch = "DM", domination = "DOM", crazy_king = "CK",
-    king_of_the_hill = "KOTH", capture_the_flag = "CTF", murderball = "BALL",
-}
-
 local MENU_W = 388
 local MENU_H = 530
 local ROW_H = 28
@@ -84,20 +79,9 @@ local function ago_label(capturedAt)
     return math.floor(s / 86400) .. "d ago"
 end
 
-local function result_color(res)
-    if res == "WIN" then return K.COLOR.heal end
-    if res == "LOSS" then return K.COLOR.accent end
-    if res == "TIE" then return K.COLOR.gold end
-    return K.COLOR.text_dim
-end
-
-local function mode_tag(m)
-    local C = BGMeter.zenimax.constants
-    local gt = C.GAME_TYPE_LABEL[m.gameType]
-    local tag = MODE_SHORT[gt] or "?"
-    if m.teamSize then tag = tag .. "  " .. m.teamSize .. "v" .. m.teamSize end
-    return tag
-end
+local result_color, mode_tag = U.result_color, U.mode_tag
+local flash, flash_until = nil, 0
+local FLASH_MS = 3000
 
 local art_tries = 0
 
@@ -160,19 +144,19 @@ local function make_row(i)
     U.clamp_line(r.name)
 
     r.kda = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
-    r.kda:SetAnchor(RIGHT, r.container, RIGHT, -154, 0)
+    r.kda:SetAnchor(RIGHT, r.container, RIGHT, -172, 0)
     r.kda:SetDimensions(60, ROW_H)
     r.kda:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     U.clamp_line(r.kda)
 
     r.mode = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
-    r.mode:SetAnchor(RIGHT, r.container, RIGHT, -88, 0)
+    r.mode:SetAnchor(RIGHT, r.container, RIGHT, -106, 0)
     r.mode:SetDimensions(62, ROW_H)
     r.mode:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     U.clamp_line(r.mode)
 
     r.ago = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
-    r.ago:SetAnchor(RIGHT, r.container, RIGHT, -26, 0)
+    r.ago:SetAnchor(RIGHT, r.container, RIGHT, -44, 0)
     r.ago:SetDimensions(56, ROW_H)
     r.ago:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     U.clamp_line(r.ago)
@@ -186,6 +170,15 @@ local function make_row(i)
         M.request_delete(r.index)
     end, "Delete this match\nClick twice")
     r.del:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
+
+    r.lock = mk_button(r.container, TX.unlock, 14, function() M.toggle_pin(r.index) end)
+    r.lock:SetAnchor(RIGHT, r.container, RIGHT, -24, 0)
+    r.lock:SetHandler("OnMouseEnter", function(b)
+        if r.lockTip and U.card_show then U.card_show(b, BOTTOM, r.lockTip) end
+    end)
+    r.lock:SetHandler("OnMouseExit", function()
+        if U.card_hide then U.card_hide() end
+    end)
 
     r.container:SetHandler("OnMouseEnter", function()
         r.highlight:SetHidden(false)
@@ -423,6 +416,14 @@ function M.update_footer(count, vis)
             clean(nm) or "battleground", F.duration(el or 0)))
         return
     end
+    if flash then
+        local now = BGMeter.zenimax.api.now_ms and BGMeter.zenimax.api.now_ms() or 0
+        if now < flash_until then
+            set_text(panel.footer, flash)
+            return
+        end
+        flash = nil
+    end
     count = count or BGMeter.History.count()
     vis = vis or math.min(count, panel.vis or count)
     if panel.vis and count > panel.vis then
@@ -542,7 +543,15 @@ function M.refresh()
         r.container:SetHidden(false)
         r.highlight:SetHidden(true)
         r.delArm:SetHidden(armed_index ~= idx)
-        r.name:SetWidth(math.max(72, roww - 232))
+        r.name:SetWidth(math.max(72, roww - 250))
+        local tx = m.pinned and TX.lock or TX.unlock
+        r.lock:SetNormalTexture(tx.n)
+        r.lock:SetPressedTexture(tx.p)
+        r.lock:SetMouseOverTexture(tx.o)
+        r.lock._tex_normal = tx.n
+        r.lock:SetAlpha(m.pinned and 1 or 0.55)
+        r.lockTip = m.pinned and "Saved: never pruned\nClick to release it"
+            or string.format("Save this match\nKept outside the %d cap, charts and all", BGMeter.History.PIN_CAP)
         P.set_rect_color(r.pip, result_color(m.result))
         set_text(r.name, m.name or "Battleground")
         S.color(r.name, (BGMeter.UI.window.current() == idx and not BGMeter.UI.window.is_hidden()) and K.COLOR.you or K.COLOR.text)
@@ -600,12 +609,37 @@ end
 
 function M.armed_index() return armed_index end
 
+function M.toggle_pin(index)
+    local H = BGMeter.History
+    if not index or not H.get(index) then return false end
+    local ok
+    if H.is_pinned(index) then
+        ok = H.unpin(index)
+        if ok then Sound.play("close") end
+    else
+        local why
+        ok, why = H.pin(index)
+        if ok then Sound.play("pb")
+        elseif why == "full" then
+            Sound.play("deny")
+            flash = string.format("|c%ssaved matches are full (%d)  ·  release one first|r", U.hexc(K.COLOR.accent), H.PIN_CAP)
+            flash_until = (BGMeter.zenimax.api.now_ms and BGMeter.zenimax.api.now_ms() or 0) + FLASH_MS
+        end
+    end
+    if BGMeter.Storage then BGMeter.Storage.invalidate() end
+    each_drawer("invalidate")
+    M.refresh()
+    return ok
+end
+
 function M.stat_text(key) return Panel.stat_text(key) end
 function M.stat_link_hidden(key) return Panel.stat_link_hidden(key) end
 function M.stat_claim_hidden(key) return Panel.stat_claim_hidden(key) end
 function M.stat_claim_tip(key) return Panel.stat_claim_tip(key) end
 function M.podium_on() return Panel.podium_on() end
 function M.row_kda(i) return rows[i] and rows[i].kda:GetText() or nil end
+function M.rows() return rows end
+function M.footer_text() return panel and panel.footer:GetText() or nil end
 
 function M.on_double_click()
     if not built then return end

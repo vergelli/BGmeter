@@ -15,8 +15,9 @@ local Prefs = BGMeter.Prefs
 local Panel = {}
 
 local TELVAR = CURT_TELVAR_STONES
-local LINK_SIZE = 22
+local LINK_SIZE = 32
 local CLAIM_SIZE = 20
+local GLINT = "EsoUI/Art/HUD/starburst.dds"
 
 local stats = nil
 local host = nil
@@ -33,9 +34,23 @@ local function clean(s)
     return (tostring(s):gsub("%^.*$", ""))
 end
 
-local PODIUM = { name = "BGMeterPodiumGlow", ms = 40, period_ms = 1200, on = false, t0 = 0 }
+local TIERS = {
+    { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true },
+    { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60 },
+    { max = 100,  word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50 },
+    { max = 250,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42 },
+    { max = 500,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36 },
+    { max = 1000, word = "Fine",      col = { 0.45, 0.82, 0.35 }, glow = 0.30 },
+}
+Panel.TIERS = TIERS
 
-local function podium_now()
+local FX = { name = "BGMeterStandingFx", ms = 40, on = false, t0 = 0, tier = nil, rank = 0 }
+local BREATH_MS = 2600
+local HUE_MS = 1200
+local GLINT_MS = 3400
+local GLINT_ON = 0.16
+
+local function fx_now()
     if GetGameTimeMilliseconds then return GetGameTimeMilliseconds() end
     return os.clock() * 1000
 end
@@ -52,37 +67,86 @@ local function hue_rgb(h)
     return 1, 0, 1 - f
 end
 
-function Panel.podium_stop()
-    if not PODIUM.on then return end
-    PODIUM.on = false
-    BGMeter.zenimax.events.unregister_update(PODIUM.name)
-end
-
-local function podium_tick()
-    local st = stats and stats.stand
-    if not (st and st.glow) or host.win:IsHidden() then Panel.podium_stop() return end
-    local t = ((podium_now() - PODIUM.t0) % PODIUM.period_ms) / PODIUM.period_ms
-    local r, g, b = hue_rgb(t)
-    st.glow:SetColor(0.45 + 0.55 * r, 0.45 + 0.55 * g, 0.45 + 0.55 * b, 0.90)
-    local r2, g2, b2 = hue_rgb(t + 0.5)
-    st.icon:SetColor(0.80 + 0.20 * r2, 0.80 + 0.20 * g2, 0.80 + 0.20 * b2, 1)
-end
-
-local function podium_start()
-    if PODIUM.on then return end
-    PODIUM.on = true
-    PODIUM.t0 = podium_now()
-    BGMeter.zenimax.events.register_update(PODIUM.name, PODIUM.ms, podium_tick)
-    podium_tick()
-end
-
-function Panel.podium_on() return PODIUM.on end
-
 local function trophy_tier(rank)
-    if rank <= 3 then return { 0.97, 0.97, 1.00 }, 0.90, "Champion!" end
-    if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60, "Mythic!" end
-    if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50, "Legendary" end
-    return { 0.72, 0.53, 0.98 }, 0.42, "Epic"
+    for _, tier in ipairs(TIERS) do
+        if rank <= tier.max then return tier end
+    end
+    return nil
+end
+
+function Panel.tier_of(rank) return trophy_tier(rank) end
+
+local function glint_set(ic, u, side)
+    if not ic then return end
+    if u == nil then ic:SetHidden(true) return end
+    local s = math.sin(math.pi * u)
+    ic:SetAlpha(s)
+    ic:SetScale(0.5 + 0.7 * s)
+    if ic.SetTextureRotation then ic:SetTextureRotation(u * math.pi * 0.5 * side) end
+    ic:SetHidden(false)
+end
+
+function Panel.podium_stop()
+    if not FX.on then return end
+    FX.on = false
+    FX.tier = nil
+    BGMeter.zenimax.events.unregister_update(FX.name)
+    local st = stats and stats.stand
+    if st then glint_set(st.glint1, nil); glint_set(st.glint2, nil) end
+end
+
+local function fx_tick()
+    local st = stats and stats.stand
+    local tier = FX.tier
+    if not (st and st.glow and tier) or host.win:IsHidden() then Panel.podium_stop() return end
+    local t = fx_now() - FX.t0
+    local breath = 0.82 + 0.18 * math.sin(2 * math.pi * t / BREATH_MS)
+    local col = tier.col
+    if tier.hue then
+        local u = (t % HUE_MS) / HUE_MS
+        local r, g, b = hue_rgb(u)
+        st.glow:SetColor(0.45 + 0.55 * r, 0.45 + 0.55 * g, 0.45 + 0.55 * b, tier.glow * breath)
+        local r2, g2, b2 = hue_rgb(u + 0.5)
+        st.icon:SetColor(0.80 + 0.20 * r2, 0.80 + 0.20 * g2, 0.80 + 0.20 * b2, 1)
+    else
+        st.glow:SetColor(col[1], col[2], col[3], tier.glow * breath)
+    end
+    local g = (t % GLINT_MS) / GLINT_MS
+    glint_set(st.glint1, (g < GLINT_ON) and (g / GLINT_ON) or nil, 1)
+    local g2 = ((t + GLINT_MS / 2) % GLINT_MS) / GLINT_MS
+    glint_set(st.glint2, (FX.rank == 1 and g2 < GLINT_ON) and (g2 / GLINT_ON) or nil, -1)
+end
+
+local function fx_start(tier, rank)
+    FX.tier, FX.rank = tier, rank
+    if FX.on then return end
+    FX.on = true
+    FX.t0 = fx_now()
+    BGMeter.zenimax.events.register_update(FX.name, FX.ms, fx_tick)
+    fx_tick()
+end
+
+function Panel.podium_on() return FX.on end
+
+local function ensure_fx_controls(st)
+    if st.glow then return end
+    st.glow = P.icon(st.c, "bgmeter/assets/glow.dds")
+    st.glow:SetAnchor(CENTER, st.icon, CENTER, 0, 0)
+    st.glow:SetDimensions(64, 64)
+    if st.glow.SetBlendMode then st.glow:SetBlendMode(TEX_BLEND_MODE_ADD) end
+    if st.glow.SetDrawLevel then st.glow:SetDrawLevel(1) end
+    if st.icon.SetDrawLevel then st.icon:SetDrawLevel(2) end
+    st.glint1 = P.icon(st.c, GLINT)
+    st.glint1:SetDimensions(14, 14)
+    st.glint1:SetAnchor(CENTER, st.icon, TOPRIGHT, -8, 7)
+    st.glint2 = P.icon(st.c, GLINT)
+    st.glint2:SetDimensions(10, 10)
+    st.glint2:SetAnchor(CENTER, st.icon, BOTTOMLEFT, 9, -9)
+    for _, ic in ipairs({ st.glint1, st.glint2 }) do
+        if ic.SetBlendMode then ic:SetBlendMode(TEX_BLEND_MODE_ADD) end
+        if ic.SetDrawLevel then ic:SetDrawLevel(3) end
+        ic:SetHidden(true)
+    end
 end
 
 local function refresh_ava()
@@ -166,26 +230,19 @@ local function refresh_standing()
     st.c:SetHidden(false)
     if st.link then st.link:SetHidden(false) end
     if standing and (standing.rank or 0) > 0 then
-        local top = standing.rank <= 100
+        local tier = trophy_tier(standing.rank)
         if st.icon then
-            st.icon:SetTexture(top and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
+            st.icon:SetTexture(tier and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
                 or "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
             local tierTag = ""
-            if top then
-                local col, glowA, word = trophy_tier(standing.rank)
+            if tier then
+                ensure_fx_controls(st)
+                local col = tier.col
                 st.icon:SetColor(col[1], col[2], col[3], 1)
-                if not st.glow then
-                    st.glow = P.icon(st.c, "bgmeter/assets/glow.dds")
-                    st.glow:SetAnchor(CENTER, st.icon, CENTER, 0, 0)
-                    st.glow:SetDimensions(64, 64)
-                    if st.glow.SetBlendMode then st.glow:SetBlendMode(TEX_BLEND_MODE_ADD) end
-                    if st.glow.SetDrawLevel then st.glow:SetDrawLevel(1) end
-                    if st.icon.SetDrawLevel then st.icon:SetDrawLevel(2) end
-                end
-                st.glow:SetColor(col[1], col[2], col[3], glowA)
+                st.glow:SetColor(col[1], col[2], col[3], tier.glow)
                 st.glow:SetHidden(false)
-                if standing.rank <= 3 and Prefs.get("animate") then podium_start() else Panel.podium_stop() end
-                tierTag = string.format("  ·  |c%s%s|r", F.hexc(col), word)
+                if Prefs.get("animate") then fx_start(tier, standing.rank) else Panel.podium_stop() end
+                tierTag = string.format("  ·  |c%s%s|r", F.hexc(col), tier.word)
             else
                 Panel.podium_stop()
                 st.icon:SetColor(1, 1, 1, 1)
@@ -317,12 +374,12 @@ local function make_stat(pw, rowi, right, withIcon, withBar, link)
         st.label:SetHeight(20)
         if link then
             st.link = mk_button(c, link.tx, LINK_SIZE, link.fn, link.tip)
-            st.link:SetAnchor(TOPRIGHT, c, TOPRIGHT, 2, 1)
+            st.link:SetAnchor(RIGHT, c, RIGHT, 4, 0)
             st.link:SetHidden(true)
             if link.claim then
                 st.textX = textX
                 st.claim = mk_button(c, TX.satchel, CLAIM_SIZE, link.claim, nil)
-                st.claim:SetAnchor(TOPRIGHT, c, TOPRIGHT, -(LINK_SIZE + 2), 3)
+                st.claim:SetAnchor(TOPRIGHT, c, TOPRIGHT, -(LINK_SIZE + 2), 1)
                 st.claim:SetHidden(true)
                 st.claim:SetHandler("OnMouseEnter", function(b)
                     if U.card_show then U.card_show(b, BOTTOM, st.claim_tip or "") end
@@ -334,16 +391,16 @@ local function make_stat(pw, rowi, right, withIcon, withBar, link)
         end
         st.bar = U.inset_bar(c)
         st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
-        st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -3)
+        st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, linkInset, -3)
         st.bar.container:SetHeight(9)
-        st.barW = 200 - textX
+        st.barW = 200 - textX + linkInset
     else
         st.label:SetAnchor(LEFT, c, LEFT, textX, 0)
         st.label:SetAnchor(RIGHT, c, RIGHT, linkInset, 0)
         st.label:SetHeight(rowH)
         if link then
             st.link = mk_button(c, link.tx, LINK_SIZE, link.fn, link.tip)
-            st.link:SetAnchor(RIGHT, c, RIGHT, 2, 0)
+            st.link:SetAnchor(RIGHT, c, RIGHT, 4, 0)
             st.link:SetHidden(true)
         end
     end

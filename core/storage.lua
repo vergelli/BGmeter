@@ -66,6 +66,7 @@ local function cache_key(data)
     local prefs = data.prefs or {}
     return table.concat({
         tostring(#matches), tostring(first and first.capturedAt or 0), tostring(prefs.max_history or 0),
+        tostring(BGMeter.History.pinned_count()),
         tostring(count(data.faces)), tostring(data.ledger and data.ledger.streak or 0),
     }, "|")
 end
@@ -82,11 +83,13 @@ function Storage.report()
     local heavyKeep = History.HEAVY_KEEP or 10
     local cap = (data.prefs and data.prefs.max_history) or 50
 
-    local heavySum, heavyN, lightSum, lightN, strippedSum = 0, 0, 0, 0, 0
+    local pinCap = History.PIN_CAP or 10
+    local heavySum, heavyN, lightSum, lightN, strippedSum, pinnedN = 0, 0, 0, 0, 0, 0
     for i = 1, n do
         local m = matches[i]
         local bytes = Storage.estimate(m)
-        if i <= heavyKeep and m.timeline then
+        if m.pinned then pinnedN = pinnedN + 1 end
+        if m.timeline then
             heavySum, heavyN = heavySum + bytes, heavyN + 1
             strippedSum = strippedSum + Storage.estimate(m, HEAVY_OMIT)
         else
@@ -101,7 +104,7 @@ function Storage.report()
     else lightAvg = 0 end
     if heavyAvg == 0 then heavyAvg = lightAvg end
     local heavySlots = math.min(cap, heavyKeep)
-    local projectedMatches = heavyAvg * heavySlots + lightAvg * math.max(0, cap - heavySlots)
+    local projectedMatches = heavyAvg * (heavySlots + pinCap) + lightAvg * math.max(0, cap - heavySlots)
     if projectedMatches < usedMatches then projectedMatches = usedMatches end
 
     local faces = data.faces or {}
@@ -115,7 +118,7 @@ function Storage.report()
 
     local report = {
         matches = { used = usedMatches, cap = projectedMatches, count = n, capCount = cap,
-                    heavy = heavyN, heavyAvg = heavyAvg, lightAvg = lightAvg },
+                    heavy = heavyN, heavyAvg = heavyAvg, lightAvg = lightAvg, pinned = pinnedN, pinCap = pinCap },
         faces   = { used = usedFaces, cap = projectedFaces, count = facesN, capCount = facesCap },
         ledger  = { used = usedLedger },
         total   = Storage.estimate(data),

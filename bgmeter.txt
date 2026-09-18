@@ -66,6 +66,7 @@ ui/win_faces.lua
 ui/win_arenas.lua
 ui/win_marks.lua
 ui/win_about.lua
+ui/win_saved.lua
 ui/win_panel.lua
 ui/win_queue.lua
 ui/win_menu.lua

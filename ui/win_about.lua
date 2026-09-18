@@ -13,7 +13,7 @@ local set_text = U.set_text
 local hexc = F.hexc
 
 local AUTHOR = "Federico Vergelli"
-local GITHUB = "github.com/vergelli/BGmeter"
+local CREDITS = { "unit220" }
 local BAR_H = 7
 local LINE_H = 30
 
@@ -58,23 +58,22 @@ local D = Drawer.new({
     cache_key = function(self)
         local Storage = BGMeter.Storage
         local r = Storage and Storage.report()
-        return tostring(BGMeter.History.count()) .. "|" .. tostring(r and r.faces.count or 0) .. "|" .. tostring(BGMeter.Prefs.get("max_history"))
+        return tostring(BGMeter.History.count()) .. "|" .. tostring(BGMeter.History.pinned_count()) .. "|"
+            .. tostring(r and r.faces.count or 0) .. "|" .. tostring(BGMeter.Prefs.get("max_history"))
     end,
     fetch = function(self)
-        local Faces = BGMeter.Faces
+        local Faces, History = BGMeter.Faces, BGMeter.History
         local cap = BGMeter.Prefs.get("max_history") or 50
+        local pinned = History.pinned_count()
         return {
-            { k = "Version", v = K.VERSION, tip = "BGmeter " .. K.VERSION .. "\nPost-battle analytics for Battlegrounds" },
-            { k = "Author", v = AUTHOR, tip = "Written and maintained by " .. AUTHOR .. " (@vergelli)" },
-            { k = "Made with", v = "AI assistance", tip = "Built with AI assistance (Claude).\nReviewed, tested in-game and maintained by the author." },
-            { k = "Thanks", v = "unit220", tip = "Familiar faces was unit220's idea,\nand the first bug reports came from them." },
-            { k = "Matches kept", v = string.format("%d / %d", BGMeter.History.count(), cap),
-              tip = "Change the cap under Settings, Matches kept.\nThe ten most recent matches keep their full timeline;\nolder ones keep the scoreboard only." },
+            { k = "Version", v = K.VERSION, tip = "BGmeter " .. K.VERSION },
+            { k = "Author", v = AUTHOR, tip = "@vergelli" },
+            { k = "Credits", v = table.concat(CREDITS, ", "), tip = table.concat(CREDITS, "\n") },
+            { k = "Matches kept", v = string.format("%d / %d%s", History.count() - pinned, cap,
+                pinned > 0 and string.format("  ·  %d saved", pinned) or ""),
+              tip = string.format("The cap is under Settings, Matches kept.\nThe ten most recent keep their charts; older ones keep the scoreboard.\nSaved matches (up to %d) sit outside the cap and keep whatever they had.", History.PIN_CAP) },
             { k = "Faces known", v = string.format("%d / %d", Faces.count(), Faces.CAP or 1500),
-              tip = "Players you have met. The oldest names make room\nwhen the ledger reaches its cap." },
-            { k = "Commands", v = "/bgmeter", tip = "/bgmeter opens this Registry\n/bgmeter vet dumps the raw veterancy values" },
-            { k = "Feedback", v = "ESOUI or GitHub", tip = "Bugs and ideas are welcome in the ESOUI comments\nor on " .. GITHUB },
-            { k = "Disclaimer", v = "not affiliated", tip = "This add-on is not created by, affiliated with,\nor sponsored by ZeniMax Media Inc." },
+              tip = "The oldest names make room when the ledger is full." },
         }
     end,
     row_make = function(self, r)
@@ -113,17 +112,13 @@ local D = Drawer.new({
         fill_line(p.matches, "matches", r.matches.used, r.matches.cap, K.COLOR.gold)
         fill_line(p.faces, "faces", r.faces.used, r.faces.cap, K.COLOR.veterancy)
         p.tip = string.format(
-            "Bytes this addon keeps in your saved variables.\n"
-            .. "Used is what the store holds today; available is not a game limit,\n"
-            .. "it is the size the store would reach at the cap the addon sets itself\n"
-            .. "(matches: Settings, Matches kept; faces: %d names).\n"
-            .. "matches %s  ·  faces %s  ·  ledger %s  ·  whole store %s",
-            r.faces.capCount, F.bytes(r.matches.used), F.bytes(r.faces.used), F.bytes(r.ledger.used), F.bytes(r.total))
+            "Bytes in your saved variables.\nAvailable is the store at the addon's own caps, not a game limit.\nwhole store %s",
+            F.bytes(r.total))
     end,
     foot = function(self, list)
         local r = BGMeter.Storage and BGMeter.Storage.report()
         if not r then return "" end
-        return string.format("%s in saved variables  ·  hover a line for more", F.bytes(r.total))
+        return string.format("%s in saved variables", F.bytes(r.total))
     end,
 })
 
