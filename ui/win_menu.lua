@@ -33,7 +33,8 @@ local PANEL_H = 128
 local QUEUE_H = 36
 local FOOT_H = 34
 local INSET_PAD = 20
-local SCROLL_W = 6
+local SCROLL_W = 8
+local ARROW = 16
 local MIN_H, MAX_AUTO_H = 390, 764
 
 local Scene = BGMeter.zenimax.scene
@@ -367,26 +368,42 @@ local function build()
     P.frame(panel.inset):SetAnchorFill(panel.inset)
 
     panel.scroll = {}
+    local ac = K.COLOR.accent
+    local up = P.button(panel.inset, "EsoUI/Art/Buttons/scrollbox_upArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_upArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_upArrow_over.dds")
+    up:SetDimensions(ARROW, ARROW)
+    up:SetAnchor(TOPRIGHT, panel.inset, TOPRIGHT, 0, 4)
+    up:SetHandler("OnClicked", function() M.scroll_to(offset - 1) end)
+    up:SetHidden(true)
+    panel.scroll.up = up
+    local down = P.button(panel.inset, "EsoUI/Art/Buttons/scrollbox_downArrow_up.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_down.dds", "EsoUI/Art/Buttons/scrollbox_downArrow_over.dds")
+    down:SetDimensions(ARROW, ARROW)
+    down:SetAnchor(BOTTOMRIGHT, panel.inset, BOTTOMRIGHT, 0, -4)
+    down:SetHandler("OnClicked", function() M.scroll_to(offset + 1) end)
+    down:SetHidden(true)
+    panel.scroll.down = down
     local track = BGMeter.zenimax.ui.create_control(nil, panel.inset, CT_CONTROL)
-    track:SetAnchor(TOPRIGHT, panel.inset, TOPRIGHT, -4, 6)
-    track:SetAnchor(BOTTOMRIGHT, panel.inset, BOTTOMRIGHT, -4, -6)
+    track:SetAnchor(TOPRIGHT, panel.inset, TOPRIGHT, -4, ARROW + 6)
+    track:SetAnchor(BOTTOMRIGHT, panel.inset, BOTTOMRIGHT, -4, -(ARROW + 6))
     track:SetWidth(SCROLL_W)
     track:SetMouseEnabled(true)
     track:SetHidden(true)
-    track:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then M.on_track_click() end end)
+    track:SetHandler("OnMouseUp", function(_, _, upInside)
+        if drag.on then M.on_thumb_up() return end
+        if upInside then M.on_track_click() end
+    end)
     panel.scroll.track = track
-    panel.scroll.trackBg = P.rect(track, { 1, 1, 1, 0.06 })
+    panel.scroll.trackBg = P.rect(track, { ac[1], ac[2], ac[3], 0.12 })
     panel.scroll.trackBg:SetAnchorFill(track)
     local thumb = BGMeter.zenimax.ui.create_control(nil, track, CT_CONTROL)
     thumb:SetAnchor(TOPLEFT, track, TOPLEFT, 0, 0)
     thumb:SetWidth(SCROLL_W)
     thumb:SetMouseEnabled(true)
-    local thumbTex = P.rect(thumb, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    local thumbTex = P.rect(thumb, { ac[1], ac[2], ac[3], 0.55 })
     thumbTex:SetAnchorFill(thumb)
     thumb:SetHandler("OnMouseDown", function() M.on_thumb_down() end)
     thumb:SetHandler("OnMouseUp", function() M.on_thumb_up() end)
-    thumb:SetHandler("OnMouseEnter", function() P.set_rect_color(thumbTex, { K.COLOR.text[1], K.COLOR.text[2], K.COLOR.text[3], 0.75 }) end)
-    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumbTex, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 }) end end)
+    thumb:SetHandler("OnMouseEnter", function() if not drag.on then P.set_rect_color(thumbTex, { ac[1], ac[2], ac[3], 0.85 }) end end)
+    thumb:SetHandler("OnMouseExit", function() if not drag.on then P.set_rect_color(thumbTex, { ac[1], ac[2], ac[3], 0.55 }) end end)
     panel.scroll.thumb = thumb
     panel.scroll.thumbTex = thumbTex
 
@@ -442,6 +459,8 @@ end
 
 function layout_scrollbar(count, maxOff)
     local sc = panel.scroll
+    sc.up:SetHidden(maxOff <= 0 or offset <= 0)
+    sc.down:SetHidden(maxOff <= 0 or offset >= maxOff)
     if maxOff <= 0 then sc.track:SetHidden(true) return end
     local th = sc.track:GetHeight()
     if th <= 0 then sc.track:SetHidden(true) return end
@@ -488,6 +507,8 @@ end
 function M.on_thumb_down()
     local _, my = BGMeter.zenimax.api.get_ui_mouse()
     drag.on, drag.y0, drag.off0 = true, my or 0, offset
+    local ac = K.COLOR.accent
+    P.set_rect_color(panel.scroll.thumbTex, { ac[1], ac[2], ac[3], 0.95 })
     panel.win:SetHandler("OnUpdate", drag_update)
 end
 
@@ -495,8 +516,11 @@ function M.on_thumb_up()
     if not drag.on then return end
     drag.on = false
     panel.win:SetHandler("OnUpdate", nil)
-    P.set_rect_color(panel.scroll.thumbTex, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], 0.55 })
+    local ac = K.COLOR.accent
+    P.set_rect_color(panel.scroll.thumbTex, { ac[1], ac[2], ac[3], 0.55 })
 end
+
+function M.scroll_controls() return panel and panel.scroll end
 
 function M.window() return panel and panel.win end
 
