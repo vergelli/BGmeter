@@ -26,8 +26,9 @@ local MIN_SIDE = 240
 local BINS = 32
 local WHEEL_MS = 5000
 local SKULL = "EsoUI/Art/TargetMarkers/Target_White_Skull_64.dds"
-local PIP_ME = "EsoUI/Art/MapPins/UI-WorldMapPlayerPip.dds"
 local PIP_MATE = "EsoUI/Art/MapPins/UI-WorldMapGroupPip.dds"
+local PIP_ME = PIP_MATE
+local DOCK_SNAP = 48
 local FALLBACK_PIN = "EsoUI/Art/MapPins/battlegrounds_murderball_neutral.dds"
 local FALLBACK_AREA = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.dds"
 local LV = { tile = 1, heat = 2, path = 3, mark = 4, hit = 5 }
@@ -61,19 +62,19 @@ end
 
 local built = false
 local c = nil
-local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, race = nil }
+local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, race = nil, docked = true, heatKey = nil }
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
     if not sv then return {} end
     sv.window = sv.window or {}
-    sv.window.map = sv.window.map or { open = false, w = 0, h = 0 }
+    sv.window.map = sv.window.map or { open = false, w = 0, h = 0, free = false, x = 0, y = 0 }
     return sv.window.map
 end
 
 local function pin_texture(ty, kind)
     local data = ZO_MapPin and ZO_MapPin.PIN_DATA and ty and ZO_MapPin.PIN_DATA[ty]
-    if data and data.texture then return data.texture end
+    if data and type(data.texture) == "string" then return data.texture end
     if kind == "area" then return FALLBACK_AREA end
     return FALLBACK_PIN
 end
@@ -132,6 +133,36 @@ local function segment_set(sg, on)
     for _, e in pairs(sg.box) do P.set_rect_color(e, gold(on and 0.9 or 0.35)) end
 end
 
+local function dock()
+    local win = c.win
+    win:ClearAnchors()
+    if W.win then win:SetAnchor(TOPLEFT, W.win, BOTTOMLEFT, 0, 4) else win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0) end
+    state.docked = true
+    sv_win().free = false
+end
+
+local function float_at(x, y)
+    local win = c.win
+    win:ClearAnchors()
+    win:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, x, y)
+    state.docked = false
+    local g = sv_win()
+    g.free, g.x, g.y = true, x, y
+end
+
+function M.on_move_stop()
+    if not built then return end
+    local x, y = c.win:GetLeft(), c.win:GetTop()
+    if W.win and math.abs(x - W.win:GetLeft()) <= DOCK_SNAP and math.abs(y - (W.win:GetBottom() + 4)) <= DOCK_SNAP then
+        if not state.docked then Sound.play("nav") end
+        dock()
+    else
+        float_at(x, y)
+    end
+end
+
+function M.is_docked() return state.docked end
+
 local function build()
     if built then return end
     local wm = BGMeter.zenimax.ui.wm
@@ -139,6 +170,8 @@ local function build()
     local win = wm:CreateTopLevelWindow("BGMeterMapPanel")
     win:SetDimensions((g.w or 0) > 0 and g.w or L.map_w, (g.h or 0) > 0 and g.h or L.map_h)
     win:SetMouseEnabled(true)
+    win:SetMovable(true)
+    win:SetHandler("OnMoveStop", function() M.on_move_stop() end)
     win:SetClampedToScreen(true)
     win:SetHidden(true)
     win:SetDrawTier(DT_HIGH)
@@ -307,8 +340,7 @@ local function build()
     end)
     c.slider:SetHandler("OnMouseWheel", function(_, delta) M.on_wheel(delta) end)
 
-    win:ClearAnchors()
-    if W.win then win:SetAnchor(TOPLEFT, W.win, BOTTOMLEFT, 0, 4) else win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0) end
+    if g.free and (g.x or 0) ~= 0 then float_at(g.x, g.y) else dock() end
     built = true
 end
 
@@ -398,22 +430,41 @@ local function polyline(xs, ys, n, color, thick, alpha)
     end
 end
 
+local function present_span(series, upto)
+    local first = nil
+    for i = 1, upto do
+        local x, y = series.x[i] or 0, series.y[i] or 0
+        if x > 0 or y > 0 then
+            first = i
+            break
+        end
+    end
+    return first
+end
+
 local function scaled(series, upto, smooth)
     local xs, ys = {}, {}
     local n = 0
-    if smooth and upto >= 3 then
-        local sx, sy = BGMeter.Match.geo_spline(series.x, series.y, upto, 3)
+    local first = present_span(series, upto)
+    if not first then return xs, ys, 0 end
+    local px, py = {}, {}
+    for i = first, upto do
+        local x, y = series.x[i] or 0, series.y[i] or 0
+        if x > 0 or y > 0 then px[#px + 1], py[#py + 1] = x, y end
+    end
+    if smooth and #px >= 3 then
+        local sx, sy = BGMeter.Match.geo_spline(px, py, #px, 3)
         for i = 1, #sx do xs[i], ys[i] = mx(sx[i]), mx(sy[i]) end
         n = #sx
     else
-        for i = 1, upto do xs[i], ys[i] = mx(series.x[i] or 0), mx(series.y[i] or 0) end
-        n = upto
+        for i = 1, #px do xs[i], ys[i] = mx(px[i]), mx(py[i]) end
+        n = #px
     end
     return xs, ys, n
 end
 
-local function release_all()
-    c.heat_pool:release_all()
+local function release_all(keep_heat)
+    if not keep_heat then c.heat_pool:release_all() end
     c.dot_pool:release_all()
     if c.line_pool then c.line_pool:release_all() end
     c.icon_pool:release_all()
@@ -517,7 +568,7 @@ local function draw_positions(geo, m, idx, t)
     for name, s in pairs(geo.pos) do
         if name ~= mine then
             local x, y = s.x[idx], s.y[idx]
-            if x and y then
+            if x and y and (x > 0 or y > 0) then
                 local d = c.icon_pool:acquire()
                 d:SetTexture(PIP_MATE)
                 d:ClearAnchors()
@@ -541,7 +592,7 @@ local function draw_positions(geo, m, idx, t)
     elseif mine and geo.pos[mine] then
         mx_, my_ = geo.pos[mine].x[idx], geo.pos[mine].y[idx]
     end
-    if mx_ and my_ then
+    if mx_ and my_ and (mx_ > 0 or my_ > 0) then
         local ring = c.icon_pool:acquire()
         ring:SetTexture(PIP_ME)
         ring:ClearAnchors()
@@ -614,9 +665,12 @@ end
 function M.render()
     if not built or c.win:IsHidden() then return end
     local m = BGMeter.History.get(W.current_index)
-    release_all()
     layout()
     local hm = Prefs.get("map_heat_mode")
+    local heatKey = tostring(hm) .. "|" .. tostring(state.side) .. "|" .. tostring(m)
+    local keep_heat = (heatKey == state.heatKey)
+    release_all(keep_heat)
+    state.heatKey = heatKey
     c.heatMark:SetHidden(hm == "off")
     S.color(c.heatLabel, hm ~= "off" and K.COLOR.text or K.COLOR.text_dim)
     for _, sg in ipairs(c.heatSeg) do segment_set(sg, hm == sg.key) end
@@ -631,6 +685,7 @@ function M.render()
     state.geo = m and BGMeter.Match.geo(m) or nil
     apply_tiles(m or {})
     if not state.geo then
+        state.heatKey = nil
         c.empty:SetHidden(false)
         set_text(c.sub, m and (m.name or "Battleground") or "")
         for _, l in ipairs(c.nowLines) do set_text(l, "") end
@@ -650,7 +705,7 @@ function M.render()
     state.applying = false
     local idx = BGMeter.Match.geo_index(geo, state.t)
     set_text(c.sub, string.format("%s  ·  %s", m.name or "Battleground", m.map and m.map.name or ""))
-    if hm ~= "off" then draw_heat(geo, m, hm) end
+    if hm ~= "off" and not keep_heat then draw_heat(geo, m, hm) end
     draw_paths(geo, m, idx, state.t)
     if Prefs.get("map_deaths") then draw_deaths(geo, m, state.t) end
     if Prefs.get("map_pins") then draw_pins(geo, idx) end
@@ -689,6 +744,7 @@ function M.on_double_click(y)
     c.win:SetDimensions(L.map_w, L.map_h)
     local gg = sv_win()
     gg.w, gg.h = 0, 0
+    dock()
     Sound.play("nav")
     M.render()
 end
@@ -874,7 +930,7 @@ local function mini_draw()
         end
     end
     for name, s in pairs(geo.pos) do
-        if name ~= geo.mine and s.x[idx] and s.y[idx] then
+        if name ~= geo.mine and s.x[idx] and s.y[idx] and (s.x[idx] > 0 or s.y[idx] > 0) then
             local d = mini.icon_pool:acquire()
             d:SetTexture(PIP_MATE)
             d:ClearAnchors()
@@ -905,7 +961,7 @@ local function mini_stop()
 end
 
 local function mini_tick()
-    if not mini or mini.frame:IsHidden() or not mstate.geo or not Prefs.get("animate") then mini_stop() return end
+    if not mini or mini.frame:IsHidden() or not mstate.geo or not Prefs.get("animate") or (W.win and W.win:IsHidden()) then mini_stop() return end
     local tspan = mstate.geo.t[mstate.geo.n] or 1
     mstate.t = mstate.t + tspan * MINI_TICK_MS / MINI_LOOP_MS
     if mstate.t > tspan + tspan * 0.08 then mstate.t = 0 end

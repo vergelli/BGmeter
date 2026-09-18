@@ -393,7 +393,11 @@ end
 
 local function read_map()
     local A = BGMeter.zenimax.api
-    if safe(A.map_matches_player) == false then safe(A.set_map_to_player) end
+    if safe(A.map_matches_player) == false then
+        if safe(A.world_map_showing) then return nil end
+        safe(A.set_map_to_player)
+        if safe(A.map_matches_player) == false then return nil end
+    end
     local nx, ny = safe(A.get_map_num_tiles)
     nx, ny = tonumber(nx) or 0, tonumber(ny) or 0
     if nx <= 0 or ny <= 0 or nx * ny > 36 then return nil end
@@ -431,24 +435,27 @@ local function sample_positions()
     local now = (safe(A.now_ms) or 0) - (active.startMs or 0)
     if i > 1 and tl.pt[i - 1] == now then return end
     tl.pt[i] = now
-    local function put(name, x, y)
-        if not name or x == nil then return end
+    local function put(name, x, y, inMap)
+        if not name or x == nil or inMap == false then return end
         local rec = tl.pos[name]
         if not rec then rec = { x = {}, y = {} }; tl.pos[name] = rec end
         rec.x[i], rec.y[i] = q(x), q(y)
     end
-    local px, py = safe(A.get_map_player_position, "player")
-    put(active.localName, px, py)
+    local px, py, _, pin = safe(A.get_map_player_position, "player")
+    put(active.localName, px, py, pin)
     local n = safe(A.get_group_size) or 0
     for g = 1, math.min(n, 8) do
         local tag = safe(A.get_group_unit_tag, g)
         if tag then
             local nm = clean_name(safe(A.get_unit_name, tag))
             if nm and nm ~= active.localName then
-                local gx, gy = safe(A.get_map_player_position, tag)
-                put(nm, gx, gy)
+                local gx, gy, _, gin = safe(A.get_map_player_position, tag)
+                put(nm, gx, gy, gin)
             end
         end
+    end
+    for _, rec in pairs(tl.pos) do
+        if rec.x[i] == nil then rec.x[i], rec.y[i] = 0, 0 end
     end
     local nobj = safe(A.get_num_objectives) or 0
     for o = 1, math.min(nobj, MAX_PINS) do
