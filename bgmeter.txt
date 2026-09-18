@@ -35,6 +35,7 @@ core/capture.lua
 core/history.lua
 core/faces.lua
 core/ledger.lua
+core/storage.lua
 core/standing.lua
 core/awards.lua
 core/records.lua
@@ -64,6 +65,9 @@ ui/drawer.lua
 ui/win_faces.lua
 ui/win_arenas.lua
 ui/win_marks.lua
+ui/win_about.lua
+ui/win_panel.lua
+ui/win_queue.lua
 ui/win_menu.lua
 
 bgmeter.lua

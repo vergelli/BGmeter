@@ -13,6 +13,9 @@ local P = BGMeter.Plot.primitives
 local S = BGMeter.Plot.style
 local Prefs = BGMeter.Prefs
 local Sound = BGMeter.Sound
+local Drawer = BGMeter.UI.Drawer
+local Panel = BGMeter.UI.panel
+local Queue = BGMeter.UI.queue
 
 local M = {}
 
@@ -38,8 +41,6 @@ local INSET_PAD = 20
 local SCROLL_W = 6
 local MIN_H, MAX_AUTO_H = 390, 764
 
-local TELVAR = CURT_TELVAR_STONES
-
 local Scene = BGMeter.zenimax.scene
 
 local layout_scrollbar
@@ -53,13 +54,6 @@ local reopen_after_report = false
 local drag = { on = false, y0 = 0, off0 = 0 }
 local armed_index = nil
 local DISARM_MS = 3000
-
-local function safe(fn, ...)
-    if type(fn) ~= "function" then return nil end
-    local ok, a, b = pcall(fn, ...)
-    if not ok then return nil end
-    return a, b
-end
 
 local function clean(s)
     if not s or s == "" then return nil end
@@ -145,238 +139,8 @@ local function auto_height()
     panel.win:SetHeight(math.max(MIN_H, math.min(want, MAX_AUTO_H)))
 end
 
-local PODIUM = { name = "BGMeterPodiumGlow", ms = 40, period_ms = 1200, on = false, t0 = 0 }
-
-local function podium_now()
-    if GetGameTimeMilliseconds then return GetGameTimeMilliseconds() end
-    return os.clock() * 1000
-end
-
-local function hue_rgb(h)
-    local x = (h % 1) * 6
-    local i = math.floor(x)
-    local f = x - i
-    if i == 0 then return 1, f, 0 end
-    if i == 1 then return 1 - f, 1, 0 end
-    if i == 2 then return 0, 1, f end
-    if i == 3 then return 0, 1 - f, 1 end
-    if i == 4 then return f, 0, 1 end
-    return 1, 0, 1 - f
-end
-
-local function podium_stop()
-    if not PODIUM.on then return end
-    PODIUM.on = false
-    BGMeter.zenimax.events.unregister_update(PODIUM.name)
-end
-
-local function podium_tick()
-    local st = panel and panel.stats.stand
-    if not (st and st.glow) or panel.win:IsHidden() then podium_stop() return end
-    local t = ((podium_now() - PODIUM.t0) % PODIUM.period_ms) / PODIUM.period_ms
-    local r, g, b = hue_rgb(t)
-    st.glow:SetColor(0.45 + 0.55 * r, 0.45 + 0.55 * g, 0.45 + 0.55 * b, 0.90)
-    local r2, g2, b2 = hue_rgb(t + 0.5)
-    st.icon:SetColor(0.80 + 0.20 * r2, 0.80 + 0.20 * g2, 0.80 + 0.20 * b2, 1)
-end
-
-local function podium_start()
-    if PODIUM.on then return end
-    PODIUM.on = true
-    PODIUM.t0 = podium_now()
-    BGMeter.zenimax.events.register_update(PODIUM.name, PODIUM.ms, podium_tick)
-    podium_tick()
-end
-
-local function refresh_panel()
-    local A = BGMeter.zenimax.api
-    local C = BGMeter.zenimax.constants
-
-    local st = panel.stats.ava
-    local rank = safe(A.get_ava_rank)
-    if rank and rank > 0 then
-        st.c:SetHidden(false)
-        local gender = safe(A.get_gender) or 1
-        local rname = clean(safe(A.get_ava_rank_name, gender, rank)) or "?"
-        if st.icon then st.icon:SetTexture(safe(A.get_ava_rank_icon, rank) or "") end
-        set_text(st.label, string.format("%s  %d", rname, rank))
-        local pts = safe(A.get_ava_rank_points) or 0
-        local base = safe(A.get_ava_points_needed, rank) or 0
-        local nextNeed = safe(A.get_ava_points_needed, rank + 1)
-        if nextNeed and nextNeed > pts then
-            st.tip = string.format("Alliance War rank %d\n%s AP to the next rank", rank, F.commas(nextNeed - pts))
-        else
-            st.tip = string.format("Alliance War rank %d", rank)
-        end
-        if st.bar then
-            if nextNeed and nextNeed > base then
-                local pct = math.max(0, math.min(1, (pts - base) / (nextNeed - base)))
-                U.inset_bar_set(st.bar, pct, K.COLOR.gold, st.barW)
-                st.bar.container:SetHidden(false)
-            else
-                st.bar.container:SetHidden(true)
-            end
-        end
-    else
-        st.c:SetHidden(true)
-    end
-
-    st = panel.stats.vet
-    local snap = BGMeter.Veterancy and BGMeter.Veterancy.snapshot()
-    if st.link then st.link:SetHidden(not (snap and snap.rank)) end
-    if snap and snap.rank then
-        st.c:SetHidden(false)
-        if st.icon then
-            st.icon:SetTexture(safe(A.get_veterancy_rank_icon, snap.iconRank or snap.rank, snap.seasonId)
-                or snap.rankIcon or "")
-        end
-        local laps = snap.laps or 0
-        set_text(st.label, string.format("%s  %d%s", clean(snap.rankTitle) or "Veterancy", snap.rank,
-            laps > 0 and (" ×" .. laps) or ""))
-        local waiting = snap.claimable or 0
-        if st.claim then
-            st.claim:SetHidden(waiting <= 0)
-            st.claim_tip = string.format("Claim your veterancy rewards (%d waiting)", waiting)
-            st.label:ClearAnchors()
-            st.label:SetAnchor(TOPLEFT, st.c, TOPLEFT, st.textX, 3)
-            st.label:SetAnchor(TOPRIGHT, st.c, TOPRIGHT, waiting > 0 and -42 or -20, 3)
-        end
-        local season = clean(snap.seasonName)
-        local seasonLine = season and ("\n" .. season) or ""
-        if snap.tierTotal and snap.tierTotal > 0 then
-            st.tip = string.format("Veterancy rank %d%s\n%s / %s to the next %s%s",
-                snap.rank, laps > 0 and string.format("  ·  max rank, reward ×%d", laps) or "",
-                F.commas(snap.progressToNext or 0), F.commas(snap.tierTotal),
-                snap.pastMax and "reward" or "rank", seasonLine)
-        else
-            st.tip = string.format("Veterancy rank %d%s", snap.rank, seasonLine)
-        end
-        if st.bar then
-            if snap.percent then
-                local pct = math.max(0, math.min(1, snap.percent))
-                U.inset_bar_set(st.bar, pct, K.COLOR.veterancy, st.barW)
-                st.bar.container:SetHidden(false)
-            else
-                st.bar.container:SetHidden(true)
-            end
-        end
-    else
-        st.c:SetHidden(true)
-    end
-
-    st = panel.stats.stand
-    local function trophy_tier(rank)
-        if rank <= 3 then return { 0.97, 0.97, 1.00 }, 0.90, "Champion!" end
-        if rank <= 10 then return { 1.00, 0.55, 0.15 }, 0.60, "Mythic!" end
-        if rank <= 50 then return { 1.00, 0.84, 0.30 }, 0.50, "Legendary" end
-        return { 0.72, 0.53, 0.98 }, 0.42, "Epic"
-    end
-    local sv = BGMeter.zenimax.savedvars.get()
-    local standing = sv and sv.standing
-    if M._demo_rank then standing = { rank = M._demo_rank, score = 123456 } end
-    st.c:SetHidden(false)
-    if st.link then st.link:SetHidden(false) end
-    if standing and (standing.rank or 0) > 0 then
-        local top = standing.rank <= 100
-        if st.icon then
-            st.icon:SetTexture(top and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
-                or "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
-            local tierTag = ""
-            if top then
-                local col, glowA, word = trophy_tier(standing.rank)
-                st.icon:SetColor(col[1], col[2], col[3], 1)
-                if not st.glow then
-                    st.glow = P.icon(st.c, "bgmeter/assets/glow.dds")
-                    st.glow:SetAnchor(CENTER, st.icon, CENTER, 0, 0)
-                    st.glow:SetDimensions(64, 64)
-                    if st.glow.SetBlendMode then st.glow:SetBlendMode(TEX_BLEND_MODE_ADD) end
-                    if st.glow.SetDrawLevel then st.glow:SetDrawLevel(1) end
-                    if st.icon.SetDrawLevel then st.icon:SetDrawLevel(2) end
-                end
-                st.glow:SetColor(col[1], col[2], col[3], glowA)
-                st.glow:SetHidden(false)
-                if standing.rank <= 3 and Prefs.get("animate") then podium_start() else podium_stop() end
-                tierTag = string.format("  ·  |c%02X%02X%02X%s|r",
-                    math.floor(col[1] * 255 + 0.5), math.floor(col[2] * 255 + 0.5),
-                    math.floor(col[3] * 255 + 0.5), word)
-            else
-                podium_stop()
-                st.icon:SetColor(1, 1, 1, 1)
-                if st.glow then st.glow:SetHidden(true) end
-            end
-            st.tierTag = tierTag
-        end
-        set_text(st.label, "#" .. F.commas(standing.rank) .. (st.tierTag or ""))
-        S.color(st.label, K.COLOR.gold)
-        st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score or 0))
-    else
-        podium_stop()
-        if st.icon then
-            st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
-            st.icon:SetColor(1, 1, 1, 1)
-            if st.glow then st.glow:SetHidden(true) end
-        end
-        set_text(st.label, "unranked")
-        S.color(st.label, K.COLOR.text_dim)
-        if standing and (standing.score or 0) > 0 then
-            st.tip = string.format("Competitive standing\nrating %s", F.commas(standing.score))
-        else
-            st.tip = "Competitive standing\nplay a ranked battleground to appear"
-        end
-    end
-
-    st = panel.stats.ap
-    st.c:SetHidden(false)
-    if st.icon then st.icon:SetTexture(safe(A.get_currency_icon, C.CURT_ALLIANCE_POINTS) or "") end
-    set_text(st.label, F.commas(safe(A.get_alliance_points) or 0))
-    st.tip = "Alliance Points"
-
-    st = panel.stats.telvar
-    if TELVAR then
-        st.c:SetHidden(false)
-        if st.icon then st.icon:SetTexture(safe(A.get_currency_icon, TELVAR) or "") end
-        set_text(st.label, F.commas(safe(A.get_currency, TELVAR, C.CURRENCY_LOCATION_CHARACTER) or 0))
-        st.tip = "Tel Var Stones"
-    else
-        st.c:SetHidden(true)
-    end
-
-    st = panel.stats.session
-    local sess = BGMeter.Session
-    if sess and sess.matches > 0 then
-        if (sess.streak or 0) >= 2 then
-            set_text(st.label, string.format("%dW-%dL  ·  %dx streak", sess.wins, sess.losses, sess.streak))
-        else
-            set_text(st.label, string.format("%dW-%dL tonight", sess.wins, sess.losses))
-        end
-        local col = K.COLOR.text_dim
-        if sess.wins > sess.losses then col = K.COLOR.heal
-        elseif sess.losses > sess.wins then col = K.COLOR.accent end
-        S.color(st.label, col)
-        st.tip = string.format("This play session\n%d battlegrounds%s\n%s AP  ·  %s XP earned",
-            sess.matches,
-            (sess.streak or 0) >= 2 and string.format("\n%d wins in a row", sess.streak) or "",
-            F.commas(sess.ap), F.commas(sess.xp))
-    else
-        local Hist = BGMeter.History
-        local n, aw, al = Hist.count(), 0, 0
-        for i = 1, n do
-            local m = Hist.get(i)
-            if m.result == "WIN" then aw = aw + 1 elseif m.result == "LOSS" then al = al + 1 end
-        end
-        if n > 0 then
-            set_text(st.label, string.format("%dW-%dL all time", aw, al))
-            local col = K.COLOR.text_dim
-            if aw > al then col = K.COLOR.heal elseif al > aw then col = K.COLOR.accent end
-            S.color(st.label, col)
-            st.tip = string.format("All recorded battlegrounds\n%d battles\nNo battles yet this session", n)
-        else
-            set_text(st.label, "no battles yet")
-            S.color(st.label, K.COLOR.text_dim)
-            st.tip = "This play session (since login)"
-        end
-    end
-    st.c:SetHidden(false)
+local function each_drawer(method, ...)
+    for _, d in ipairs(Drawer.all()) do d[method](d, ...) end
 end
 
 local function make_row(i)
@@ -393,11 +157,7 @@ local function make_row(i)
     r.name = P.label(r.container, S.FONT.row, K.COLOR.text)
     r.name:SetAnchor(LEFT, r.container, LEFT, 14, 0)
     r.name:SetHeight(ROW_H)
-
-    if r.name.SetMaxLineCount then r.name:SetMaxLineCount(1) end
-    if TEXT_WRAP_MODE_ELLIPSIS and r.name.SetWrapMode then
-        r.name:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-    end
+    U.clamp_line(r.name)
 
     r.kda = P.label(r.container, S.FONT.small, K.COLOR.text_dim)
     r.kda:SetAnchor(RIGHT, r.container, RIGHT, -154, 0)
@@ -448,9 +208,7 @@ local function make_row(i)
     return r
 end
 
-local function build()
-    if built then return end
-
+local function build_launcher()
     local g = sv_launcher()
     local LSZ = 56
     local win = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterLauncher")
@@ -505,11 +263,11 @@ local function build()
         local f = phase - (i - 1)
         local a, b2 = GLOW_COLORS[i], GLOW_COLORS[j]
         local r = a[1] + (b2[1] - a[1]) * f
-        local g = a[2] + (b2[2] - a[2]) * f
+        local g2 = a[2] + (b2[2] - a[2]) * f
         local bch = a[3] + (b2[3] - a[3]) * f
-        launcher.glow:SetColor(r, g, bch, 0.65)
+        launcher.glow:SetColor(r, g2, bch, 0.65)
         local pulse = 0.55 + 0.35 * (0.5 + 0.5 * math.sin(t * math.pi * 4))
-        launcher.glowFx:SetColor(r, g, bch, pulse)
+        launcher.glowFx:SetColor(r, g2, bch, pulse)
     end
 
     local function glow_loop()
@@ -530,6 +288,11 @@ local function build()
         launcher.glowFx:SetHidden(true)
         launcher.icon:SetColor(1, 1, 1, LAUNCHER_IDLE)
     end)
+end
+
+local function build()
+    if built then return end
+    build_launcher()
 
     local mg = sv_menu()
     local pw = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterMenu")
@@ -549,9 +312,7 @@ local function build()
         mg = sv_menu()
         mg.w, mg.h = pw:GetWidth(), pw:GetHeight()
         apply_art_cover()
-        BGMeter.UI.faces.on_host_resized()
-        BGMeter.UI.arenas.on_host_resized()
-        BGMeter.UI.marks.on_host_resized()
+        each_drawer("on_host_resized")
         M.refresh()
     end)
     pw:SetHandler("OnMouseWheel", function(_, delta) M.scroll_to(offset - delta) end)
@@ -590,120 +351,23 @@ local function build()
     panel.gear = mk_button(pw, TX.gear, 28, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
-    local function make_stat(rowi, right, withIcon, withBar, link)
-        local c = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
-        local rowH = right and 28 or 38
-        local iconS = right and 26 or 38
-        local pad = right and 6 or 9
-        c:SetHeight(rowH)
-        c:SetMouseEnabled(true)
-        local y = HEAD_H + (rowi - 1) * (right and 30 or 40)
-        if right then
-            c:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -(INSET_PAD + 2), y)
-            c:SetWidth(126)
-        else
-            c:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD + 2, y)
-            c:SetWidth(200)
-        end
-        local st = { c = c }
-        if withIcon then
-            st.icon = P.icon(c)
-            st.icon:SetDimensions(iconS, iconS)
-            st.icon:SetAnchor(LEFT, c, LEFT, 0, 0)
-        end
-        local textX = withIcon and (iconS + pad) or 2
-        st.label = P.label(c, right and S.FONT.small or S.FONT.row, K.COLOR.text)
-        U.clamp_line(st.label)
-        if withBar then
-            st.label:SetAnchor(TOPLEFT, c, TOPLEFT, textX, 3)
-            st.label:SetAnchor(TOPRIGHT, c, TOPRIGHT, link and -20 or 0, 3)
-            st.label:SetHeight(20)
-            if link then
-                st.link = mk_button(c, TX.nextb, 16, link.fn, link.tip)
-                st.link:SetAnchor(TOPRIGHT, c, TOPRIGHT, 0, 5)
-                st.link:SetHidden(true)
-                if link.claim then
-                    st.textX = textX
-                    st.claim = mk_button(c, TX.satchel, 20, link.claim, nil)
-                    st.claim:SetAnchor(TOPRIGHT, c, TOPRIGHT, -20, 3)
-                    st.claim:SetHidden(true)
-                    st.claim:SetHandler("OnMouseEnter", function(b)
-                        if U.card_show then U.card_show(b, BOTTOM, st.claim_tip or "") end
-                    end)
-                    st.claim:SetHandler("OnMouseExit", function()
-                        if U.card_hide then U.card_hide() end
-                    end)
-                end
-            end
-            st.bar = U.inset_bar(c)
-            st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
-            st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, 0, -3)
-            st.bar.container:SetHeight(9)
-            st.barW = 200 - textX
-        else
-            st.label:SetAnchor(LEFT, c, LEFT, textX, 0)
-            st.label:SetAnchor(RIGHT, c, RIGHT, link and -20 or 0, 0)
-            st.label:SetHeight(rowH)
-            if link then
-                st.link = mk_button(c, TX.nextb, 16, link.fn, link.tip)
-                st.link:SetAnchor(RIGHT, c, RIGHT, 0, 0)
-                st.link:SetHidden(true)
-            end
-        end
-        c:SetHandler("OnMouseEnter", function()
-            if st.tip and U.card_show then U.card_show(c, BOTTOM, st.tip) end
-        end)
-        c:SetHandler("OnMouseExit", function()
-            if U.card_hide then U.card_hide() end
-        end)
-        return st
-    end
-
-    panel.stats = {
-        ava     = make_stat(1, false, true, true),
-        vet     = make_stat(2, false, true, true, { fn = function() M.open_veterancy() end, tip = "View veterancy",
-                                                  claim = function() M.claim_veterancy() end }),
-        stand   = make_stat(3, false, true, false, { fn = function() M.open_leaderboard() end, tip = "View competitive leaderboard" }),
-        ap      = make_stat(1, true, true),
-        telvar  = make_stat(2, true, true),
-        session = make_stat(3, true, false),
-    }
-    for _, key in ipairs({ "ap", "telvar" }) do
-        local lbl = panel.stats[key].label
-        if lbl.SetFont then lbl:SetFont(S.FONT.row) end
-    end
+    panel.stats = Panel.build(pw, {
+        head_h = HEAD_H, inset_pad = INSET_PAD,
+        open_veterancy = function() M.open_veterancy() end,
+        claim_veterancy = function() M.claim_veterancy() end,
+        open_leaderboard = function() M.open_leaderboard() end,
+    })
 
     panel.inset = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL)
     panel.inset:SetAnchor(TOPLEFT, pw, TOPLEFT, INSET_PAD, HEAD_H + PANEL_H)
     panel.inset:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -INSET_PAD, -(FOOT_H + QUEUE_H))
     panel.inset:SetMouseEnabled(false)
 
-    local qc = BGMeter.zenimax.ui.create_from_virtual(nil, pw, "ZO_ComboBox")
-    qc:SetDimensions(168, 30)
-    qc:SetAnchor(BOTTOMLEFT, pw, BOTTOMLEFT, INSET_PAD, -(FOOT_H + 3))
-    panel.queue = { combo_c = qc, sel = 1 }
-    if type(ZO_ComboBox_ObjectFromContainer) == "function" then
-        local ok, obj = pcall(ZO_ComboBox_ObjectFromContainer, qc)
-        if ok then panel.queue.combo = obj end
-    end
-    if panel.queue.combo and panel.queue.combo.SetSortsItems then
-        panel.queue.combo:SetSortsItems(false)
-    end
-
-    panel.queue.btn = BGMeter.zenimax.ui.create_from_virtual(nil, pw, "ZO_DefaultButton")
-    panel.queue.btn:SetDimensions(92, 28)
-    panel.queue.btn:SetAnchor(LEFT, qc, RIGHT, 4, 0)
-    panel.queue.btn:SetText("Queue")
-    panel.queue.btn:SetHandler("OnClicked", function() M.queue_click() end)
-
-    panel.queue.status = P.label(pw, S.FONT.small, K.COLOR.text_dim)
-    panel.queue.status:SetAnchor(LEFT, panel.queue.btn, RIGHT, 8, 0)
-    panel.queue.status:SetHeight(28)
-    panel.queue.statusW = 90
-    if panel.queue.status.SetMaxLineCount then panel.queue.status:SetMaxLineCount(1) end
-    if TEXT_WRAP_MODE_ELLIPSIS and panel.queue.status.SetWrapMode then
-        panel.queue.status:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-    end
+    panel.queue = Queue.build(pw, {
+        x = INSET_PAD, y = -(FOOT_H + 3),
+        visible = function() return built and not panel.win:IsHidden() end,
+        on_update = function() M.update_footer() end,
+    })
 
     panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
     panel.insetBg:SetAnchorFill(panel.inset)
@@ -745,16 +409,13 @@ local function build()
     panel.footer:SetHeight(14)
     panel.footer:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     U.clamp_line(panel.footer)
-    BGMeter.UI.faces.init(pw)
-    BGMeter.UI.arenas.init(pw)
-    BGMeter.UI.marks.init(pw)
+    each_drawer("init", pw)
 
     built = true
 end
 
-local QUEUE_TICKER = "BGMeterQueueTick"
-
-local function update_footer(count, vis)
+function M.update_footer(count, vis)
+    if not built then return end
     local Cap = BGMeter.Capture
     if Cap and Cap.is_active and Cap.is_active() then
         local nm, el = Cap.live()
@@ -771,226 +432,8 @@ local function update_footer(count, vis)
     end
 end
 
-local function safe_m(obj, method, ...)
-    if not obj or type(obj[method]) ~= "function" then return nil end
-    local ok, a = pcall(obj[method], obj, ...)
-    if not ok then return nil end
-    return a
-end
-
-local function push_set(q, id, name)
-    local A = BGMeter.zenimax.api
-    if not id then return end
-    name = clean(name) or clean(safe(A.lfg_set_info, id)) or ("Set " .. id)
-    q.sets[#q.sets + 1] = { id = id, name = name }
-end
-
-local function collect_from_manager(q, types)
-    local mgr = ZO_ACTIVITY_FINDER_ROOT_MANAGER
-    if not mgr or type(mgr.GetLocationsData) ~= "function" then return false end
-    for _, act in ipairs(types) do
-        local ok, locations = pcall(mgr.GetLocationsData, mgr, act)
-        if ok and type(locations) == "table" and #locations > 0 then
-            for _, loc in ipairs(locations) do
-                if safe_m(loc, "IsSetEntryType")
-                    and not safe_m(loc, "IsLocked")
-                    and not safe_m(loc, "IsDisabled") then
-                    push_set(q, safe_m(loc, "GetId"), safe_m(loc, "GetRawName"))
-                end
-            end
-            if #q.sets > 0 then
-                q.act = act
-                BGMeter.Log.debug("queue sets via manager: %d playable of %d (activity %s)",
-                    #q.sets, #locations, tostring(act))
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local function populate_queue_sets()
-    local A = BGMeter.zenimax.api
-    local C = BGMeter.zenimax.constants
-    local q = panel.queue
-    q.sets = {}
-    q.act = nil
-    local types = { C.LFG_ACTIVITY_BG_CHAMPION, C.LFG_ACTIVITY_BG_NON_CHAMPION, C.LFG_ACTIVITY_BG_LOW_LEVEL }
-    if not collect_from_manager(q, types) then
-        for _, act in ipairs(types) do
-            local n = safe(A.lfg_num_sets, act) or 0
-            BGMeter.Log.debug("queue sets: activity=%s count=%s", tostring(act), tostring(n))
-            if n > 0 then
-                q.act = act
-                for i = 1, n do
-                    local id = safe(A.lfg_set_id, act, i)
-                    if id and not safe(A.lfg_set_disabled, id) then
-                        push_set(q, id, nil)
-                    end
-                end
-                BGMeter.Log.debug("queue sets: %d enabled of %d", #q.sets, n)
-                break
-            end
-        end
-    end
-    if not q.sets[q.sel] then q.sel = 1 end
-    if q.combo and q.combo.ClearItems then
-        q.combo:ClearItems()
-        for i, s in ipairs(q.sets) do
-            q.combo:AddItem(q.combo:CreateItemEntry(s.name, function() q.sel = i end))
-        end
-        if q.sets[q.sel] and q.combo.SetSelectedItemText then
-            q.combo:SetSelectedItemText(q.sets[q.sel].name)
-        end
-    end
-end
-
-local bg_types
-local function is_bg_activity(activityId)
-    local A = BGMeter.zenimax.api
-    local C = BGMeter.zenimax.constants
-    if not bg_types then
-        bg_types = {}
-        for _, t in ipairs({ C.LFG_ACTIVITY_BG_CHAMPION, C.LFG_ACTIVITY_BG_NON_CHAMPION, C.LFG_ACTIVITY_BG_LOW_LEVEL }) do
-            if t ~= nil then bg_types[t] = true end
-        end
-    end
-    if not activityId or activityId <= 0 then return false end
-    return bg_types[safe(A.lfg_activity_type, activityId)] == true
-end
-
-local function bg_searching()
-    local A = BGMeter.zenimax.api
-    if not safe(A.lfg_searching) then return false end
-    local n = safe(A.lfg_num_requests)
-    if not n or type(A.lfg_request_ids) ~= "function" then return true end
-    for i = 1, n do
-        local ok, aid, sid = pcall(A.lfg_request_ids, i)
-        if ok then
-            if sid and sid ~= 0 and (safe(A.lfg_set_activity_count, sid) or 0) > 0 then
-                aid = safe(A.lfg_set_activity_id, sid, 1)
-            end
-            if is_bg_activity(aid) then return true end
-        end
-    end
-    return false
-end
-
-local function in_lfg_dungeon()
-    local A = BGMeter.zenimax.api
-    local curId = safe(A.lfg_current_activity) or 0
-    return curId > 0 and not is_bg_activity(curId)
-end
-
-local function queue_ticker_sync(searching)
-    local E = BGMeter.zenimax.events
-    local want = searching and built and not panel.win:IsHidden()
-    if want and not panel.queue.ticking then
-        E.register_update(QUEUE_TICKER, 1000, function() M.update_queue() end)
-        panel.queue.ticking = true
-    elseif not want and panel.queue.ticking then
-        E.unregister_update(QUEUE_TICKER)
-        panel.queue.ticking = false
-    end
-end
-
-function M.update_queue()
-    if not built then return end
-    local A = BGMeter.zenimax.api
-    local C = BGMeter.zenimax.constants
-    local q = panel.queue
-    local anySearch = safe(A.lfg_searching) and true or false
-    local searching = anySearch and bg_searching()
-    local capturing = BGMeter.Capture and BGMeter.Capture.is_active and BGMeter.Capture.is_active() or false
-    local inDungeon = in_lfg_dungeon()
-    update_footer()
-    local compact = (q.statusW or 200) < 110
-    if q.btn.SetEnabled then
-        q.btn:SetEnabled(searching or not (capturing or anySearch or inDungeon))
-    end
-    if capturing and not searching then
-        q.btn:SetText("Queue")
-        set_text(q.status, compact and "" or "in a battleground")
-        S.color(q.status, K.COLOR.text_dim)
-    elseif anySearch and not searching then
-        q.btn:SetText("Queue")
-        set_text(q.status, compact and "" or "in another queue")
-        S.color(q.status, K.COLOR.text_dim)
-    elseif inDungeon and not searching then
-        q.btn:SetText("Queue")
-        set_text(q.status, compact and "" or "in a dungeon")
-        S.color(q.status, K.COLOR.text_dim)
-    elseif searching then
-        q.btn:SetText("Cancel")
-        local startMs, etaMs = safe(A.lfg_times)
-        local now = safe(A.now_ms) or 0
-        local txt = compact and "..." or "in queue"
-        if startMs and startMs > 0 and now > startMs then
-            if compact then
-                txt = F.duration(now - startMs)
-            else
-                txt = "in queue  " .. F.duration(now - startMs)
-                if etaMs and etaMs > startMs then
-                    txt = txt .. "  ·  eta ~" .. F.duration(etaMs - startMs)
-                end
-            end
-        end
-        set_text(q.status, txt)
-        S.color(q.status, K.COLOR.gold)
-    else
-        q.btn:SetText("Queue")
-        local cd = C.LFG_COOLDOWN_BATTLEGROUND_DESERTED_QUEUE
-            and safe(A.lfg_cooldown, C.LFG_COOLDOWN_BATTLEGROUND_DESERTED_QUEUE) or 0
-        if cd and cd > 0 then
-            set_text(q.status, (compact and "" or "deserter  ") .. F.duration(cd * 1000))
-            S.color(q.status, K.COLOR.accent)
-        else
-            set_text(q.status, "")
-        end
-    end
-    queue_ticker_sync(searching or capturing)
-end
-
-function M.queue_click()
-    if not built then return end
-    local A = BGMeter.zenimax.api
-    local C = BGMeter.zenimax.constants
-    local q = panel.queue
-    if safe(A.lfg_searching) then
-        if bg_searching() then
-            safe(A.lfg_cancel)
-            Sound.play("nav")
-            BGMeter.Log.debug("battleground queue cancelled")
-            M.update_queue()
-        end
-        return
-    end
-    if (BGMeter.Capture and BGMeter.Capture.is_active()) or in_lfg_dungeon() then
-        return
-    end
-    local flash
-    do
-        local s = q.sets and q.sets[q.sel]
-        if not s then
-            flash = "no queue entries available"
-        else
-            safe(A.lfg_clear_search)
-            safe(A.lfg_add_set, s.id)
-            local res = safe(A.lfg_start)
-            Sound.play("nav")
-            if C.ACTIVITY_QUEUE_RESULT_SUCCESS and res and res ~= C.ACTIVITY_QUEUE_RESULT_SUCCESS then
-                flash = "queue rejected (" .. tostring(res) .. ")"
-            else
-                BGMeter.Log.debug("queued: %s", s.name)
-            end
-        end
-    end
-    M.update_queue()
-    if flash then
-        set_text(q.status, flash)
-        S.color(q.status, K.COLOR.accent)
-    end
-end
+function M.update_queue() Queue.update() end
+function M.queue_click() Queue.click() end
 
 local function max_offset()
     return math.max(0, BGMeter.History.count() - (panel.vis or 1))
@@ -1065,16 +508,13 @@ function M.refresh()
     local H = BGMeter.History
     local count = H.count()
 
-    refresh_panel()
-    BGMeter.UI.faces.refresh()
-    BGMeter.UI.arenas.refresh()
-    BGMeter.UI.marks.refresh()
+    Panel.refresh()
+    each_drawer("refresh")
 
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
 
-    panel.queue.statusW = math.max(36, w - 2 * INSET_PAD - 168 - 4 - 92 - 8)
-    panel.queue.status:SetWidth(panel.queue.statusW)
+    Queue.layout(math.max(36, w - 2 * INSET_PAD - 168 - 4 - 92 - 8 - 20))
     local insetH = h - HEAD_H - PANEL_H - QUEUE_H - FOOT_H - 10
     panel.vis = math.max(1, math.floor(insetH / (ROW_H + 2)))
 
@@ -1124,7 +564,7 @@ function M.refresh()
         rows[i].index = nil
     end
 
-    update_footer(count, vis)
+    M.update_footer(count, vis)
 end
 
 function M.delete(index)
@@ -1160,11 +600,11 @@ end
 
 function M.armed_index() return armed_index end
 
-function M.stat_text(key) return panel and panel.stats[key] and panel.stats[key].label:GetText() or nil end
-function M.stat_link_hidden(key)
-    local st = panel and panel.stats[key]
-    return not (st and st.link) or st.link:IsHidden()
-end
+function M.stat_text(key) return Panel.stat_text(key) end
+function M.stat_link_hidden(key) return Panel.stat_link_hidden(key) end
+function M.stat_claim_hidden(key) return Panel.stat_claim_hidden(key) end
+function M.stat_claim_tip(key) return Panel.stat_claim_tip(key) end
+function M.podium_on() return Panel.podium_on() end
 function M.row_kda(i) return rows[i] and rows[i].kda:GetText() or nil end
 
 function M.on_double_click()
@@ -1184,16 +624,6 @@ end
 function M.claim_veterancy()
     if BGMeter.Veterancy.claim() then Sound.play("nav") end
     M.refresh_if_visible()
-end
-
-function M.stat_claim_hidden(key)
-    local st = panel and panel.stats[key]
-    return not (st and st.claim) or st.claim:IsHidden()
-end
-
-function M.stat_claim_tip(key)
-    local st = panel and panel.stats[key]
-    return st and st.claim_tip or nil
 end
 
 function M.open_veterancy()
@@ -1235,29 +665,27 @@ function M.show_menu()
     offset = 0
     auto_height()
     apply_art_cover()
-    populate_queue_sets()
-    M.update_queue()
+    Queue.populate()
+    Queue.update()
     M.refresh()
-    BGMeter.UI.faces.on_menu_shown()
-    BGMeter.UI.arenas.on_menu_shown()
-    BGMeter.UI.marks.on_menu_shown()
+    each_drawer("on_menu_shown")
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
-    safe(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
+    if type(A.query_bg_leaderboard) == "function" then
+        pcall(A.query_bg_leaderboard, C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE)
+    end
     Sound.play("menu")
 end
 
-function M.podium_on() return PODIUM.on end
-
 function M.hide_menu(silent)
-    podium_stop()
+    Panel.podium_stop()
     if not built then return end
     local was_visible = not panel.win:IsHidden()
     M.disarm_delete()
-    BGMeter.UI.Drawer.blur_all()
+    Drawer.blur_all()
     panel.win:SetHidden(true)
     if not silent and was_visible then Sound.play("close") end
-    queue_ticker_sync(false)
+    Queue.stop_ticker()
 end
 
 function M.toggle()
@@ -1320,7 +748,7 @@ function M.init()
     local C = BGMeter.zenimax.constants
     if C.EVENT_ACTIVITY_FINDER_STATUS_UPDATE then
         BGMeter.zenimax.events.register("BGMeterQueue", C.EVENT_ACTIVITY_FINDER_STATUS_UPDATE,
-            function() M.update_queue() end)
+            function() Queue.update() end)
     end
     if SCENE_MANAGER then
         local function handler(_, newState) M.on_scene_state(newState) end

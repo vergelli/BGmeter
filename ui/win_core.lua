@@ -30,6 +30,9 @@ local TX = {
     prev   = { n = "EsoUI/Art/Buttons/large_leftArrow_up.dds",  p = "EsoUI/Art/Buttons/large_leftArrow_down.dds",  o = "EsoUI/Art/Buttons/large_leftArrow_over.dds" },
     nextb  = { n = "EsoUI/Art/Buttons/large_rightArrow_up.dds", p = "EsoUI/Art/Buttons/large_rightArrow_down.dds", o = "EsoUI/Art/Buttons/large_rightArrow_over.dds" },
     satchel = { n = "EsoUI/Art/Help/help_tabIcon_itemAssistance_up.dds", p = "EsoUI/Art/Help/help_tabIcon_itemAssistance_down.dds", o = "EsoUI/Art/Help/help_tabIcon_itemAssistance_over.dds" },
+    vet    = { n = "EsoUI/Art/Campaign/campaign_tabIcon_veterancy_up.dds", p = "EsoUI/Art/Campaign/campaign_tabIcon_veterancy_down.dds", o = "EsoUI/Art/Campaign/campaign_tabIcon_veterancy_over.dds" },
+    board  = { n = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_up.dds", p = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_down.dds", o = "EsoUI/Art/Battlegrounds/battlegrounds_tabIcon_battlegrounds_over.dds" },
+    about  = { n = "EsoUI/Art/Addons/Gamepad/gp_addons_manage.dds", p = "EsoUI/Art/Addons/Gamepad/gp_addons_manage.dds", o = "EsoUI/Art/Addons/Gamepad/gp_addons_manage.dds" },
 }
 
 local MAP_ART = {
@@ -136,6 +139,7 @@ function W.tip_static(control, text) W.tips[control] = text; W.tip_dynamic(contr
 
 local function mk_button(parent, tx, size, onclick, tipText)
     local b = P.button(parent, tx.n, tx.p, tx.o)
+    b._tex_normal = tx.n
     b:SetDimensions(size, size)
     b:SetHandler("OnClicked", function() onclick() end)
     if tipText then
@@ -256,10 +260,7 @@ local function hit_proxy(target)
     return h
 end
 
-local function hexc(c)
-    return string.format("%02x%02x%02x",
-        math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
-end
+local hexc = F.hexc
 
 local function neutral_color()
     return { 0.55, 0.55, 0.60 }

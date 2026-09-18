@@ -34,9 +34,7 @@ local function sv_menu()
     return data.menu
 end
 
-function Drawer.hexc(c)
-    return string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
-end
+Drawer.hexc = BGMeter.Format.hexc
 
 function Drawer.row_h() return ROW_H end
 
@@ -177,6 +175,7 @@ function Drawer:refresh()
     end
     self.last_count, self.last_vis = #list, vis
     self:layout_scrollbar()
+    if self.spec.panel_refresh then self.spec.panel_refresh(self) end
     local foot
     if #list > vis then
         foot = string.format("%d-%d of %d  ·  scroll for more", self.offset + 1, math.min(#list, self.offset + vis), #list)
@@ -309,7 +308,11 @@ function Drawer:init(pw)
     local spec = self.spec
     local tab = { root = BGMeter.zenimax.ui.create_control(nil, pw, CT_CONTROL) }
     tab.root:SetDimensions(MEDAL, MEDAL)
-    tab.root:SetAnchor(CENTER, pw, TOPRIGHT, 0, MEDAL_Y0 + ((spec.index or 1) - 1) * MEDAL_STEP)
+    if spec.bottom then
+        tab.root:SetAnchor(CENTER, pw, BOTTOMRIGHT, 0, -(MEDAL_Y0 - 16) - ((spec.index or 1) - 1) * MEDAL_STEP)
+    else
+        tab.root:SetAnchor(CENTER, pw, TOPRIGHT, 0, MEDAL_Y0 + ((spec.index or 1) - 1) * MEDAL_STEP)
+    end
     tab.root:SetMouseEnabled(true)
     if tab.root.SetDrawLevel then tab.root:SetDrawLevel(10) end
     tab.icon = P.button(tab.root, spec.icon, spec.icon_down, spec.icon_over)
@@ -420,7 +423,17 @@ function Drawer:init(pw)
         bar_h = BAR_H - 4
     end
     local list_top = HEAD_H + bar_h + 8
-    local foot_h = FOOT_H + (spec.credit and 12 or 0)
+    local panel_h = spec.panel_h or 0
+    local foot_h = FOOT_H + (spec.credit and 12 or 0) + panel_h
+
+    if panel_h > 0 then
+        drawer.panel = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
+        drawer.panel:SetAnchor(BOTTOMLEFT, d, BOTTOMLEFT, PAD, -(foot_h - panel_h))
+        drawer.panel:SetAnchor(BOTTOMRIGHT, d, BOTTOMRIGHT, -PAD, -(foot_h - panel_h))
+        drawer.panel:SetHeight(panel_h)
+        drawer.panel:SetMouseEnabled(true)
+        if spec.panel_build then spec.panel_build(self, drawer.panel, DRAWER_W - 2 * PAD) end
+    end
 
     drawer.list = BGMeter.zenimax.ui.create_control(nil, d, CT_CONTROL)
     drawer.list:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, list_top)
