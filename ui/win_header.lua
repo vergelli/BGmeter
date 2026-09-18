@@ -85,6 +85,9 @@ local function build_header(win)
     h.prev = mk_button(win, TX.prev, 26, function() W.step(-1) end, "Newer match")
     h.prev:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 148), 13)
 
+    h.map = mk_button(win, TX.map, 28, function() BGMeter.UI.map.toggle() end, "Map\nWhere the match happened")
+    h.map:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 186), 11)
+
     return h
 end
 

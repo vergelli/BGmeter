@@ -391,17 +391,94 @@ end
 
 function Match.pack_timeline(m)
     local tl = m and m.timeline
-    if not tl or not tl.p or not tl.t then return 0 end
-    local n, packed = #tl.t, 0
-    for _, rec in pairs(tl.p) do
-        if type(rec.d) == "table" then
-            rec.s = Match.pack_series(rec.d, n)
-            rec.d = nil
-            packed = packed + 1
+    if not tl then return 0 end
+    local packed = 0
+    if tl.p and tl.t then
+        local n = #tl.t
+        for _, rec in pairs(tl.p) do
+            if type(rec.d) == "table" then
+                rec.s = Match.pack_series(rec.d, n)
+                rec.d = nil
+                packed = packed + 1
+            end
+            rec.h = nil
         end
-        rec.h = nil
+    end
+    if tl.pt and tl.pos then
+        local n = #tl.pt
+        for _, rec in pairs(tl.pos) do
+            if type(rec.x) == "table" and type(rec.x[1]) ~= "string" then
+                rec.x = Match.pack_series(rec.x, n)
+                rec.y = Match.pack_series(rec.y, n)
+                packed = packed + 1
+            end
+        end
+        for _, pin in ipairs(tl.pin or {}) do
+            if type(pin.x) == "table" and type(pin.x[1]) ~= "string" then
+                pin.x = Match.pack_series(pin.x, n)
+                pin.y = Match.pack_series(pin.y, n)
+                pin.ty = Match.pack_series(pin.ty, n)
+                packed = packed + 1
+            end
+        end
+        tl.pinIdx = nil
     end
     return packed
+end
+
+function Match.geo(m)
+    local tl = m and m.timeline
+    if not tl or not tl.pt or #tl.pt < 2 or not tl.pos then return nil end
+    local n = #tl.pt
+    local team, mine = {}, Match.local_name(m)
+    for _, r in ipairs(m.battle or {}) do
+        local nm = r.displayName or r.charName
+        if nm then team[(nm:gsub("%^.*$", ""))] = r.team end
+    end
+    local pos, teammates = {}, 0
+    for nm, rec in pairs(tl.pos) do
+        pos[nm] = { x = Match.unpack_series(rec.x, n), y = Match.unpack_series(rec.y, n) }
+        if not team[nm] then team[nm] = m.localTeam end
+        if nm ~= mine then teammates = teammates + 1 end
+    end
+    local pins = {}
+    for i, pin in ipairs(tl.pin or {}) do
+        pins[i] = { name = pin.name, kind = pin.kind, keepId = pin.keepId, objectiveId = pin.objectiveId,
+                    x = Match.unpack_series(pin.x, n), y = Match.unpack_series(pin.y, n), ty = Match.unpack_series(pin.ty, n) }
+    end
+    local stepMs = (n > 1) and math.floor((tl.pt[n] - tl.pt[1]) / (n - 1)) or 0
+    return { n = n, t = tl.pt, pos = pos, pins = pins, team = team, mine = mine, teammates = teammates, stepMs = stepMs }
+end
+
+function Match.geo_index(geo, t)
+    if not geo then return 1 end
+    local idx = 1
+    for i = 1, geo.n do
+        if (geo.t[i] or 0) <= t then idx = i else break end
+    end
+    return idx
+end
+
+function Match.geo_heat(geo, m, bins)
+    if not geo then return nil end
+    bins = bins or 32
+    local grid, max = {}, 0
+    for nm, s in pairs(geo.pos) do
+        if geo.team[nm] == m.localTeam or nm == geo.mine then
+            for i = 1, geo.n do
+                local x, y = s.x[i], s.y[i]
+                if x and y and (x > 0 or y > 0) then
+                    local bx = math.min(bins, math.floor(x / 1000 * bins) + 1)
+                    local by = math.min(bins, math.floor(y / 1000 * bins) + 1)
+                    local k = (by - 1) * bins + bx
+                    grid[k] = (grid[k] or 0) + 1
+                    if grid[k] > max then max = grid[k] end
+                end
+            end
+        end
+    end
+    if max == 0 then return nil end
+    return { grid = grid, max = max, bins = bins }
 end
 
 function Match.damage_race(m)

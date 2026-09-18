@@ -36,6 +36,7 @@ local TX = {
     saved  = { n = "EsoUI/Art/Inventory/inventory_tabIcon_container_up.dds", p = "EsoUI/Art/Inventory/inventory_tabIcon_container_down.dds", o = "EsoUI/Art/Inventory/inventory_tabIcon_container_over.dds" },
     lock   = { n = "EsoUI/Art/Miscellaneous/locked_up.dds", p = "EsoUI/Art/Miscellaneous/locked_down.dds", o = "EsoUI/Art/Miscellaneous/locked_over.dds" },
     unlock = { n = "EsoUI/Art/Miscellaneous/unlocked_up.dds", p = "EsoUI/Art/Miscellaneous/unlocked_down.dds", o = "EsoUI/Art/Miscellaneous/unlocked_over.dds" },
+    map    = { n = "EsoUI/Art/MainMenu/menuBar_map_up.dds", p = "EsoUI/Art/MainMenu/menuBar_map_down.dds", o = "EsoUI/Art/MainMenu/menuBar_map_over.dds" },
 }
 
 local MODE_SHORT = {

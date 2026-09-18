@@ -62,6 +62,7 @@ ui/win_battle.lua
 ui/win_chart.lua
 ui/win_haul.lua
 ui/win_shell.lua
+ui/win_map.lua
 ui/drawer.lua
 ui/win_faces.lua
 ui/win_arenas.lua

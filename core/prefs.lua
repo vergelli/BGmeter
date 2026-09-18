@@ -9,6 +9,7 @@ local FALLBACK = {
     show_haul = true, show_veterancy = true, show_standing = true,
     show_awards = true, show_timeline = true, show_launcher = true,
     show_race = true, show_kills = true,
+    map_heat = true, map_path = true, map_team = false, map_deaths = true, map_pins = true,
     cursor_on_open = false,
     opacity = 0.97,
     sort_key = "damage", sort_desc = true,

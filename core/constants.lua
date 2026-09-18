@@ -69,6 +69,7 @@ K.LAYOUT = {
     occ_h      = 48,
     race_h     = 48,
     kills_h    = 44,
+    map_h      = 440,
 }
 
 K.ALPHA = {

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.0]
+
+- Map: the recorder samples your position, your teammates' and every objective pin every 3 s, keeps the arena's tile art with the match, and stamps your kills and deaths with where they happened. A map button in the report header opens a panel under the report: the real arena map with your team's presence heat, your path in gold, teammates' paths on request, skulls where you died and where you got kills, and flags, relics and balls where they were at the scrubbed second. A slider under the map moves through the match, and hovering the timeline chart moves it too. Layers toggle from the panel. Matches recorded before 0.4.0 have no map.
+
 ## [0.3.0]
 
 - Saved matches: a lock on every Registry row keeps that match forever, outside the "Matches kept" cap and with its charts if it still has them, up to ten. A Saved matches drawer at the bottom edge of the Registry (chest glyph) lists them, newest first, click to open; the hover says whether the charts survived. The Registry footer says so when the ten are full.
