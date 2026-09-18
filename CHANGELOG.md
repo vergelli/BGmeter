@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.0]
+
+- Saved matches: a lock on every Registry row keeps that match forever, outside the "Matches kept" cap and with its charts if it still has them, up to ten. A Saved matches drawer at the bottom edge of the Registry (chest glyph) lists them, newest first, click to open; the hover says whether the charts survived. The Registry footer says so when the ten are full.
+- About drawer at the bottom edge of the Registry (overview glyph): version, author and credits (hover the field for the names: unit220, TattoozNbooZ), a CAPACITY table with kept, cap and saved for matches and faces, and a STORAGE panel of two bars, matches and faces, reading bytes used over bytes available. Available is not a game limit: it is the size the store would reach at the addon's own caps, saved matches included, estimated the way the game writes saved variables.
+- Competitive standing tiers moved up: Champion is the top 10, Mythic the top 25, Legendary the top 50, Epic the top 100, and two new tiers below, Superior (top 250, blue) and Fine (top 500, green). Every tier's glow breathes slowly, a small glint crosses the trophy every few seconds and a light then sweeps letter by letter across the tier word; Champions keep the chrome rainbow, and rank 1 gets a second glint. Animations off keeps the still glow.
+- The Registry list scrollbar is the same bar the drawers use: wider, in the accent colour, with arrows at both ends.
+- Settings: two new toggles under Result window, Damage race strip and Kill pressure strip.
+- The drawer glyphs on the Registry edge behave like the game's own tabs: the open drawer wears its pressed art, hover shows the hover art.
+- A KILL PRESSURE strip under the damage race: kills per minute, one bar per team, the two teams mirrored around a middle line. Hover a minute for the count. It shows when the window has room, like the race.
+- The damage race lines are lightly smoothed, sit on a soft halo and fill toward the floor in their team's colour.
+- The score chart marks each new round with a dashed line and a label, ticks the minutes along the bottom, shows the top score and names the teams in colour next to the title.
+- Every chart strip wears a thin frame.
+- In Chaosball your own possessions and in Capture the Relic the runs you scored are drawn in gold on the lane instead of the team colour, and the hover says "you".
+- The veterancy link wears the campaign veterancy glyph and the leaderboard link the battlegrounds glyph, twice the size of the old arrow.
+- Alliance Points and experience per minute, and damage per minute in the detail line, count played minutes only: the countdown before the gates open no longer deflates them. Matches recorded before this keep their old rates.
+- Fixed: a rating drop of exactly three digits read as "-,245" on the standing panel.
+- Fixed: a player who left before the end vanished from their team's damage race line. Each sampled player now stays on the team they were sampled on.
+- Fixed: the Registry's "all time" record only counted the matches still kept; it now reads the ledger, which never forgets.
+- Fixed: in multi-round matches the first lead of a new round counted as a lead change.
+- Fixed: the momentum bar's "+N kills" hovers never showed in deathmatch.
+- Internals: the Registry is split into panel, queue and menu; chart strips share one builder and one clear path; drawers register themselves.
+
 ## [0.2.0]
 
 - A ledger of aggregates fills in at the end of every match and once from the matches already stored: per arena and per game mode it keeps matches, wins, losses, your damage, healing, kills and deaths, and your best damage there; plus personal marks for damage, healing, kills, assists, AP and win streak, each with the match it came from. It stays a few kilobytes no matter how many matches you play.
