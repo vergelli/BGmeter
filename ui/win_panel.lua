@@ -51,6 +51,7 @@ local GLINT_MS = 3400
 local GLINT_ON = 0.16
 local SWEEP_FROM, SWEEP_TO = 0.16, 0.60
 local SWEEP_WIDTH = 0.14
+local SWEEP_FRAMES = 24
 
 local function fx_now()
     if GetGameTimeMilliseconds then return GetGameTimeMilliseconds() end
@@ -102,6 +103,21 @@ local function word_text(st, tier, u, spot)
     return st.rankText .. " · |c" .. F.hexc(tier.col) .. tier.word .. "|r"
 end
 
+local function sweep_frames(st, tier)
+    local frames = {}
+    for f = 1, SWEEP_FRAMES do
+        local u = (f - 1) / (SWEEP_FRAMES - 1) * 1.3 - 0.15
+        local spot = nil
+        if tier.hue then
+            local r, g, b = hue_rgb((f - 1) / SWEEP_FRAMES)
+            spot = { 0.55 + 0.45 * r, 0.55 + 0.45 * g, 0.55 + 0.45 * b }
+        end
+        frames[f] = word_text(st, tier, u, spot)
+    end
+    frames.rest = word_text(st, tier, nil)
+    return frames
+end
+
 local function glint_set(ic, u, side)
     if not ic then return end
     if u == nil then ic:SetHidden(true) return end
@@ -141,17 +157,19 @@ local function fx_tick()
     glint_set(st.glint1, (g < GLINT_ON) and (g / GLINT_ON) or nil, 1)
     local g2 = ((t + GLINT_MS / 2) % GLINT_MS) / GLINT_MS
     glint_set(st.glint2, (FX.rank == 1 and g2 < GLINT_ON) and (g2 / GLINT_ON) or nil, -1)
-    if g >= SWEEP_FROM and g < SWEEP_TO then
-        local spot = nil
-        if tier.hue then
-            local r, gg, b = hue_rgb((t % HUE_MS) / HUE_MS)
-            spot = { 0.55 + 0.45 * r, 0.55 + 0.45 * gg, 0.55 + 0.45 * b }
+    local frames = st.sweepFrames
+    if frames then
+        if g >= SWEEP_FROM and g < SWEEP_TO then
+            local f = math.floor((g - SWEEP_FROM) / (SWEEP_TO - SWEEP_FROM) * SWEEP_FRAMES) + 1
+            if f > SWEEP_FRAMES then f = SWEEP_FRAMES end
+            if st.frame ~= f then
+                st.frame = f
+                set_text(st.label, frames[f])
+            end
+        elseif st.frame ~= 0 then
+            st.frame = 0
+            set_text(st.label, frames.rest)
         end
-        set_text(st.label, word_text(st, tier, (g - SWEEP_FROM) / (SWEEP_TO - SWEEP_FROM) * 1.3 - 0.15, spot))
-        st.sweeping = true
-    elseif st.sweeping then
-        set_text(st.label, word_text(st, tier, nil))
-        st.sweeping = false
     end
 end
 
@@ -280,7 +298,8 @@ local function refresh_standing()
                 st.glow:SetColor(col[1], col[2], col[3], tier.glow)
                 st.glow:SetHidden(false)
                 st.rankText = "#" .. F.commas(standing.rank)
-                st.sweeping = false
+                st.sweepFrames = sweep_frames(st, tier)
+                st.frame = 0
                 if Prefs.get("animate") then fx_start(tier, standing.rank) else Panel.podium_stop() end
                 tierTag = string.format(" · |c%s%s|r", F.hexc(col), tier.word)
             else
