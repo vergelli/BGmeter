@@ -812,7 +812,7 @@ end
 
 function M.controls() return c end
 
-local MINI_TICK_MS = 80
+local MINI_TICK_MS = 100
 local MINI_LOOP_MS = 22000
 local MINI_NAME = "BGMeterMiniPlay"
 local MINI_MIN = 120
@@ -892,24 +892,55 @@ local function mini_tiles(m)
     end
 end
 
+local mscratch = { xs = {}, ys = {}, n = 0, drawn = 0, side = 0, geo = nil }
+
+local function mini_scale(v) return v / 1000 * mstate.side end
+
+local function mini_prepare()
+    local geo = mstate.geo
+    local me = geo.me or (geo.mine and geo.pos[geo.mine])
+    local xs, ys = mscratch.xs, mscratch.ys
+    local n = 0
+    if me then
+        local count = geo.me and me.n or geo.n
+        for i = 1, count do
+            local x, y = me.x[i] or 0, me.y[i] or 0
+            if x > 0 or y > 0 then
+                n = n + 1
+                xs[n], ys[n] = mini_scale(x), mini_scale(y)
+            else
+                n = n + 1
+                xs[n], ys[n] = false, false
+            end
+        end
+    end
+    for i = n + 1, #xs do xs[i], ys[i] = nil, nil end
+    mscratch.n, mscratch.drawn, mscratch.side, mscratch.geo = n, 0, mstate.side, geo
+end
+
 local function mini_draw()
     local geo, m = mstate.geo, mstate.m
-    mini.dot_pool:release_all()
-    if mini.line_pool then mini.line_pool:release_all() end
-    mini.icon_pool:release_all()
-    if not geo then return end
-    local side = mstate.side
-    local function mm(v) return v / 1000 * side end
+    if not geo then
+        mini.dot_pool:release_all()
+        if mini.line_pool then mini.line_pool:release_all() end
+        mini.icon_pool:release_all()
+        return
+    end
+    if mscratch.geo ~= geo or mscratch.side ~= mstate.side then mini_prepare() end
     local t = mstate.t
     local idx = BGMeter.Match.geo_index(geo, t)
-    local tc = S.team_color(m.localTeam)
     local me = geo.me or (geo.mine and geo.pos[geo.mine])
-    if me then
-        local upto = geo.me and BGMeter.Match.geo_index_of(me.t, me.n, t) or idx
-        local xs, ys = {}, {}
-        for i = 1, upto do xs[i], ys[i] = mm(me.x[i] or 0), mm(me.y[i] or 0) end
-        if mini.line_pool then
-            for i = 2, upto do
+    local upto = 0
+    if me then upto = geo.me and BGMeter.Match.geo_index_of(me.t, me.n, t) or idx end
+    if upto > mscratch.n then upto = mscratch.n end
+    local xs, ys = mscratch.xs, mscratch.ys
+    if upto < mscratch.drawn then
+        if mini.line_pool then mini.line_pool:release_all() end
+        mscratch.drawn = 0
+    end
+    if mini.line_pool then
+        for i = math.max(2, mscratch.drawn + 1), upto do
+            if xs[i] and xs[i - 1] then
                 local ln = mini.line_pool:acquire()
                 ln:ClearAnchors()
                 ln:SetAnchor(TOPLEFT, mini.root, TOPLEFT, xs[i - 1], ys[i - 1])
@@ -919,22 +950,26 @@ local function mini_draw()
                 ln:SetHidden(false)
             end
         end
-        if upto >= 1 then
-            local d = mini.icon_pool:acquire()
-            d:SetTexture(PIP_ME)
-            d:ClearAnchors()
-            d:SetAnchor(CENTER, mini.root, TOPLEFT, xs[upto], ys[upto])
-            d:SetDimensions(16, 16)
-            d:SetColor(K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 1)
-            d:SetHidden(false)
-        end
     end
+    if upto > mscratch.drawn then mscratch.drawn = upto end
+    mini.icon_pool:release_all()
+    mini.dot_pool:release_all()
+    if upto >= 1 and xs[upto] then
+        local d = mini.icon_pool:acquire()
+        d:SetTexture(PIP_ME)
+        d:ClearAnchors()
+        d:SetAnchor(CENTER, mini.root, TOPLEFT, xs[upto], ys[upto])
+        d:SetDimensions(16, 16)
+        d:SetColor(K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 1)
+        d:SetHidden(false)
+    end
+    local tc = S.team_color(m.localTeam)
     for name, s in pairs(geo.pos) do
         if name ~= geo.mine and s.x[idx] and s.y[idx] and (s.x[idx] > 0 or s.y[idx] > 0) then
             local d = mini.icon_pool:acquire()
             d:SetTexture(PIP_MATE)
             d:ClearAnchors()
-            d:SetAnchor(CENTER, mini.root, TOPLEFT, mm(s.x[idx]), mm(s.y[idx]))
+            d:SetAnchor(CENTER, mini.root, TOPLEFT, mini_scale(s.x[idx]), mini_scale(s.y[idx]))
             d:SetDimensions(10, 10)
             d:SetColor(tc[1], tc[2], tc[3], 1)
             d:SetHidden(false)
@@ -948,7 +983,7 @@ local function mini_draw()
             ic:SetColor(1, 1, 1, 1)
             ic:SetDimensions(14, 14)
             ic:ClearAnchors()
-            ic:SetAnchor(CENTER, mini.root, TOPLEFT, mm(x), mm(y))
+            ic:SetAnchor(CENTER, mini.root, TOPLEFT, mini_scale(x), mini_scale(y))
             ic:SetHidden(false)
         end
     end
@@ -966,6 +1001,9 @@ local function mini_tick()
     mstate.t = mstate.t + tspan * MINI_TICK_MS / MINI_LOOP_MS
     if mstate.t > tspan + tspan * 0.08 then mstate.t = 0 end
     mini_draw()
+end
+
+function M.mini_scratch() return mscratch
 end
 
 local function mini_start()
