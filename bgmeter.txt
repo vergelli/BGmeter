@@ -36,6 +36,7 @@ core/history.lua
 core/faces.lua
 core/ledger.lua
 core/storage.lua
+core/geo.lua
 core/standing.lua
 core/awards.lua
 core/records.lua
