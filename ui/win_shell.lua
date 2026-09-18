@@ -521,7 +521,7 @@ local function apply_visibility()
     if not want then
         W._chart_hover_stop()
         hide_medal_card()
-        if BGMeter.UI.map then BGMeter.UI.map.on_report_hidden() end
+        if BGMeter.UI.map then BGMeter.UI.map.on_report_hidden(true) end
     elseif was_hidden and BGMeter.UI.map then
         BGMeter.UI.map.on_report_shown()
     end
@@ -593,7 +593,7 @@ local function after_hide(was_visible)
     W._persist_hidden(true)
     W._chart_hover_stop()
     hide_medal_card()
-    if BGMeter.UI.map then BGMeter.UI.map.on_report_hidden() end
+    if BGMeter.UI.map then BGMeter.UI.map.on_report_hidden(false) end
     if was_visible then
         Sound.play("close")
         if BGMeter.UI.menu and BGMeter.UI.menu.on_report_closed then

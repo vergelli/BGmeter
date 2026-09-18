@@ -244,7 +244,7 @@ local function build()
 
     c.close = mk_button(c.head, TX.close, 20, function() M.close() end, "Close")
     c.close:SetAnchor(RIGHT, c.head, RIGHT, -8, 0)
-    c.dockChip = chip(c.head, "FLOAT", 56, function() M.toggle_dock() end, "Attach under the report or let it float\nDrag it near the report to dock, double-click the header to reset")
+    c.dockChip = chip(c.head, "FLOAT", 56, function() M.toggle_dock() end, "Docked: sits under the report and closes with it.\nFloating: its own window, stays open when the report closes,\nkeep it anywhere. Drag it near the report to dock, double-click the header to reset.")
     c.dockChip.hit:SetAnchor(RIGHT, c.close, LEFT, -10, 0)
 
     local edge = { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], K.ALPHA.chart_edge }
@@ -378,7 +378,7 @@ local function layout()
     else
         c.art:SetHidden(true)
     end
-    set_text(c.dockHint, state.docked and "docked under the report\ndrag it away to float" or "floating\ndrag it under the report to dock")
+    set_text(c.dockHint, state.docked and "docked: closes with the report\ndrag it away to float" or "floating: stays open on its own\ndrag it under the report to dock")
 end
 
 local function apply_tiles(m)
@@ -692,7 +692,9 @@ end
 function M.toggle_dock()
     if not built then return end
     if state.docked then
-        undock(c.win:GetLeft(), c.win:GetTop() + 40)
+        local x, y = c.win:GetLeft(), c.win:GetTop()
+        if W.win then x, y = W.win:GetRight() + 8, W.win:GetTop() end
+        undock(x, y)
     else
         dock()
     end
@@ -762,8 +764,11 @@ function M.on_report_render()
     M.render()
 end
 
-function M.on_report_hidden()
-    if built and not c.win:IsHidden() then M.stop_play(); c.win:SetHidden(true) end
+function M.on_report_hidden(forced)
+    if not built or c.win:IsHidden() then return end
+    if not forced and not state.docked then return end
+    M.stop_play()
+    c.win:SetHidden(true)
 end
 
 function M.on_report_shown()
@@ -778,5 +783,204 @@ end
 function M.on_move_stop() on_move_stop() end
 
 function M.controls() return c end
+
+local MINI_TICK_MS = 80
+local MINI_LOOP_MS = 22000
+local MINI_NAME = "BGMeterMiniPlay"
+local MINI_MIN = 120
+local mini = nil
+local mstate = { m = nil, geo = nil, t = 0, side = 0, on = false }
+
+local function mini_build(parent)
+    if mini then return end
+    mini = { root = BGMeter.zenimax.ui.create_control(nil, parent, CT_CONTROL) }
+    local r = mini.root
+    r:SetMouseEnabled(true)
+    r:SetHidden(true)
+    mini.bg = P.rect(r, { 0, 0, 0, 0.6 })
+    mini.bg:SetAnchorFill(r)
+    mini.tiles = {}
+    mini.dot_pool = leveled_pool(function() return P.rect(r, { 1, 1, 1, 1 }) end, LV.mark)
+    local probe = P.line(r, { 1, 1, 1, 1 }, 2)
+    if probe then
+        probe:SetHidden(true)
+        mini.line_pool = leveled_pool(function() return P.line(r, { 1, 1, 1, 1 }, 2) end, LV.path)
+    end
+    mini.icon_pool = leveled_pool(function() return P.icon(r, "") end, LV.mark)
+    mini.box = P.hairline_box(r, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.35 })
+    for _, edge in pairs(mini.box) do if edge.SetDrawLevel then edge:SetDrawLevel(LV.hit) end end
+    mini.glow = P.rect(r, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0 })
+    mini.glow:SetAnchorFill(r)
+    if mini.glow.SetDrawLevel then mini.glow:SetDrawLevel(LV.hit) end
+    mini.label = P.label(r, S.FONT.small, K.COLOR.gold)
+    mini.label:SetAnchor(BOTTOMLEFT, r, BOTTOMLEFT, 4, -3)
+    mini.label:SetHeight(12)
+    if mini.label.SetDrawLevel then mini.label:SetDrawLevel(LV.hit) end
+    set_text(mini.label, "MAP")
+    r:SetHandler("OnMouseEnter", function()
+        P.set_rect_color(mini.glow, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.14 })
+        for _, edge in pairs(mini.box) do P.set_rect_color(edge, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.9 }) end
+        if U.card_show then U.card_show(r, LEFT, "Open the map\nheat, paths, deaths and objectives on the arena") end
+    end)
+    r:SetHandler("OnMouseExit", function()
+        P.set_rect_color(mini.glow, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0 })
+        for _, edge in pairs(mini.box) do P.set_rect_color(edge, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.35 }) end
+        if U.card_hide then U.card_hide() end
+    end)
+    r:SetHandler("OnMouseUp", function(_, _, upInside)
+        if upInside then
+            if M.is_open() then M.close() else M.open() end
+        end
+    end)
+end
+
+local function mini_tiles(m)
+    local map = m.map
+    local nx, ny = (map and map.nx) or 0, (map and map.ny) or 0
+    local total = nx * ny
+    for i = 1, math.max(total, #mini.tiles) do
+        local tile = mini.tiles[i]
+        if i <= total then
+            if not tile then
+                tile = P.icon(mini.root, "")
+                if tile.SetDrawLevel then tile:SetDrawLevel(LV.tile) end
+                mini.tiles[i] = tile
+            end
+            local col = (i - 1) % nx
+            local row = math.floor((i - 1) / nx)
+            local tw = mstate.side / nx
+            tile:ClearAnchors()
+            tile:SetAnchor(TOPLEFT, mini.root, TOPLEFT, col * tw, row * tw)
+            tile:SetDimensions(tw + 0.5, tw + 0.5)
+            tile:SetTexture(map.tex and map.tex[i] or "")
+            tile:SetColor(1, 1, 1, 0.9)
+            tile:SetHidden(false)
+        elseif tile then
+            tile:SetHidden(true)
+        end
+    end
+end
+
+local function mini_draw()
+    local geo, m = mstate.geo, mstate.m
+    mini.dot_pool:release_all()
+    if mini.line_pool then mini.line_pool:release_all() end
+    mini.icon_pool:release_all()
+    if not geo then return end
+    local side = mstate.side
+    local function mm(v) return v / 1000 * side end
+    local t = mstate.t
+    local idx = BGMeter.Match.geo_index(geo, t)
+    local tc = S.team_color(m.localTeam)
+    local me = geo.me or (geo.mine and geo.pos[geo.mine])
+    if me then
+        local upto = geo.me and BGMeter.Match.geo_index_of(me.t, me.n, t) or idx
+        local xs, ys = {}, {}
+        for i = 1, upto do xs[i], ys[i] = mm(me.x[i] or 0), mm(me.y[i] or 0) end
+        if mini.line_pool then
+            for i = 2, upto do
+                local ln = mini.line_pool:acquire()
+                ln:ClearAnchors()
+                ln:SetAnchor(TOPLEFT, mini.root, TOPLEFT, xs[i - 1], ys[i - 1])
+                ln:SetAnchor(TOPRIGHT, mini.root, TOPLEFT, xs[i], ys[i])
+                ln:SetColor(K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 0.9)
+                if ln.SetThickness then ln:SetThickness(2) end
+                ln:SetHidden(false)
+            end
+        end
+        if upto >= 1 then
+            local ring = mini.dot_pool:acquire()
+            ring:ClearAnchors()
+            ring:SetAnchor(CENTER, mini.root, TOPLEFT, xs[upto], ys[upto])
+            ring:SetDimensions(11, 11)
+            P.set_rect_color(ring, { K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 0.3 })
+            ring:SetHidden(false)
+            local d = mini.dot_pool:acquire()
+            d:ClearAnchors()
+            d:SetAnchor(CENTER, mini.root, TOPLEFT, xs[upto], ys[upto])
+            d:SetDimensions(6, 6)
+            P.set_rect_color(d, K.COLOR.you)
+            d:SetHidden(false)
+        end
+    end
+    for name, s in pairs(geo.pos) do
+        if name ~= geo.mine and s.x[idx] and s.y[idx] then
+            local d = mini.dot_pool:acquire()
+            d:ClearAnchors()
+            d:SetAnchor(CENTER, mini.root, TOPLEFT, mm(s.x[idx]), mm(s.y[idx]))
+            d:SetDimensions(4, 4)
+            P.set_rect_color(d, { tc[1], tc[2], tc[3], 0.85 })
+            d:SetHidden(false)
+        end
+    end
+    for _, pin in ipairs(geo.pins) do
+        local x, y = pin.x[idx], pin.y[idx]
+        if x and y and (x > 0 or y > 0) then
+            local ic = mini.icon_pool:acquire()
+            ic:SetTexture(pin_texture(pin.ty[idx], pin.kind))
+            ic:SetColor(1, 1, 1, 1)
+            ic:SetDimensions(14, 14)
+            ic:ClearAnchors()
+            ic:SetAnchor(CENTER, mini.root, TOPLEFT, mm(x), mm(y))
+            ic:SetHidden(false)
+        end
+    end
+end
+
+local function mini_stop()
+    if not mstate.on then return end
+    mstate.on = false
+    BGMeter.zenimax.events.unregister_update(MINI_NAME)
+end
+
+local function mini_tick()
+    if not mini or mini.root:IsHidden() or not mstate.geo or not Prefs.get("animate") then mini_stop() return end
+    local tspan = mstate.geo.t[mstate.geo.n] or 1
+    mstate.t = mstate.t + tspan * MINI_TICK_MS / MINI_LOOP_MS
+    if mstate.t > tspan + tspan * 0.08 then mstate.t = 0 end
+    mini_draw()
+end
+
+local function mini_start()
+    if mstate.on then return end
+    mstate.on = true
+    BGMeter.zenimax.events.register_update(MINI_NAME, MINI_TICK_MS, mini_tick)
+end
+
+function M.mini_update(m, parent, x, y, avail)
+    mini_build(parent)
+    local geo = m and BGMeter.Match.geo(m) or nil
+    local side = math.min(avail or 0, L.haul_w - 32)
+    if not geo or not m.map or side < MINI_MIN then
+        mini.root:SetHidden(true)
+        mini_stop()
+        mstate.geo, mstate.m = nil, nil
+        return false
+    end
+    mstate.side = side
+    mini.root:ClearAnchors()
+    mini.root:SetAnchor(TOPLEFT, parent, TOPLEFT, x, y)
+    mini.root:SetDimensions(side, side)
+    mini.root:SetHidden(false)
+    if mstate.m ~= m then mstate.t = 0 end
+    mstate.m, mstate.geo = m, geo
+    mini_tiles(m)
+    local tspan = geo.t[geo.n] or 1
+    if Prefs.get("animate") then
+        mini_start()
+    else
+        mini_stop()
+        mstate.t = tspan
+    end
+    mini_draw()
+    return true
+end
+
+function M.mini_visible() return mini ~= nil and not mini.root:IsHidden() end
+function M.mini_time() return mstate.t end
+function M.mini_running() return mstate.on end
+function M.mini_click() if mini then mini.root._onOnMouseUp = nil end if M.is_open() then M.close() else M.open() end end
+function M.mini_controls() return mini end
+
 
 BGMeter.UI.map = M

@@ -85,31 +85,6 @@ local function build_header(win)
     h.prev = mk_button(win, TX.prev, 26, function() W.step(-1) end, "Newer match")
     h.prev:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 148), 13)
 
-    h.mapHit = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
-    h.mapHit:SetAnchor(TOPLEFT, win, TOPLEFT, L.margin + 250, 38)
-    h.mapHit:SetDimensions(78, 26)
-    h.mapHit:SetMouseEnabled(true)
-    h.mapBg = P.rect(h.mapHit, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.10 })
-    h.mapBg:SetAnchorFill(h.mapHit)
-    h.mapBox = P.hairline_box(h.mapHit, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.45 })
-    h.map = P.icon(h.mapHit, TX.map.n)
-    h.map:SetDimensions(22, 22)
-    h.map:SetAnchor(LEFT, h.mapHit, LEFT, 4, 0)
-    h.mapLabel = P.label(h.mapHit, S.FONT.small, K.COLOR.gold)
-    h.mapLabel:SetText("MAP")
-    h.mapLabel:SetAnchor(LEFT, h.map, RIGHT, 4, 0)
-    h.mapLabel:SetHeight(26)
-    h.mapHit:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then BGMeter.UI.map.toggle() end end)
-    h.mapHit:SetHandler("OnMouseEnter", function()
-        h.mapBg:SetHidden(false)
-        P.set_rect_color(h.mapBg, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 })
-        if U.card_show then U.card_show(h.mapHit, BOTTOM, h.mapTip or "Map") end
-    end)
-    h.mapHit:SetHandler("OnMouseExit", function()
-        P.set_rect_color(h.mapBg, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.10 })
-        if U.card_hide then U.card_hide() end
-    end)
-
     return h
 end
 
@@ -192,17 +167,6 @@ function SEC.header(m)
     else set_banner("MATCH RESULTS", K.COLOR.text_dim, nil) end
     apply_map_art(m)
     layout_chips(m)
-    local hasGeo = m.timeline and m.timeline.pt and #m.timeline.pt >= 2
-    local hh = W.header
-    if hasGeo then
-        S.color(hh.mapLabel, K.COLOR.gold)
-        hh.map:SetColor(1, 1, 1, 1)
-        hh.mapTip = "Map: where the match happened\nheat, paths, deaths and objectives on the arena"
-    else
-        S.color(hh.mapLabel, K.COLOR.text_dim)
-        hh.map:SetColor(1, 1, 1, 0.45)
-        hh.mapTip = "Map: this match was recorded before 0.4.0\nthere is no position data to draw"
-    end
 end
 
 U.build_header = build_header
