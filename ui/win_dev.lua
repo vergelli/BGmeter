@@ -39,6 +39,17 @@ local ACTIONS = {
     { label = "Vet mock: past max h3", cmd = "vetmock h3" },
     { label = "Vet mock: off", cmd = "vetmock off" },
     { label = "Forget faces", cmd = "forget faces" },
+    { label = "Geo: probe now", cmd = "geo", tip = "Map, tiles, your position, the group's and the objective pins, right now.\nRun it once outside a battleground and once inside." },
+    { label = "Geo: record ON", cmd = "geo on", tip = "Samples positions every 2 s during battlegrounds until you turn it off.\nStarts by itself when a match begins." },
+    { label = "Geo: record OFF", cmd = "geo off" },
+    { label = "Geo: mark here", cmd = "geo mark", tip = "Notes your position with a timestamp. Stand on a flag or a base and mark it." },
+    { label = "Geo: dump page 1", cmd = "geo dump 1", tip = "The trace in pages the copybox can hold. Select All, Ctrl+C, paste each page to me." },
+    { label = "Geo: dump page 2", cmd = "geo dump 2" },
+    { label = "Geo: dump page 3", cmd = "geo dump 3" },
+    { label = "Geo: dump page 4", cmd = "geo dump 4" },
+    { label = "Geo: dump page 5", cmd = "geo dump 5" },
+    { label = "Geo: dump page 6", cmd = "geo dump 6" },
+    { label = "Geo: clear trace", cmd = "geo clear" },
 }
 
 local D = Drawer.new({

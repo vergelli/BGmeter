@@ -85,10 +85,17 @@ function Storage.report()
 
     local pinCap = History.PIN_CAP or 10
     local heavySum, heavyN, lightSum, lightN, strippedSum, pinnedN = 0, 0, 0, 0, 0, 0
+    local geoSum, geoN = 0, 0
     for i = 1, n do
         local m = matches[i]
         local bytes = Storage.estimate(m)
         if m.pinned then pinnedN = pinnedN + 1 end
+        local tl = m.timeline
+        if tl and tl.pt then
+            geoSum = geoSum + Storage.estimate({ pt = tl.pt, pos = tl.pos, pin = tl.pin, mt = tl.mt, mx = tl.mx, my = tl.my })
+                + (m.map and Storage.estimate(m.map) or 0)
+            geoN = geoN + 1
+        end
         if m.timeline then
             heavySum, heavyN = heavySum + bytes, heavyN + 1
             strippedSum = strippedSum + Storage.estimate(m, HEAVY_OMIT)
@@ -115,12 +122,16 @@ function Storage.report()
     if projectedFaces < usedFaces then projectedFaces = usedFaces end
 
     local usedLedger = data.ledger and Storage.estimate(data.ledger) or 0
+    local geoAvg = (geoN > 0) and (geoSum / geoN) or 0
+    local projectedGeo = geoAvg * (heavyKeep + pinCap)
+    if projectedGeo < geoSum then projectedGeo = geoSum end
 
     local report = {
         matches = { used = usedMatches, cap = projectedMatches, count = n, capCount = cap,
                     heavy = heavyN, heavyAvg = heavyAvg, lightAvg = lightAvg, pinned = pinnedN, pinCap = pinCap },
         faces   = { used = usedFaces, cap = projectedFaces, count = facesN, capCount = facesCap },
         ledger  = { used = usedLedger },
+        map     = { used = geoSum, cap = projectedGeo, count = geoN },
         total   = Storage.estimate(data),
     }
     cache.key, cache.report = key, report

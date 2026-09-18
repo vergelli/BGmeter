@@ -872,6 +872,7 @@ local function chart_hover_poll()
     if U.card_show then
         U.card_show(b.chart, TOP, table.concat(parts, "\n"))
     end
+    if BGMeter.UI.map and BGMeter.UI.map.is_open() then BGMeter.UI.map.set_time(want_t, true) end
 end
 
 function W._chart_hover_start()

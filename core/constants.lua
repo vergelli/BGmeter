@@ -7,7 +7,7 @@ local K = {}
 K.ADDON_NAME = "bgmeter"
 K.TITLE      = "BGmeter"
 K.LOGO       = "bgmeter/assets/launcher.dds"
-K.VERSION    = "0.3.0"
+K.VERSION    = "0.4.0"
 K.SAVED_VARS = "BGMeterSavedVars"
 K.SLASH      = "/bgmeter"
 
@@ -47,9 +47,9 @@ K.TEAM_ART = {
 
 K.LAYOUT = {
     window_w   = 760,
-    window_h   = 620,
+    window_h   = 800,
     min_w      = 700,
-    min_h      = 600,
+    min_h      = 780,
     max_w      = 1240,
     max_h      = 980,
     row_h      = 28,
@@ -69,6 +69,9 @@ K.LAYOUT = {
     occ_h      = 48,
     race_h     = 48,
     kills_h    = 44,
+    map_h      = 560,
+    map_w      = 760,
+    map_min    = 280,
 }
 
 K.ALPHA = {
