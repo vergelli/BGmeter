@@ -98,8 +98,8 @@ local function shimmer(word, col, spot, u)
 end
 
 local function word_text(st, tier, u, spot)
-    if u then return st.rankText .. "  ·  " .. shimmer(tier.word, tier.col, spot or { 1, 1, 1 }, u) end
-    return st.rankText .. "  ·  |c" .. F.hexc(tier.col) .. tier.word .. "|r"
+    if u then return st.rankText .. " · " .. shimmer(tier.word, tier.col, spot or { 1, 1, 1 }, u) end
+    return st.rankText .. " · |c" .. F.hexc(tier.col) .. tier.word .. "|r"
 end
 
 local function glint_set(ic, u, side)
@@ -282,7 +282,7 @@ local function refresh_standing()
                 st.rankText = "#" .. F.commas(standing.rank)
                 st.sweeping = false
                 if Prefs.get("animate") then fx_start(tier, standing.rank) else Panel.podium_stop() end
-                tierTag = string.format("  ·  |c%s%s|r", F.hexc(col), tier.word)
+                tierTag = string.format(" · |c%s%s|r", F.hexc(col), tier.word)
             else
                 Panel.podium_stop()
                 st.icon:SetColor(1, 1, 1, 1)
@@ -396,7 +396,7 @@ local function make_stat(pw, rowi, right, withIcon, withBar, link)
         c:SetWidth(126)
     else
         c:SetAnchor(TOPLEFT, pw, TOPLEFT, host.inset_pad + 2, y)
-        c:SetWidth(200)
+        c:SetWidth(216)
     end
     local st = { c = c }
     if withIcon then
@@ -433,7 +433,7 @@ local function make_stat(pw, rowi, right, withIcon, withBar, link)
         st.bar.container:SetAnchor(BOTTOMLEFT, c, BOTTOMLEFT, textX, -3)
         st.bar.container:SetAnchor(BOTTOMRIGHT, c, BOTTOMRIGHT, linkInset, -3)
         st.bar.container:SetHeight(9)
-        st.barW = 200 - textX + linkInset
+        st.barW = 216 - textX + linkInset
     else
         st.label:SetAnchor(LEFT, c, LEFT, textX, 0)
         st.label:SetAnchor(RIGHT, c, RIGHT, linkInset, 0)

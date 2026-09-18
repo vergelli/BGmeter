@@ -20,17 +20,17 @@ local LINE_H = 30
 local function storage_line(parent, y, w)
     local line = {}
     line.name = P.label(parent, S.FONT.small, K.COLOR.text_dim)
-    line.name:SetAnchor(TOPLEFT, parent, TOPLEFT, 0, y)
+    line.name:SetAnchor(TOPLEFT, parent, TOPLEFT, 4, y)
     line.name:SetDimensions(70, 14)
     line.value = P.label(parent, S.FONT.small, K.COLOR.text)
-    line.value:SetAnchor(TOPRIGHT, parent, TOPRIGHT, 0, y)
-    line.value:SetDimensions(w - 70, 14)
+    line.value:SetAnchor(TOPRIGHT, parent, TOPRIGHT, -4, y)
+    line.value:SetDimensions(w - 78, 14)
     line.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     U.clamp_line(line.value)
     line.bar = U.inset_bar(parent)
-    line.bar.container:SetAnchor(TOPLEFT, parent, TOPLEFT, 0, y + 17)
-    line.bar.container:SetDimensions(w, BAR_H + 2)
-    line.barW = w
+    line.bar.container:SetAnchor(TOPLEFT, parent, TOPLEFT, 4, y + 17)
+    line.bar.container:SetDimensions(w - 8, BAR_H + 2)
+    line.barW = w - 8
     return line
 end
 
@@ -55,7 +55,8 @@ local D = Drawer.new({
     icon_over = TX.about.o,
     drag_name = "BGMeterAboutDrag",
     row_h = 40,
-    panel_h = 14 + 2 * LINE_H,
+    list_heading = "ADDON",
+    panel_h = 18 + 2 * LINE_H,
     cache_key = function(self)
         local Storage = BGMeter.Storage
         local r = Storage and Storage.report()
@@ -67,29 +68,37 @@ local D = Drawer.new({
         local cap = BGMeter.Prefs.get("max_history") or 50
         local pinned = History.pinned_count()
         return {
-            { k = "Version", v = K.VERSION, tip = "BGmeter " .. K.VERSION },
-            { k = "Author", v = AUTHOR, tip = "@vergelli" },
-            { k = "Credits", v = table.concat(CREDITS, ", "), tip = table.concat(CREDITS, "\n") },
-            { k = "Matches kept", v = string.format("%d / %d%s", History.count() - pinned, cap,
+            { k = "VERSION", v = K.VERSION, tip = "BGmeter " .. K.VERSION },
+            { k = "AUTHOR", v = AUTHOR, tip = "@vergelli" },
+            { k = "CREDITS", v = table.concat(CREDITS, ", "), tip = table.concat(CREDITS, "\n") },
+            { k = "MATCHES KEPT", v = string.format("%d / %d%s", History.count() - pinned, cap,
                 pinned > 0 and string.format("  ·  %d saved", pinned) or ""),
               tip = string.format("The cap is under Settings, Matches kept.\nThe ten most recent keep their charts; older ones keep the scoreboard.\nSaved matches (up to %d) sit outside the cap and keep whatever they had.", History.PIN_CAP) },
-            { k = "Faces known", v = string.format("%d / %d", Faces.count(), Faces.CAP or 1500),
+            { k = "FACES KNOWN", v = string.format("%d / %d", Faces.count(), Faces.CAP or 1500),
               tip = "The oldest names make room when the ledger is full." },
         }
     end,
     row_make = function(self, r)
+        r.base:SetHidden(true)
+        r.highlight:ClearAnchors()
+        r.highlight:SetAnchor(TOPLEFT, r.container, TOPLEFT, 0, 2)
+        r.highlight:SetAnchor(BOTTOMRIGHT, r.container, BOTTOMRIGHT, 0, -2)
         r.name:ClearAnchors()
-        r.name:SetAnchor(TOPLEFT, r.container, TOPLEFT, 10, 4)
-        r.name:SetAnchor(TOPRIGHT, r.container, TOPRIGHT, -6, 4)
-        r.name:SetHeight(14)
+        r.name:SetAnchor(TOPLEFT, r.container, TOPLEFT, 4, 5)
+        r.name:SetAnchor(TOPRIGHT, r.container, TOPRIGHT, -4, 5)
+        r.name:SetHeight(13)
         if r.name.SetFont then r.name:SetFont(S.FONT.small) end
         S.color(r.name, K.COLOR.text_dim)
         r.count:ClearAnchors()
-        r.count:SetAnchor(BOTTOMLEFT, r.container, BOTTOMLEFT, 10, -4)
-        r.count:SetAnchor(BOTTOMRIGHT, r.container, BOTTOMRIGHT, -6, -4)
-        r.count:SetHeight(18)
+        r.count:SetAnchor(BOTTOMLEFT, r.container, BOTTOMLEFT, 4, -5)
+        r.count:SetAnchor(BOTTOMRIGHT, r.container, BOTTOMRIGHT, -4, -5)
+        r.count:SetHeight(17)
         r.count:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
         U.clamp_line(r.count)
+        r.rule = P.rect(r.container, { 1, 1, 1, 0.08 })
+        r.rule:SetAnchor(BOTTOMLEFT, r.container, BOTTOMLEFT, 0, 0)
+        r.rule:SetAnchor(BOTTOMRIGHT, r.container, BOTTOMRIGHT, 0, 0)
+        r.rule:SetHeight(1)
     end,
     row_fill = function(self, r, e)
         set_text(r.name, e.k)
@@ -102,8 +111,12 @@ local D = Drawer.new({
         p.heading:SetText("STORAGE")
         p.heading:SetAnchor(TOPLEFT, panel, TOPLEFT, 0, 0)
         p.heading:SetDimensions(w, 14)
-        p.matches = storage_line(panel, 14, w)
-        p.faces = storage_line(panel, 14 + LINE_H, w)
+        p.rule = P.rect(panel, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 })
+        p.rule:SetAnchor(TOPLEFT, panel, TOPLEFT, 0, 17)
+        p.rule:SetAnchor(TOPRIGHT, panel, TOPRIGHT, 0, 17)
+        p.rule:SetHeight(1)
+        p.matches = storage_line(panel, 22, w)
+        p.faces = storage_line(panel, 22 + LINE_H, w)
         panel:SetHandler("OnMouseEnter", function()
             if p.tip and U.card_show then U.card_show(panel, LEFT, p.tip) end
         end)

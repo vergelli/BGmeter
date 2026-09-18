@@ -621,8 +621,8 @@ function SEC.timeline(m)
     local tdm_line = (not lanes) and lead ~= nil
     local mom_h = (dc.cmom or lead) and (tdm_line and 46 or 28) or 0
 
-    local race_h = dc.race and L.race_h or 0
-    local kills_h = dc.kp and L.kills_h or 0
+    local race_h = (dc.race and Prefs.get("show_race")) and L.race_h or 0
+    local kills_h = (dc.kp and Prefs.get("show_kills")) and L.kills_h or 0
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
     local function fits(extra) return cont_h - rows_h >= L.chart_h + extra + 8 end

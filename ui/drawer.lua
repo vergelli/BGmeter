@@ -424,6 +424,18 @@ function Drawer:init(pw)
         bar_h = BAR_H - 4
     end
     local list_top = HEAD_H + bar_h + 8
+    if spec.list_heading then
+        drawer.heading = P.label(d, S.FONT.small, K.COLOR.gold)
+        drawer.heading:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, list_top)
+        drawer.heading:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, list_top)
+        drawer.heading:SetHeight(14)
+        set_text(drawer.heading, spec.list_heading)
+        local rule = P.rect(d, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 })
+        rule:SetAnchor(TOPLEFT, d, TOPLEFT, PAD, list_top + 17)
+        rule:SetAnchor(TOPRIGHT, d, TOPRIGHT, -PAD, list_top + 17)
+        rule:SetHeight(1)
+        list_top = list_top + 24
+    end
     local panel_h = spec.panel_h or 0
     local foot_h = FOOT_H + (spec.credit and 12 or 0) + panel_h
 
