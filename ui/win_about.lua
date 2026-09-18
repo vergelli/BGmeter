@@ -103,7 +103,7 @@ local D = Drawer.new({
         return {
             { k = "VERSION", v = K.VERSION, tip = "BGmeter " .. K.VERSION },
             { k = "AUTHOR", v = AUTHOR, tip = "@vergelli" },
-            { k = "CREDITS", v = "|c" .. hexc(K.COLOR.text_dim) .. "hover|r", tip = table.concat(CREDITS, "\n") },
+            { k = "CREDITS", v = "", tip = table.concat(CREDITS, "\n") },
         }
     end,
     row_make = function(self, r)
@@ -130,7 +130,16 @@ local D = Drawer.new({
     end,
     row_fill = function(self, r, e)
         set_text(r.name, e.k)
-        set_text(r.count, string.format("|c%s%s|r", hexc(K.COLOR.gold), e.v))
+        r.name:ClearAnchors()
+        if e.v == "" then
+            r.name:SetAnchor(LEFT, r.container, LEFT, 4, 0)
+            r.name:SetAnchor(RIGHT, r.container, RIGHT, -4, 0)
+            set_text(r.count, "")
+        else
+            r.name:SetAnchor(TOPLEFT, r.container, TOPLEFT, 4, 5)
+            r.name:SetAnchor(TOPRIGHT, r.container, TOPRIGHT, -4, 5)
+            set_text(r.count, string.format("|c%s%s|r", hexc(K.COLOR.gold), e.v))
+        end
     end,
     describe = function(self, e) return e.tip end,
     panel_build = function(self, panel, w)

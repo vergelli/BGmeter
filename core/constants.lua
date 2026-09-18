@@ -7,7 +7,7 @@ local K = {}
 K.ADDON_NAME = "bgmeter"
 K.TITLE      = "BGmeter"
 K.LOGO       = "bgmeter/assets/launcher.dds"
-K.VERSION    = "0.3.0"
+K.VERSION    = "0.4.0"
 K.SAVED_VARS = "BGMeterSavedVars"
 K.SLASH      = "/bgmeter"
 
