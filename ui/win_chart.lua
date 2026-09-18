@@ -188,7 +188,7 @@ local function lane_label(lane)
     return lane.name or ("flag " .. tostring(lane.letter))
 end
 
-function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
+function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt, mine)
     b.ribbon:ClearAnchors()
     b.ribbon:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -y_off)
     b.ribbon:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -y_off)
@@ -205,7 +205,7 @@ function SEC.ribbon(b, lanes, ribbon_h, tspan, w, y_off, gt)
             local x0, x1 = rx(seg.t0), rx(seg.t1)
             if x1 > x0 then
                 if seg.own and seg.own ~= 0 then
-                    local tc = S.team_color(seg.own)
+                    local tc = (mine and seg.who == mine) and K.COLOR.you or S.team_color(seg.own)
                     local fa = K.ALPHA.ribbon_fill
                     if x1 - x0 > TIP * 2 then
                         flat_rect(b.ribbon_pool, b.ribbon, x0, y, x1 - x0 - TIP, lh, { tc[1], tc[2], tc[3], fa })
@@ -581,6 +581,7 @@ local function derive(m, tl, tspan, gt)
     end
     dc.kp = Match.kill_pressure(m.killfeed, tspan)
     dc.rounds = Match.round_marks(tl)
+    dc.mine = Match.local_name(m)
     return dc
 end
 
@@ -775,7 +776,7 @@ function SEC.timeline(m)
         SEC.kills(b, dc.kp, tspan, w, kills_h, kills_off)
     end
     if lanes then
-        SEC.ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt)
+        SEC.ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt, dc.mine)
     end
     if occ then
         SEC.occupation(b, occ, neutralPct, fstats, w)
@@ -784,7 +785,7 @@ function SEC.timeline(m)
         SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, dc.cmom, dc.cmomMax)
     end
 
-    W.chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes, kf = m.killfeed }
+    W.chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes, kf = m.killfeed, mine = dc.mine }
 end
 
 local function chart_hover_poll()
@@ -833,8 +834,12 @@ local function chart_hover_poll()
             local label = (hit and hit.name) or lane_label(lane)
             if own ~= 0 then
                 local tc = S.team_color(own)
+                local holder = team_name(own)
+                if hit and hit.who then
+                    if hit.who == st.mine then tc, holder = K.COLOR.you, "you" else holder = hit.who end
+                end
                 parts[#parts + 1] = string.format("|c%s%s  %s|r",
-                    hexc(tc), label, team_name(own))
+                    hexc(tc), label, holder)
             elseif hit or not lane.covered then
                 parts[#parts + 1] = string.format("|c8c8c95%s  neutral|r", label)
             end

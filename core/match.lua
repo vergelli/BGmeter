@@ -307,8 +307,9 @@ function Match.relic_lanes(m, tspan)
     end
     local function close(lane, t1)
         if lane.cur and lane.cur ~= 0 and t1 > lane.t0 then
-            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur }
+            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur, who = lane.who }
         end
+        lane.who = nil
     end
     for i = 1, #rl.t do
         local lane = lanes[rl.o[i]]
@@ -318,6 +319,7 @@ function Match.relic_lanes(m, tspan)
             if evl == "flag_taken" then
                 close(lane, t)
                 lane.cur, lane.t0 = rl.hold[i] or 0, t
+                lane.who = rl.who and rl.who[i] or nil
                 if not lane.home or lane.home == 0 then
                     lane.ticks[#lane.ticks + 1] = { t = t, own = rl.hold[i] or 0, kind = "take",
                                                     who = rl.who and rl.who[i] or nil }
@@ -328,6 +330,8 @@ function Match.relic_lanes(m, tspan)
             elseif evl == "captured" then
                 close(lane, t)
                 lane.cur = 0
+                local last = lane.segs[#lane.segs]
+                if last and rl.who and rl.who[i] and last.t1 == t then last.who = rl.who[i] end
                 lane.ticks[#lane.ticks + 1] = { t = t, own = rl.last[i] or 0, kind = "cap",
                                                 who = rl.who and rl.who[i] or nil }
             elseif evl == "flag_returned" or evl == "flag_timer_return" then
@@ -344,6 +348,13 @@ function Match.relic_lanes(m, tspan)
         lane.cur = nil
     end
     return lanes
+end
+
+function Match.local_name(m)
+    local lr = Match.local_row(m)
+    local nm = lr and (lr.displayName or lr.charName)
+    if not nm then return nil end
+    return (nm:gsub("%^.*$", ""))
 end
 
 local CHUNK = 1500

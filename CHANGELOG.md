@@ -11,6 +11,7 @@
 - The damage race lines are lightly smoothed, sit on a soft halo and fill toward the floor in their team's colour.
 - The score chart marks each new round with a dashed line and a label, ticks the minutes along the bottom, shows the top score and names the teams in colour next to the title.
 - Every chart strip wears a thin frame.
+- In Chaosball your own possessions and in Capture the Relic the runs you scored are drawn in gold on the lane instead of the team colour, and the hover says "you".
 - The veterancy link wears the campaign veterancy glyph and the leaderboard link the battlegrounds glyph, twice the size of the old arrow.
 - Alliance Points and experience per minute, and damage per minute in the detail line, count played minutes only: the countdown before the gates open no longer deflates them. Matches recorded before this keep their old rates.
 - Fixed: a rating drop of exactly three digits read as "-,245" on the standing panel.

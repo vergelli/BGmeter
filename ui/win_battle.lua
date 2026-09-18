@@ -181,7 +181,7 @@ local function build_battle(win)
     b.cursor:SetHidden(true)
 
     strip("ribbon", "FLAG CONTROL",
-        "Who held each flag over time (lane color = owning team).\nFlag pin = captured  ·  shield = attack defended\nHover any pin for the details")
+        "Who held each flag over time (lane color = owning team).\nFlag pin = captured  ·  shield = attack defended\nIn Chaosball and Capture the Relic your own runs are gold.\nHover any pin for the details")
 
     b.ribbon_pool = rect_pool(b.ribbon)
 
