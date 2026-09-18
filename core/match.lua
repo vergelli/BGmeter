@@ -87,12 +87,18 @@ function Match.column_max(m, key)
     return max
 end
 
+function Match.played_ms(m)
+    if m.playedMs and m.playedMs > 0 then return m.playedMs end
+    return m.durationMs or 0
+end
+
 function Match.derive(m)
     m.durationMs = (m.endMs and m.startMs) and math.max(0, m.endMs - m.startMs) or m.durationMs
     local h = m.haul
     local F = BGMeter.Format
-    h.apPerMin = math.floor(F.per_minute(h.apGained, m.durationMs) + 0.5)
-    h.xpPerMin = math.floor(F.per_minute(h.xpGained, m.durationMs) + 0.5)
+    local played = Match.played_ms(m)
+    h.apPerMin = math.floor(F.per_minute(h.apGained, played) + 0.5)
+    h.xpPerMin = math.floor(F.per_minute(h.xpGained, played) + 0.5)
     local lr = Match.local_row(m)
     local kills = lr and lr.kills or 0
     h.apPerKill = (kills > 0) and math.floor(h.apGained / kills + 0.5) or 0
@@ -301,8 +307,9 @@ function Match.relic_lanes(m, tspan)
     end
     local function close(lane, t1)
         if lane.cur and lane.cur ~= 0 and t1 > lane.t0 then
-            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur }
+            lane.segs[#lane.segs + 1] = { t0 = lane.t0, t1 = t1, own = lane.cur, who = lane.who }
         end
+        lane.who = nil
     end
     for i = 1, #rl.t do
         local lane = lanes[rl.o[i]]
@@ -312,6 +319,7 @@ function Match.relic_lanes(m, tspan)
             if evl == "flag_taken" then
                 close(lane, t)
                 lane.cur, lane.t0 = rl.hold[i] or 0, t
+                lane.who = rl.who and rl.who[i] or nil
                 if not lane.home or lane.home == 0 then
                     lane.ticks[#lane.ticks + 1] = { t = t, own = rl.hold[i] or 0, kind = "take",
                                                     who = rl.who and rl.who[i] or nil }
@@ -322,6 +330,8 @@ function Match.relic_lanes(m, tspan)
             elseif evl == "captured" then
                 close(lane, t)
                 lane.cur = 0
+                local last = lane.segs[#lane.segs]
+                if last and rl.who and rl.who[i] and last.t1 == t then last.who = rl.who[i] end
                 lane.ticks[#lane.ticks + 1] = { t = t, own = rl.last[i] or 0, kind = "cap",
                                                 who = rl.who and rl.who[i] or nil }
             elseif evl == "flag_returned" or evl == "flag_timer_return" then
@@ -338,6 +348,13 @@ function Match.relic_lanes(m, tspan)
         lane.cur = nil
     end
     return lanes
+end
+
+function Match.local_name(m)
+    local lr = Match.local_row(m)
+    local nm = lr and (lr.displayName or lr.charName)
+    if not nm then return nil end
+    return (nm:gsub("%^.*$", ""))
 end
 
 local CHUNK = 1500
@@ -404,7 +421,7 @@ function Match.damage_race(m)
     local decoded = {}
     for nm, rec in pairs(tl.p) do
         decoded[nm] = rec.d or Match.unpack_series(rec.s, n)
-        local team = team_of[nm]
+        local team = team_of[nm] or rec.tm
         if team then
             if not seen[team] then seen[team] = true; teams[#teams + 1] = team; series[team] = {} end
             local row = series[team]
@@ -485,6 +502,7 @@ function Match.lead_stats(tl)
     local leader = nil
     local maxLead = { team = nil, lead = 0, t = 0 }
     for i = 1, #tl.t do
+        if i > 1 and tl.r and tl.r[i] ~= tl.r[i - 1] then leader = nil end
         local best, second, bestTeam = 0, 0, nil
         for s = 1, 3 do
             local team = teams[s]
@@ -508,6 +526,54 @@ function Match.lead_stats(tl)
     if not maxLead.team then return nil end
     return { changes = changes, maxTeam = maxLead.team, maxLead = maxLead.lead,
              maxAt = maxLead.t, finalLeader = leader }
+end
+
+function Match.round_marks(tl)
+    if not tl or not tl.t or not tl.r or #tl.t < 2 then return nil end
+    local marks = {}
+    for i = 2, #tl.t do
+        if tl.r[i] ~= tl.r[i - 1] then
+            marks[#marks + 1] = { i = i, t = tl.t[i], r = tl.r[i] }
+        end
+    end
+    if #marks == 0 then return nil end
+    return marks
+end
+
+function Match.smooth3(arr, n)
+    n = n or #arr
+    local out = {}
+    for i = 1, n do
+        local a = arr[math.max(1, i - 1)] or 0
+        local b = arr[i] or 0
+        local c = arr[math.min(n, i + 1)] or 0
+        out[i] = (a + 2 * b + c) / 4
+    end
+    return out
+end
+
+function Match.kill_pressure(killfeed, tspan, binMs)
+    if not killfeed or #killfeed == 0 or not tspan or tspan <= 0 then return nil end
+    binMs = binMs or 60000
+    local bins = math.max(1, math.ceil(tspan / binMs))
+    local counts, teams, seen, maxv, total = {}, {}, {}, 0, 0
+    for _, k in ipairs(killfeed) do
+        local team = k.kt
+        if team then
+            local b = math.floor(math.max(0, math.min(k.t or 0, tspan - 1)) / binMs) + 1
+            if not seen[team] then
+                seen[team] = true
+                teams[#teams + 1] = team
+                counts[team] = {}
+            end
+            counts[team][b] = (counts[team][b] or 0) + 1
+            if counts[team][b] > maxv then maxv = counts[team][b] end
+            total = total + 1
+        end
+    end
+    if #teams == 0 or maxv == 0 then return nil end
+    table.sort(teams)
+    return { bins = bins, binMs = binMs, teams = teams, counts = counts, max = maxv, total = total }
 end
 
 function Match.bloodiest_minute(killfeed, windowMs)

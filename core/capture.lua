@@ -369,12 +369,13 @@ local function sample_players(tl, i, round)
     if n <= 0 then return end
     tl.p = tl.p or {}
     for e = 1, n do
-        local charName, displayName = safe(A.get_entry_info, e, round)
+        local charName, displayName, team = safe(A.get_entry_info, e, round)
         local nm = clean_name(displayName or charName)
         if nm then
             local rec = tl.p[nm]
             if not rec then rec = { d = {} }; tl.p[nm] = rec end
             rec.d[i] = read_score(e, C.SCORE_TRACKER_TYPE_DAMAGE_DONE, round)
+            if team and team ~= 0 then rec.tm = team end
         end
     end
 end
@@ -447,6 +448,7 @@ function Capture.begin()
     sample_scores()
 
     local C = BGMeter.zenimax.constants
+    if safe(A.get_bg_state) == C.BATTLEGROUND_STATE_RUNNING then active.runMs = active.startMs end
     BGMeter.Log.debug("match begin: bg=%s id=%s gameType=%s rounds=%s localTeam=%s teamSize=%s competitive=%s ap0=%d",
         tostring(active.name), tostring(active.bgId),
         tostring(C.GAME_TYPE_LABEL[active.gameType] or active.gameType),
@@ -516,6 +518,7 @@ function Capture.finalize()
     pcall(Match.pack_timeline, active)
 
     active.endMs = safe(A.now_ms) or active.startMs
+    active.playedMs = math.max(0, active.endMs - (active.runMs or active.startMs))
     active.capturedAt = safe(A.get_timestamp)
     active.result = read_result(active.localTeam)
 
@@ -545,6 +548,13 @@ end
 function Capture.rescan(reason)
     if not active then return end
     scan_objectives(reason)
+end
+
+function Capture.mark_running()
+    if not active or active.runMs then return end
+    local A = BGMeter.zenimax.api
+    active.runMs = safe(A.now_ms) or active.startMs
+    BGMeter.Log.debug("gates open at %s", BGMeter.Format.duration(active.runMs - (active.startMs or 0)))
 end
 
 function Capture.abort()
