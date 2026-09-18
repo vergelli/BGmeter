@@ -37,10 +37,10 @@ end
 local TIERS = {
     { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true },
     { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60 },
-    { max = 100,  word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50 },
-    { max = 250,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42 },
-    { max = 500,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36 },
-    { max = 1000, word = "Fine",      col = { 0.45, 0.82, 0.35 }, glow = 0.30 },
+    { max = 50,   word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50 },
+    { max = 100,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42 },
+    { max = 250,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36 },
+    { max = 500,  word = "Fine",      col = { 0.45, 0.82, 0.35 }, glow = 0.30 },
 }
 Panel.TIERS = TIERS
 
@@ -49,6 +49,8 @@ local BREATH_MS = 2600
 local HUE_MS = 1200
 local GLINT_MS = 3400
 local GLINT_ON = 0.16
+local SWEEP_FROM, SWEEP_TO = 0.16, 0.60
+local SWEEP_WIDTH = 0.14
 
 local function fx_now()
     if GetGameTimeMilliseconds then return GetGameTimeMilliseconds() end
@@ -75,6 +77,23 @@ local function trophy_tier(rank)
 end
 
 function Panel.tier_of(rank) return trophy_tier(rank) end
+
+local function shimmer(word, col, u)
+    local n = #word
+    local parts = {}
+    for i = 1, n do
+        local d = ((i - 0.5) / n - u) / SWEEP_WIDTH
+        local w = math.exp(-d * d)
+        local c = { col[1] + (1 - col[1]) * 0.9 * w, col[2] + (1 - col[2]) * 0.9 * w, col[3] + (1 - col[3]) * 0.9 * w }
+        parts[i] = "|c" .. F.hexc(c) .. word:sub(i, i)
+    end
+    return table.concat(parts) .. "|r"
+end
+
+local function word_text(st, tier, u)
+    if u then return st.rankText .. "  ·  " .. shimmer(tier.word, tier.col, u) end
+    return st.rankText .. "  ·  |c" .. F.hexc(tier.col) .. tier.word .. "|r"
+end
 
 local function glint_set(ic, u, side)
     if not ic then return end
@@ -115,6 +134,13 @@ local function fx_tick()
     glint_set(st.glint1, (g < GLINT_ON) and (g / GLINT_ON) or nil, 1)
     local g2 = ((t + GLINT_MS / 2) % GLINT_MS) / GLINT_MS
     glint_set(st.glint2, (FX.rank == 1 and g2 < GLINT_ON) and (g2 / GLINT_ON) or nil, -1)
+    if g >= SWEEP_FROM and g < SWEEP_TO then
+        set_text(st.label, word_text(st, tier, (g - SWEEP_FROM) / (SWEEP_TO - SWEEP_FROM) * 1.3 - 0.15))
+        st.sweeping = true
+    elseif st.sweeping then
+        set_text(st.label, word_text(st, tier, nil))
+        st.sweeping = false
+    end
 end
 
 local function fx_start(tier, rank)
@@ -241,6 +267,8 @@ local function refresh_standing()
                 st.icon:SetColor(col[1], col[2], col[3], 1)
                 st.glow:SetColor(col[1], col[2], col[3], tier.glow)
                 st.glow:SetHidden(false)
+                st.rankText = "#" .. F.commas(standing.rank)
+                st.sweeping = false
                 if Prefs.get("animate") then fx_start(tier, standing.rank) else Panel.podium_stop() end
                 tierTag = string.format("  ·  |c%s%s|r", F.hexc(col), tier.word)
             else

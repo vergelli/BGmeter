@@ -13,7 +13,7 @@ local set_text = U.set_text
 local hexc = F.hexc
 
 local AUTHOR = "Federico Vergelli"
-local CREDITS = { "unit220" }
+local CREDITS = { "unit220", "TattoozNbooZ" }
 local BAR_H = 7
 local LINE_H = 30
 
@@ -79,9 +79,10 @@ local D = Drawer.new({
     row_make = function(self, r)
         r.name:ClearAnchors()
         r.name:SetAnchor(LEFT, r.container, LEFT, 10, 0)
-        r.name:SetAnchor(RIGHT, r.container, RIGHT, -112, 0)
+        r.name:SetAnchor(RIGHT, r.container, RIGHT, -140, 0)
         S.color(r.name, K.COLOR.text_dim)
-        r.count:SetDimensions(106, Drawer.row_h())
+        r.count:SetDimensions(134, Drawer.row_h())
+        if r.count.SetFont then r.count:SetFont(S.FONT.small) end
         U.clamp_line(r.count)
     end,
     row_fill = function(self, r, e)

@@ -250,7 +250,9 @@ function Drawer:apply_open(open, silent)
         end
     end
     self.drawer.root:SetHidden(not open)
-    self.tab.icon:SetAlpha(open and 1 or 0.85)
+    local tex = open and (self.spec.icon_down or self.spec.icon) or self.spec.icon
+    self.tab.icon:SetNormalTexture(tex)
+    self.tab.icon._tex_normal = tex
     sv_menu()[self.key .. "_open"] = open and true or false
     if open then
         self.offset = 0
@@ -318,14 +320,12 @@ function Drawer:init(pw)
     tab.icon = P.button(tab.root, spec.icon, spec.icon_down, spec.icon_over)
     tab.icon:SetDimensions(MEDAL, MEDAL)
     tab.icon:SetAnchor(CENTER, tab.root, CENTER, 0, 0)
-    tab.icon:SetAlpha(0.85)
+    tab.icon._tex_normal = spec.icon
     tab.icon:SetHandler("OnClicked", function() self:toggle() end)
     tab.icon:SetHandler("OnMouseEnter", function()
-        tab.icon:SetAlpha(1)
         if U.card_show then U.card_show(tab.root, RIGHT, spec.title) end
     end)
     tab.icon:SetHandler("OnMouseExit", function()
-        tab.icon:SetAlpha(self:is_open() and 1 or 0.85)
         if U.card_hide then U.card_hide() end
     end)
     tab.root:SetHandler("OnMouseUp", function(_, button, upInside)
