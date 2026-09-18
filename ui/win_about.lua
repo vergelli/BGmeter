@@ -176,8 +176,7 @@ local D = Drawer.new({
             "Kept is what the Registry holds today, cap is Settings, Matches kept;\n"
             .. "the ten most recent keep their charts, saved matches sit outside the cap (up to %d).\n"
             .. "Bytes are what the addon keeps in your saved variables; available is not a game limit,\n"
-            .. "it is the store at the addon's own caps.  Map is the part of the matches\n"
-            .. "that holds positions and pins (%d matches).  Whole store %s.",
+            .. "it is the store at the addon's own caps.  Map = positions and pins (%d matches).  Whole store %s.",
             H.PIN_CAP, r.map.count, F.bytes(r.total))
     end,
     foot = function(self, list)

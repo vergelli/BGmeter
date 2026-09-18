@@ -47,9 +47,9 @@ K.TEAM_ART = {
 
 K.LAYOUT = {
     window_w   = 760,
-    window_h   = 620,
+    window_h   = 800,
     min_w      = 700,
-    min_h      = 600,
+    min_h      = 780,
     max_w      = 1240,
     max_h      = 980,
     row_h      = 28,
