@@ -22,12 +22,14 @@ local PAD = 16
 local SCRUB_H = 26
 local LEGEND_W = 200
 local BINS = 32
+local DOCK_SNAP = 48
 local SKULL = "EsoUI/Art/TargetMarkers/Target_White_Skull_64.dds"
 local FALLBACK_PIN = "EsoUI/Art/MapPins/battlegrounds_murderball_neutral.dds"
 local FALLBACK_AREA = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.dds"
+local LV = { tile = 1, heat = 2, path = 3, mark = 4, hit = 5 }
 
 local LAYERS = {
-    { key = "map_heat",   label = "Heat",       tip = "Where your team spent its time.\nBrighter = more presence." },
+    { key = "map_heat",   label = "Heat",       tip = "Where your team spent its time once the gates opened.\nBrighter = more presence." },
     { key = "map_path",   label = "Your path",  tip = "Where you went, in gold, up to the scrubbed second." },
     { key = "map_team",   label = "Team paths", tip = "Your teammates' paths, faint, in the team colour." },
     { key = "map_deaths", label = "Deaths",     tip = "Red skull = where you died  ·  gold skull = where you got a kill." },
@@ -36,13 +38,14 @@ local LAYERS = {
 
 local built = false
 local c = nil
-local state = { m = nil, geo = nil, t = nil, side = 0, applying = false }
+local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, docked = true }
 
-local function sv_map()
+local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
     if not sv then return {} end
     sv.window = sv.window or {}
-    return sv.window
+    sv.window.map = sv.window.map or { open = false, dock = true, x = 0, y = 0, w = 0, h = 0 }
+    return sv.window.map
 end
 
 local function pin_texture(ty, kind)
@@ -52,32 +55,79 @@ local function pin_texture(ty, kind)
     return FALLBACK_PIN
 end
 
-local function rect_pool(parent)
+local function leveled_pool(make, level)
     return BGMeter.Plot.pool.new(
-        function() return P.rect(parent, { 1, 1, 1, 1 }) end,
-        function(r) r:SetHidden(true); r:ClearAnchors() end)
+        function()
+            local ctl = make()
+            if ctl.SetDrawLevel then ctl:SetDrawLevel(level) end
+            return ctl
+        end,
+        function(ctl) ctl:SetHidden(true); ctl:ClearAnchors() end)
 end
 
-local function icon_pool(parent)
-    return BGMeter.Plot.pool.new(
-        function() return P.icon(parent, "") end,
-        function(ic) ic:SetHidden(true); ic:ClearAnchors() end)
+local function dock()
+    local win = c.win
+    win:ClearAnchors()
+    if W.win then
+        win:SetAnchor(TOPLEFT, W.win, BOTTOMLEFT, 0, 4)
+    else
+        win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0)
+    end
+    state.docked = true
+    sv_win().dock = true
+end
+
+local function undock(x, y)
+    local win = c.win
+    win:ClearAnchors()
+    win:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, x, y)
+    state.docked = false
+    local g = sv_win()
+    g.dock, g.x, g.y = false, x, y
+end
+
+local function on_move_stop()
+    if not W.win then return end
+    local x, y = c.win:GetLeft(), c.win:GetTop()
+    local dx = math.abs(x - W.win:GetLeft())
+    local dy = math.abs(y - (W.win:GetBottom() + 4))
+    if dx <= DOCK_SNAP and dy <= DOCK_SNAP then
+        dock()
+        Sound.play("nav")
+    else
+        undock(x, y)
+    end
 end
 
 local function build()
     if built then return end
     local wm = BGMeter.zenimax.ui.wm
+    local g = sv_win()
     local win = wm:CreateTopLevelWindow("BGMeterMapPanel")
-    win:SetDimensions(L.window_w, L.map_h)
+    win:SetDimensions((g.w or 0) > 0 and g.w or L.map_w, (g.h or 0) > 0 and g.h or L.map_h)
     win:SetMouseEnabled(true)
+    win:SetMovable(true)
     win:SetClampedToScreen(true)
     win:SetHidden(true)
     win:SetDrawTier(DT_HIGH)
+    win:SetResizeHandleSize(L.resize_h)
+    win:SetDimensionConstraints(L.map_min, L.map_min - 120, L.max_w, L.max_h)
+    win:SetHandler("OnMoveStop", on_move_stop)
+    win:SetHandler("OnResizeStop", function()
+        local gg = sv_win()
+        gg.w, gg.h = win:GetWidth(), win:GetHeight()
+        M.render()
+    end)
     Scene.register_top_level(win, function() M.close() end)
     c = { win = win }
 
     c.bg = P.rect(win, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.97 })
     c.bg:SetAnchorFill(win)
+    c.art = P.icon(win)
+    c.art:SetAnchor(TOPLEFT, win, TOPLEFT, 2, 2)
+    c.art:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -2, -2)
+    c.art:SetColor(1, 1, 1, K.ALPHA.map_art * 0.8)
+    c.art:SetHidden(true)
     P.frame(win):SetAnchorFill(win)
     local strip = P.rect(win, K.COLOR.accent)
     strip:SetAnchor(TOPLEFT, win, TOPLEFT, 6, 6)
@@ -87,41 +137,34 @@ local function build()
     c.map = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
     c.map:SetAnchor(TOPLEFT, win, TOPLEFT, PAD, PAD)
     c.map:SetMouseEnabled(true)
-    c.mapBg = P.rect(c.map, { 0, 0, 0, 0.6 })
+    c.mapBg = P.rect(c.map, { 0, 0, 0, 0.7 })
     c.mapBg:SetAnchorFill(c.map)
     c.tiles = {}
-    c.tileLayer = BGMeter.zenimax.ui.create_control(nil, c.map, CT_CONTROL)
-    c.tileLayer:SetAnchorFill(c.map)
-    c.heatLayer = BGMeter.zenimax.ui.create_control(nil, c.map, CT_CONTROL)
-    c.heatLayer:SetAnchorFill(c.map)
-    c.pathLayer = BGMeter.zenimax.ui.create_control(nil, c.map, CT_CONTROL)
-    c.pathLayer:SetAnchorFill(c.map)
-    c.markLayer = BGMeter.zenimax.ui.create_control(nil, c.map, CT_CONTROL)
-    c.markLayer:SetAnchorFill(c.map)
-    c.heat_pool = rect_pool(c.heatLayer)
-    c.dot_pool = rect_pool(c.markLayer)
-    local probe = P.line(c.pathLayer, { 1, 1, 1, 1 }, 2)
+    c.heat_pool = leveled_pool(function() return P.rect(c.map, { 1, 1, 1, 1 }) end, LV.heat)
+    c.dot_pool = leveled_pool(function() return P.rect(c.map, { 1, 1, 1, 1 }) end, LV.mark)
+    local probe = P.line(c.map, { 1, 1, 1, 1 }, 2)
     if probe then
         probe:SetHidden(true)
-        c.line_pool = BGMeter.Plot.pool.new(
-            function() return P.line(c.pathLayer, { 1, 1, 1, 1 }, 2) end,
-            function(ln) ln:SetHidden(true); ln:ClearAnchors() end)
+        c.line_pool = leveled_pool(function() return P.line(c.map, { 1, 1, 1, 1 }, 2) end, LV.path)
     end
-    c.icon_pool = icon_pool(c.markLayer)
+    c.icon_pool = leveled_pool(function() return P.icon(c.map, "") end, LV.mark)
     c.hit_pool = BGMeter.Plot.pool.new(
         function()
-            local h = BGMeter.zenimax.ui.create_control(nil, c.markLayer, CT_CONTROL)
+            local h = BGMeter.zenimax.ui.create_control(nil, c.map, CT_CONTROL)
+            if h.SetDrawLevel then h:SetDrawLevel(LV.hit) end
             W.tip_dynamic(h)
             return h
         end,
         function(h) h:SetHidden(true); h:ClearAnchors(); W.tips[h] = nil end)
     c.mapBox = P.hairline_box(c.map, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], K.ALPHA.chart_edge })
+    for _, edge in pairs(c.mapBox) do if edge.SetDrawLevel then edge:SetDrawLevel(LV.hit) end end
 
     c.empty = P.label(c.map, S.FONT.small, K.COLOR.text_dim)
     c.empty:SetAnchor(CENTER, c.map, CENTER, 0, 0)
     c.empty:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-    c.empty:SetText("no map data for this match\nmatches recorded from 0.4.0 on carry positions")
+    c.empty:SetText("this match was recorded before 0.4.0\nthere is no position data to draw")
     c.empty:SetHidden(true)
+    if c.empty.SetDrawLevel then c.empty:SetDrawLevel(LV.hit) end
 
     c.title = P.label(win, S.FONT.title, K.COLOR.text)
     c.title:SetText("MAP")
@@ -166,8 +209,14 @@ local function build()
 
     c.legend = P.label(win, S.FONT.small, K.COLOR.text_dim)
     c.legend:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, y + 8)
-    c.legend:SetDimensions(LEGEND_W, 120)
+    c.legend:SetDimensions(LEGEND_W, 140)
     c.legend:SetVerticalAlignment(TEXT_ALIGN_TOP)
+
+    c.dockHint = P.label(win, S.FONT.small, K.COLOR.text_dim)
+    c.dockHint:SetAnchor(BOTTOMLEFT, c.map, BOTTOMRIGHT, PAD, 0)
+    c.dockHint:SetDimensions(LEGEND_W, 28)
+    c.dockHint:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
+    c.dockHint:SetAlpha(0.7)
 
     c.timeLabel = P.label(win, S.FONT.small, K.COLOR.gold)
     c.timeLabel:SetAnchor(BOTTOMLEFT, c.map, BOTTOMLEFT, 0, SCRUB_H)
@@ -182,23 +231,24 @@ local function build()
         M.set_time(v, false)
     end)
 
+    if g.dock == false and (g.x or 0) ~= 0 then undock(g.x, g.y) else dock() end
     built = true
 end
 
 local function layout()
     local win = c.win
-    local w = W.win and W.win:GetWidth() or L.window_w
-    win:SetWidth(w)
-    local side = L.map_h - 2 * PAD - SCRUB_H - 6
+    local w, h = win:GetWidth(), win:GetHeight()
+    local side = math.max(120, math.min(w - LEGEND_W - 3 * PAD, h - 2 * PAD - SCRUB_H - 6))
     state.side = side
     c.map:SetDimensions(side, side)
     c.slider:SetWidth(math.max(60, side - 84))
-    win:ClearAnchors()
-    if W.win then
-        win:SetAnchor(TOPLEFT, W.win, BOTTOMLEFT, 0, 4)
+    if W.map_art_path then
+        c.art:SetTexture(W.map_art_path)
+        c.art:SetHidden(false)
     else
-        win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0)
+        c.art:SetHidden(true)
     end
+    set_text(c.dockHint, state.docked and "docked under the report\ndrag it away to float" or "floating\ndrag it under the report to dock")
 end
 
 local function apply_tiles(m)
@@ -209,14 +259,15 @@ local function apply_tiles(m)
         local tile = c.tiles[i]
         if i <= total then
             if not tile then
-                tile = P.icon(c.tileLayer, "")
+                tile = P.icon(c.map, "")
+                if tile.SetDrawLevel then tile:SetDrawLevel(LV.tile) end
                 c.tiles[i] = tile
             end
             local col = (i - 1) % nx
             local row = math.floor((i - 1) / nx)
             local tw = state.side / nx
             tile:ClearAnchors()
-            tile:SetAnchor(TOPLEFT, c.tileLayer, TOPLEFT, col * tw, row * tw)
+            tile:SetAnchor(TOPLEFT, c.map, TOPLEFT, col * tw, row * tw)
             tile:SetDimensions(tw + 0.5, tw + 0.5)
             tile:SetTexture(map.tex and map.tex[i] or "")
             tile:SetColor(1, 1, 1, 0.92)
@@ -227,14 +278,15 @@ local function apply_tiles(m)
     end
 end
 
-local function mx(v) return math.floor(v / 1000 * state.side + 0.5) end
+local function mx(v) return v / 1000 * state.side end
 
-local function polyline(px, py, n, color, thick, alpha)
+local function polyline(xs, ys, n, color, thick, alpha)
+    if n < 2 then return end
     if not c.line_pool then
         for i = 1, n do
             local d = c.dot_pool:acquire()
             d:ClearAnchors()
-            d:SetAnchor(CENTER, c.pathLayer, TOPLEFT, px(i), py(i))
+            d:SetAnchor(CENTER, c.map, TOPLEFT, xs[i], ys[i])
             d:SetDimensions(thick + 1, thick + 1)
             P.set_rect_color(d, { color[1], color[2], color[3], alpha })
             d:SetHidden(false)
@@ -244,12 +296,26 @@ local function polyline(px, py, n, color, thick, alpha)
     for i = 2, n do
         local ln = c.line_pool:acquire()
         ln:ClearAnchors()
-        ln:SetAnchor(TOPLEFT, c.pathLayer, TOPLEFT, px(i - 1), py(i - 1))
-        ln:SetAnchor(TOPRIGHT, c.pathLayer, TOPLEFT, px(i), py(i))
+        ln:SetAnchor(TOPLEFT, c.map, TOPLEFT, xs[i - 1], ys[i - 1])
+        ln:SetAnchor(TOPRIGHT, c.map, TOPLEFT, xs[i], ys[i])
         ln:SetColor(color[1], color[2], color[3], alpha)
         if ln.SetThickness then ln:SetThickness(thick) end
         ln:SetHidden(false)
     end
+end
+
+local function scaled(series, upto, smooth)
+    local xs, ys = {}, {}
+    local n = 0
+    if smooth and upto >= 3 then
+        local sx, sy = BGMeter.Match.geo_spline(series.x, series.y, upto, 3)
+        for i = 1, #sx do xs[i], ys[i] = mx(sx[i]), mx(sy[i]) end
+        n = #sx
+    else
+        for i = 1, upto do xs[i], ys[i] = mx(series.x[i] or 0), mx(series.y[i] or 0) end
+        n = upto
+    end
+    return xs, ys, n
 end
 
 local function release_all()
@@ -271,9 +337,9 @@ local function draw_heat(geo, m)
             if v and v > 0 then
                 local r = c.heat_pool:acquire()
                 r:ClearAnchors()
-                r:SetAnchor(TOPLEFT, c.heatLayer, TOPLEFT, (bx - 1) * cell, (by - 1) * cell)
+                r:SetAnchor(TOPLEFT, c.map, TOPLEFT, (bx - 1) * cell, (by - 1) * cell)
                 r:SetDimensions(cell + 0.5, cell + 0.5)
-                local a = 0.10 + 0.60 * (v / heat.max) ^ 0.6
+                local a = 0.22 + 0.62 * math.min(1, v / heat.cap) ^ 0.5
                 P.set_rect_color(r, { tc[1], tc[2], tc[3], a })
                 r:SetHidden(false)
             end
@@ -281,20 +347,26 @@ local function draw_heat(geo, m)
     end
 end
 
-local function draw_paths(geo, m, upto)
+local function draw_paths(geo, m, idx, t)
     local mine = geo.mine
     if Prefs.get("map_team") then
         local tc = S.team_color(m.localTeam)
         for name, s in pairs(geo.pos) do
-            if name ~= mine and geo.team[name] == m.localTeam then
-                polyline(function(i) return mx(s.x[i]) end, function(i) return mx(s.y[i]) end, upto, tc, 1, 0.35)
+            if name ~= mine then
+                local xs, ys, n = scaled(s, idx, false)
+                polyline(xs, ys, n, tc, 1, 0.45)
             end
         end
     end
-    if Prefs.get("map_path") and mine and geo.pos[mine] then
-        local s = geo.pos[mine]
-        polyline(function(i) return mx(s.x[i]) end, function(i) return mx(s.y[i]) end, upto, K.COLOR.you, 4, 0.18)
-        polyline(function(i) return mx(s.x[i]) end, function(i) return mx(s.y[i]) end, upto, K.COLOR.you, 2, 0.95)
+    if Prefs.get("map_path") then
+        local me = geo.me
+        local upto = me and BGMeter.Match.geo_index_of(me.t, me.n, t) or idx
+        local s = me or (mine and geo.pos[mine])
+        if s then
+            local xs, ys, n = scaled(s, upto, me ~= nil)
+            polyline(xs, ys, n, K.COLOR.you, 6, 0.22)
+            polyline(xs, ys, n, K.COLOR.you, 3, 1)
+        end
     end
 end
 
@@ -304,10 +376,10 @@ local function draw_deaths(geo, m, t)
             local ic = c.icon_pool:acquire()
             ic:SetTexture(SKULL)
             local col = (k.kind == "kill") and K.COLOR.gold or K.COLOR.accent
-            ic:SetColor(col[1], col[2], col[3], 0.95)
-            ic:SetDimensions(16, 16)
+            ic:SetColor(col[1], col[2], col[3], 1)
+            ic:SetDimensions(18, 18)
             ic:ClearAnchors()
-            ic:SetAnchor(CENTER, c.markLayer, TOPLEFT, mx(k.x), mx(k.y))
+            ic:SetAnchor(CENTER, c.map, TOPLEFT, mx(k.x), mx(k.y))
             ic:SetHidden(false)
             local hit = c.hit_pool:acquire()
             hit:ClearAnchors()
@@ -327,9 +399,9 @@ local function draw_pins(geo, idx)
             local ic = c.icon_pool:acquire()
             ic:SetTexture(pin_texture(pin.ty[idx], pin.kind))
             ic:SetColor(1, 1, 1, 1)
-            ic:SetDimensions(28, 28)
+            ic:SetDimensions(30, 30)
             ic:ClearAnchors()
-            ic:SetAnchor(CENTER, c.markLayer, TOPLEFT, mx(x), mx(y))
+            ic:SetAnchor(CENTER, c.map, TOPLEFT, mx(x), mx(y))
             ic:SetHidden(false)
             local hit = c.hit_pool:acquire()
             hit:ClearAnchors()
@@ -340,25 +412,46 @@ local function draw_pins(geo, idx)
     end
 end
 
-local function draw_positions(geo, m, idx)
+local function draw_positions(geo, m, idx, t)
     local mine = geo.mine
     for name, s in pairs(geo.pos) do
-        local x, y = s.x[idx], s.y[idx]
-        if x and y then
-            local me = (name == mine)
-            local d = c.dot_pool:acquire()
-            d:ClearAnchors()
-            d:SetAnchor(CENTER, c.markLayer, TOPLEFT, mx(x), mx(y))
-            d:SetDimensions(me and 9 or 6, me and 9 or 6)
-            local col = me and K.COLOR.you or S.team_color(geo.team[name] or m.localTeam)
-            P.set_rect_color(d, { col[1], col[2], col[3], me and 1 or 0.85 })
-            d:SetHidden(false)
-            local hit = c.hit_pool:acquire()
-            hit:ClearAnchors()
-            hit:SetAnchorFill(d)
-            hit:SetHidden(false)
-            W.tips[hit] = me and "you" or name
+        if name ~= mine then
+            local x, y = s.x[idx], s.y[idx]
+            if x and y then
+                local d = c.dot_pool:acquire()
+                d:ClearAnchors()
+                d:SetAnchor(CENTER, c.map, TOPLEFT, mx(x), mx(y))
+                d:SetDimensions(7, 7)
+                local col = S.team_color(geo.team[name] or m.localTeam)
+                P.set_rect_color(d, { col[1], col[2], col[3], 0.9 })
+                d:SetHidden(false)
+                local hit = c.hit_pool:acquire()
+                hit:ClearAnchors()
+                hit:SetAnchorFill(d)
+                hit:SetHidden(false)
+                W.tips[hit] = name
+            end
         end
+    end
+    local mx_, my_
+    if geo.me then
+        local i = BGMeter.Match.geo_index_of(geo.me.t, geo.me.n, t)
+        mx_, my_ = geo.me.x[i], geo.me.y[i]
+    elseif mine and geo.pos[mine] then
+        mx_, my_ = geo.pos[mine].x[idx], geo.pos[mine].y[idx]
+    end
+    if mx_ and my_ then
+        local d = c.dot_pool:acquire()
+        d:ClearAnchors()
+        d:SetAnchor(CENTER, c.map, TOPLEFT, mx(mx_), mx(my_))
+        d:SetDimensions(11, 11)
+        P.set_rect_color(d, K.COLOR.you)
+        d:SetHidden(false)
+        local hit = c.hit_pool:acquire()
+        hit:ClearAnchors()
+        hit:SetAnchorFill(d)
+        hit:SetHidden(false)
+        W.tips[hit] = "you"
     end
 end
 
@@ -372,6 +465,7 @@ function M.render()
         t.mark:SetHidden(not on)
         S.color(t.label, on and K.COLOR.text or K.COLOR.text_dim)
     end
+    if state.m ~= m then state.t = nil end
     state.m = m
     state.geo = m and BGMeter.Match.geo(m) or nil
     apply_tiles(m or {})
@@ -387,7 +481,7 @@ function M.render()
     c.slider:SetHidden(false)
     local geo = state.geo
     local tspan = geo.t[geo.n] or 1
-    if state.t == nil or state.m ~= m then state.t = tspan end
+    if state.t == nil then state.t = tspan end
     if state.t > tspan then state.t = tspan end
     state.applying = true
     if c.slider.SetMinMax then c.slider:SetMinMax(0, tspan) end
@@ -396,14 +490,15 @@ function M.render()
     local idx = BGMeter.Match.geo_index(geo, state.t)
     set_text(c.sub, string.format("%s  ·  %s", m.name or "Battleground", m.map and m.map.name or ""))
     if Prefs.get("map_heat") then draw_heat(geo, m) end
-    draw_paths(geo, m, idx)
+    draw_paths(geo, m, idx, state.t)
     if Prefs.get("map_deaths") then draw_deaths(geo, m, state.t) end
     if Prefs.get("map_pins") then draw_pins(geo, idx) end
-    draw_positions(geo, m, idx)
+    draw_positions(geo, m, idx, state.t)
     set_text(c.timeLabel, "t " .. F.duration(state.t))
     local tc = S.team_color(m.localTeam)
-    set_text(c.legend, string.format("|c%s%s|r  ·  %d teammates tracked\n%d samples every %d s\ndrag the slider or hover the timeline chart\nto move through the match",
-        hexc(tc), team_name(m.localTeam), geo.teammates, geo.n, math.floor((geo.stepMs or 3000) / 1000)))
+    set_text(c.legend, string.format("|c%s%s|r  ·  %d teammates tracked\n%d samples every %d s%s\ndrag the slider or hover the timeline chart\nto move through the match",
+        hexc(tc), team_name(m.localTeam), geo.teammates, geo.n, math.floor((geo.stepMs or 3000) / 1000),
+        geo.me and ", your path every second" or ""))
 end
 
 function M.set_time(t, from_chart)
@@ -421,12 +516,13 @@ function M.set_time(t, from_chart)
 end
 
 function M.time() return state.t end
+function M.is_docked() return state.docked end
 
 function M.open()
     build()
     if not W.win or W.win:IsHidden() then return end
     c.win:SetHidden(false)
-    sv_map().map_open = true
+    sv_win().open = true
     state.t = nil
     M.render()
     Sound.play("menu")
@@ -435,7 +531,7 @@ end
 function M.close(silent)
     if not built or c.win:IsHidden() then return end
     c.win:SetHidden(true)
-    sv_map().map_open = false
+    sv_win().open = false
     if not silent then Sound.play("close") end
 end
 
@@ -447,9 +543,7 @@ end
 function M.is_open() return built and not c.win:IsHidden() end
 
 function M.on_report_render()
-    if not built then return end
-    if c.win:IsHidden() then return end
-    state.t = nil
+    if not built or c.win:IsHidden() then return end
     M.render()
 end
 
@@ -459,12 +553,14 @@ end
 
 function M.on_report_shown()
     build()
-    if sv_map().map_open then
+    if sv_win().open then
         c.win:SetHidden(false)
         state.t = nil
         M.render()
     end
 end
+
+function M.on_move_stop() on_move_stop() end
 
 function M.controls() return c end
 

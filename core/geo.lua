@@ -232,6 +232,26 @@ function Geo.clear()
     d.samples, d.events, d.probes = {}, {}, {}
 end
 
+local PAGE_CHARS = 24000
+
+function Geo.dump_page(page)
+    local all = Geo.dump_lines()
+    local pages, cur, size = {}, {}, 0
+    for _, l in ipairs(all) do
+        if size + #l + 1 > PAGE_CHARS and #cur > 0 then
+            pages[#pages + 1] = cur
+            cur, size = {}, 0
+        end
+        cur[#cur + 1] = l
+        size = size + #l + 1
+    end
+    if #cur > 0 then pages[#pages + 1] = cur end
+    page = math.max(1, math.min(#pages, tonumber(page) or 1))
+    local out = { string.format("=== geo dump page %d of %d  ·  next: /bgmeter geo dump %d ===", page, #pages, math.min(#pages, page + 1)) }
+    for _, l in ipairs(pages[page] or {}) do out[#out + 1] = l end
+    return out, #pages
+end
+
 function Geo.dump_lines()
     local d = sv()
     local L = {}
@@ -308,8 +328,9 @@ function Geo.command(arg)
         Geo.set_enabled(false)
         Geo.stop("off")
         Log.say("geo recording OFF")
-    elseif arg == "dump" then
-        E.show_text(table.concat(Geo.dump_lines(), "\n"))
+    elseif arg == "dump" or arg:find("^dump%s+%d+") then
+        local lines = Geo.dump_page(tonumber(arg:match("(%d+)")) or 1)
+        E.show_text(table.concat(lines, "\n"))
     elseif arg == "clear" then
         Geo.clear()
         Log.say("geo trace cleared")
@@ -317,7 +338,7 @@ function Geo.command(arg)
         Geo.event("mark", "manual")
         Log.say("geo mark noted at your position")
     else
-        Log.say("geo: (probe now)  on  off  dump  clear  mark")
+        Log.say("geo: (probe now)  on  off  dump [page]  clear  mark")
     end
 end
 

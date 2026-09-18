@@ -367,9 +367,11 @@ local function apply_map_art(m)
                 try_next()
             end
         else
+            W.map_art_path = cands[idx]
             BGMeter.Log.debug("map art resolved: %s", cands[idx])
         end
     end
+    W.map_art_path = nil
     try_next()
 end
 

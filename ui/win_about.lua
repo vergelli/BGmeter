@@ -79,7 +79,7 @@ local function fill_line(line, label, used, cap, color)
 end
 
 local CAP_H = 22 + 14 + 2 * CAP_ROW + 10
-local STORE_H = 22 + 2 * LINE_H
+local STORE_H = 22 + 3 * LINE_H
 
 local D = Drawer.new({
     key = "about",
@@ -148,6 +148,7 @@ local D = Drawer.new({
         p.storeHeading = heading(panel, "STORAGE", CAP_H, w)
         p.matches = storage_line(panel, CAP_H + 22, w)
         p.faces = storage_line(panel, CAP_H + 22 + LINE_H, w)
+        p.map = storage_line(panel, CAP_H + 22 + 2 * LINE_H, w)
         panel:SetHandler("OnMouseEnter", function()
             if p.tip and U.card_show then U.card_show(panel, LEFT, p.tip) end
         end)
@@ -170,12 +171,14 @@ local D = Drawer.new({
         set_text(p.facesRow.saved, "")
         fill_line(p.matches, "matches", r.matches.used, r.matches.cap, K.COLOR.gold)
         fill_line(p.faces, "faces", r.faces.used, r.faces.cap, K.COLOR.veterancy)
+        fill_line(p.map, "map", r.map.used, r.map.cap, K.COLOR.accent)
         p.tip = string.format(
             "Kept is what the Registry holds today, cap is Settings, Matches kept;\n"
             .. "the ten most recent keep their charts, saved matches sit outside the cap (up to %d).\n"
             .. "Bytes are what the addon keeps in your saved variables; available is not a game limit,\n"
-            .. "it is the store at the addon's own caps.  Whole store %s.",
-            H.PIN_CAP, F.bytes(r.total))
+            .. "it is the store at the addon's own caps.  Map is the part of the matches\n"
+            .. "that holds positions and pins (%d matches).  Whole store %s.",
+            H.PIN_CAP, r.map.count, F.bytes(r.total))
     end,
     foot = function(self, list)
         local r = BGMeter.Storage and BGMeter.Storage.report()

@@ -7,7 +7,10 @@ local SAMPLE_NAME = "BGMeterScoreSample"
 local SAMPLE_MS   = 5000
 local POS_NAME    = "BGMeterPosSample"
 local POS_MS      = 3000
+local ME_NAME     = "BGMeterMeSample"
+local ME_MS       = 1000
 local MAX_PINS    = 8
+local MAX_ME      = 1500
 
 local active = nil
 local baseline = nil
@@ -464,6 +467,21 @@ local function sample_positions()
     end
 end
 
+local function sample_me()
+    if not active or not active.timeline then return end
+    local A = BGMeter.zenimax.api
+    local tl = active.timeline
+    if not tl.mt then tl.mt, tl.mx, tl.my = {}, {}, {} end
+    local i = #tl.mt + 1
+    if i > MAX_ME then return end
+    local now = (safe(A.now_ms) or 0) - (active.startMs or 0)
+    if i > 1 and tl.mt[i - 1] == now then return end
+    local px, py = safe(A.get_map_player_position, "player")
+    local qx, qy = q(px), q(py)
+    if not qx or not qy then return end
+    tl.mt[i], tl.mx[i], tl.my[i] = now, qx, qy
+end
+
 local function sample_scores()
     if not active or not active.timeline then return end
     local A = BGMeter.zenimax.api
@@ -497,11 +515,13 @@ local function start_sampler()
         local ok, err = pcall(sample_positions)
         if not ok then BGMeter.Log.debug("position sampling failed: %s", tostring(err)) end
     end)
+    BGMeter.zenimax.events.register_update(ME_NAME, ME_MS, function() pcall(sample_me) end)
 end
 
 local function stop_sampler()
     BGMeter.zenimax.events.unregister_update(SAMPLE_NAME)
     BGMeter.zenimax.events.unregister_update(POS_NAME)
+    BGMeter.zenimax.events.unregister_update(ME_NAME)
 end
 
 function Capture.begin()
@@ -614,6 +634,7 @@ function Capture.finalize()
     local ok, err = pcall(sample_scores)
     if not ok then BGMeter.Log.debug("final sample failed: %s", tostring(err)) end
     pcall(sample_positions)
+    pcall(sample_me)
     pcall(Match.pack_timeline, active)
 
     active.endMs = safe(A.now_ms) or active.startMs

@@ -423,7 +423,43 @@ function Match.pack_timeline(m)
         end
         tl.pinIdx = nil
     end
+    if tl.mt and type(tl.mx) == "table" and type(tl.mx[1]) ~= "string" then
+        local n = #tl.mt
+        tl.mx = Match.pack_series(tl.mx, n)
+        tl.my = Match.pack_series(tl.my, n)
+        tl.mt = Match.pack_series(tl.mt, n)
+        packed = packed + 1
+    end
     return packed
+end
+
+function Match.geo_index_of(times, n, t)
+    local idx = 1
+    for i = 1, n do
+        if (times[i] or 0) <= t then idx = i else break end
+    end
+    return idx
+end
+
+function Match.geo_spline(xs, ys, n, sub)
+    sub = sub or 3
+    local ox, oy = {}, {}
+    local function at(i) i = math.max(1, math.min(n, i)); return xs[i] or 0, ys[i] or 0 end
+    for i = 1, n - 1 do
+        local x0, y0 = at(i - 1)
+        local x1, y1 = at(i)
+        local x2, y2 = at(i + 1)
+        local x3, y3 = at(i + 2)
+        for k = 0, sub - 1 do
+            local u = k / sub
+            local u2, u3 = u * u, u * u * u
+            ox[#ox + 1] = 0.5 * ((2 * x1) + (-x0 + x2) * u + (2 * x0 - 5 * x1 + 4 * x2 - x3) * u2 + (-x0 + 3 * x1 - 3 * x2 + x3) * u3)
+            oy[#oy + 1] = 0.5 * ((2 * y1) + (-y0 + y2) * u + (2 * y0 - 5 * y1 + 4 * y2 - y3) * u2 + (-y0 + 3 * y1 - 3 * y2 + y3) * u3)
+        end
+    end
+    local xl, yl = at(n)
+    ox[#ox + 1], oy[#oy + 1] = xl, yl
+    return ox, oy
 end
 
 function Match.geo(m)
@@ -447,7 +483,17 @@ function Match.geo(m)
                     x = Match.unpack_series(pin.x, n), y = Match.unpack_series(pin.y, n), ty = Match.unpack_series(pin.ty, n) }
     end
     local stepMs = (n > 1) and math.floor((tl.pt[n] - tl.pt[1]) / (n - 1)) or 0
-    return { n = n, t = tl.pt, pos = pos, pins = pins, team = team, mine = mine, teammates = teammates, stepMs = stepMs }
+    local me = nil
+    if tl.mt and tl.mx and tl.my then
+        local mt = Match.unpack_series(tl.mt)
+        local mn = #mt
+        if mn >= 2 then
+            me = { n = mn, t = mt, x = Match.unpack_series(tl.mx, mn), y = Match.unpack_series(tl.my, mn) }
+        end
+    end
+    local startT = 0
+    if m.playedMs and m.durationMs and m.durationMs > m.playedMs then startT = m.durationMs - m.playedMs end
+    return { n = n, t = tl.pt, pos = pos, pins = pins, team = team, mine = mine, teammates = teammates, stepMs = stepMs, me = me, startT = startT }
 end
 
 function Match.geo_index(geo, t)
@@ -467,7 +513,7 @@ function Match.geo_heat(geo, m, bins)
         if geo.team[nm] == m.localTeam or nm == geo.mine then
             for i = 1, geo.n do
                 local x, y = s.x[i], s.y[i]
-                if x and y and (x > 0 or y > 0) then
+                if x and y and (x > 0 or y > 0) and (geo.t[i] or 0) >= (geo.startT or 0) then
                     local bx = math.min(bins, math.floor(x / 1000 * bins) + 1)
                     local by = math.min(bins, math.floor(y / 1000 * bins) + 1)
                     local k = (by - 1) * bins + bx
@@ -478,7 +524,12 @@ function Match.geo_heat(geo, m, bins)
         end
     end
     if max == 0 then return nil end
-    return { grid = grid, max = max, bins = bins }
+    local vals = {}
+    for _, v in pairs(grid) do vals[#vals + 1] = v end
+    table.sort(vals)
+    local cap = vals[math.max(1, math.floor(#vals * 0.92))] or max
+    if cap < 1 then cap = 1 end
+    return { grid = grid, max = max, cap = cap, bins = bins }
 end
 
 function Match.damage_race(m)
