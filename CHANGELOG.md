@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0]
+
+- About drawer at the bottom edge of the Registry: version, author, AI disclosure, credits, the caps for matches and familiar faces, commands and where to send feedback, each with a hover for the details; and a STORAGE panel with two bars, matches and faces, reading bytes used over bytes available. Available is not a game limit: it is the size the store would reach at the cap the addon sets itself (Settings > Matches kept; 1500 faces), estimated the way the game writes saved variables.
+- A KILL PRESSURE strip under the damage race: kills per minute, one bar per team, the two teams mirrored around a middle line. Hover a minute for the count. It shows when the window has room, like the race.
+- The damage race lines are lightly smoothed, sit on a soft halo and fill toward the floor in their team's colour.
+- The score chart marks each new round with a dashed line and a label, ticks the minutes along the bottom, shows the top score and names the teams in colour next to the title.
+- Every chart strip wears a thin frame.
+- The veterancy link wears the campaign veterancy glyph and the leaderboard link the battlegrounds glyph, both larger, instead of the small arrow.
+- Alliance Points and experience per minute, and damage per minute in the detail line, count played minutes only: the countdown before the gates open no longer deflates them. Matches recorded before this keep their old rates.
+- Fixed: a rating drop of exactly three digits read as "-,245" on the standing panel.
+- Fixed: a player who left before the end vanished from their team's damage race line. Each sampled player now stays on the team they were sampled on.
+- Fixed: the Registry's "all time" record only counted the matches still kept; it now reads the ledger, which never forgets.
+- Fixed: in multi-round matches the first lead of a new round counted as a lead change.
+- Fixed: the momentum bar's "+N kills" hovers never showed in deathmatch.
+- Internals: the Registry is split into panel, queue and menu; chart strips share one builder and one clear path; drawers register themselves.
+
 ## [0.2.0]
 
 - A ledger of aggregates fills in at the end of every match and once from the matches already stored: per arena and per game mode it keeps matches, wins, losses, your damage, healing, kills and deaths, and your best damage there; plus personal marks for damage, healing, kills, assists, AP and win streak, each with the match it came from. It stays a few kilobytes no matter how many matches you play.
