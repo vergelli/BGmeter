@@ -21,8 +21,14 @@ local M = {}
 local PAD = 16
 local SCRUB_H = 26
 local LEGEND_W = 200
+local HEAD_H = 34
+local COMPACT_W = 520
 local BINS = 32
 local DOCK_SNAP = 48
+local WHEEL_MS = 5000
+local PLAY_NAME = "BGMeterMapPlay"
+local PLAY_MS = 50
+local PLAY_SPEED = 24
 local SKULL = "EsoUI/Art/TargetMarkers/Target_White_Skull_64.dds"
 local FALLBACK_PIN = "EsoUI/Art/MapPins/battlegrounds_murderball_neutral.dds"
 local FALLBACK_AREA = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.dds"
@@ -58,7 +64,7 @@ end
 
 local built = false
 local c = nil
-local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, docked = true }
+local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, docked = true, compact = false, playing = false }
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -153,9 +159,48 @@ local function build()
     strip:SetAnchor(TOPRIGHT, win, TOPRIGHT, -6, 6)
     strip:SetHeight(3)
 
+    local function chip(parent, text, w, fn, tip)
+        local ch = {}
+        ch.hit = BGMeter.zenimax.ui.create_control(nil, parent, CT_CONTROL)
+        ch.hit:SetDimensions(w, 22)
+        ch.hit:SetMouseEnabled(true)
+        ch.bg = P.rect(ch.hit, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.10 })
+        ch.bg:SetAnchorFill(ch.hit)
+        P.hairline_box(ch.hit, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.45 })
+        ch.label = P.label(ch.hit, S.FONT.small, K.COLOR.gold)
+        ch.label:SetAnchorFill(ch.hit)
+        ch.label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+        set_text(ch.label, text)
+        ch.hit:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then fn() end end)
+        ch.hit:SetHandler("OnMouseEnter", function()
+            P.set_rect_color(ch.bg, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 })
+            if tip and U.card_show then U.card_show(ch.hit, BOTTOM, tip) end
+        end)
+        ch.hit:SetHandler("OnMouseExit", function()
+            P.set_rect_color(ch.bg, { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.10 })
+            if U.card_hide then U.card_hide() end
+        end)
+        return ch
+    end
+
+    c.head = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
+    c.head:SetAnchor(TOPLEFT, win, TOPLEFT, 6, 9)
+    c.head:SetAnchor(TOPRIGHT, win, TOPRIGHT, -6, 9)
+    c.head:SetHeight(HEAD_H)
+    c.headRule = P.rect(win, { 1, 1, 1, 0.08 })
+    c.headRule:SetAnchor(TOPLEFT, c.head, BOTTOMLEFT, PAD - 6, 0)
+    c.headRule:SetAnchor(TOPRIGHT, c.head, BOTTOMRIGHT, -(PAD - 6), 0)
+    c.headRule:SetHeight(1)
+    win:SetHandler("OnMouseDoubleClick", function()
+        local _, y = BGMeter.zenimax.api.get_ui_mouse()
+        M.on_double_click(y)
+    end)
+    win:SetHandler("OnMouseWheel", function(_, delta) M.on_wheel(delta) end)
+
     c.map = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
-    c.map:SetAnchor(TOPLEFT, win, TOPLEFT, PAD, PAD)
+    c.map:SetAnchor(TOPLEFT, win, TOPLEFT, PAD, HEAD_H + 12)
     c.map:SetMouseEnabled(true)
+    c.map:SetHandler("OnMouseWheel", function(_, delta) M.on_wheel(delta) end)
     c.mapBg = P.rect(c.map, { 0, 0, 0, 0.7 })
     c.mapBg:SetAnchorFill(c.map)
     c.tiles = {}
@@ -185,16 +230,22 @@ local function build()
     c.empty:SetHidden(true)
     if c.empty.SetDrawLevel then c.empty:SetDrawLevel(LV.hit) end
 
-    c.title = P.label(win, S.FONT.title, K.COLOR.text)
+    c.emblem = P.icon(c.head, TX.map.n)
+    c.emblem:SetDimensions(24, 24)
+    c.emblem:SetAnchor(LEFT, c.head, LEFT, PAD - 6, 0)
+    c.title = P.label(c.head, S.FONT.title, K.COLOR.text)
     c.title:SetText("MAP")
-    c.title:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, -4)
-    c.sub = P.label(win, S.FONT.small, K.COLOR.text_dim)
+    c.title:SetAnchor(LEFT, c.emblem, RIGHT, 6, 0)
+    c.sub = P.label(c.head, S.FONT.small, K.COLOR.text_dim)
     U.clamp_line(c.sub)
-    c.sub:SetAnchor(TOPLEFT, c.title, BOTTOMLEFT, 0, 2)
-    c.sub:SetDimensions(LEGEND_W, 14)
+    c.sub:SetAnchor(LEFT, c.title, RIGHT, 10, 1)
+    c.sub:SetAnchor(RIGHT, c.head, RIGHT, -130, 1)
+    c.sub:SetHeight(16)
 
-    c.close = mk_button(win, TX.close, 20, function() M.close() end, "Close")
-    c.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -14, 14)
+    c.close = mk_button(c.head, TX.close, 20, function() M.close() end, "Close")
+    c.close:SetAnchor(RIGHT, c.head, RIGHT, -8, 0)
+    c.dockChip = chip(c.head, "FLOAT", 56, function() M.toggle_dock() end, "Attach under the report or let it float\nDrag it near the report to dock, double-click the header to reset")
+    c.dockChip.hit:SetAnchor(RIGHT, c.close, LEFT, -10, 0)
 
     local edge = { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], K.ALPHA.chart_edge }
     local function card(y, h, heading)
@@ -270,42 +321,57 @@ local function build()
 
     c.timeLabel = P.label(win, S.FONT.small, K.COLOR.gold)
     c.timeLabel:SetAnchor(BOTTOMLEFT, c.map, BOTTOMLEFT, 0, SCRUB_H)
-    c.timeLabel:SetDimensions(80, 16)
+    c.timeLabel:SetDimensions(56, 16)
+
+    c.playChip = chip(win, "PLAY", 52, function() M.toggle_play() end, "Play the match on the map\nMouse wheel over the map steps five seconds")
+    c.playChip.hit:SetAnchor(BOTTOMRIGHT, c.map, BOTTOMRIGHT, 0, SCRUB_H + 3)
 
     c.slider = BGMeter.zenimax.ui.create_from_virtual(nil, win, "ZO_Slider")
-    c.slider:SetAnchor(BOTTOMLEFT, c.map, BOTTOMLEFT, 84, SCRUB_H - 2)
+    c.slider:SetAnchor(BOTTOMLEFT, c.map, BOTTOMLEFT, 60, SCRUB_H - 2)
     c.slider:SetHeight(14)
     if c.slider.SetMinMax then c.slider:SetMinMax(0, 1) end
     c.slider:SetHandler("OnValueChanged", function(_, v)
         if state.applying then return end
         M.set_time(v, false)
     end)
+    c.slider:SetHandler("OnMouseWheel", function(_, delta) M.on_wheel(delta) end)
 
     if g.dock == false and (g.x or 0) ~= 0 then undock(g.x, g.y) else dock() end
     built = true
 end
 
 local function side_for(w, h)
-    return math.max(120, math.min(w - LEGEND_W - 3 * PAD, h - 2 * PAD - SCRUB_H - 6))
+    local compact = w < COMPACT_W
+    local vert = h - HEAD_H - 12 - PAD - SCRUB_H - 6
+    local horiz = compact and (w - 2 * PAD) or (w - LEGEND_W - 3 * PAD)
+    return math.max(100, math.min(horiz, vert)), compact
 end
 
 function M.snap_size()
     local win = c.win
-    local side = side_for(win:GetWidth(), win:GetHeight())
-    local w, h = side + LEGEND_W + 3 * PAD, side + 2 * PAD + SCRUB_H + 6
+    local side, compact = side_for(win:GetWidth(), win:GetHeight())
+    local w = compact and (side + 2 * PAD) or (side + LEGEND_W + 3 * PAD)
+    local h = side + HEAD_H + 12 + PAD + SCRUB_H + 6
     win:SetDimensions(w, h)
     local gg = sv_win()
     gg.w, gg.h = w, h
     return w, h
 end
 
+function M.is_compact() return state.compact end
+
 local function layout()
     local win = c.win
     local w, h = win:GetWidth(), win:GetHeight()
-    local side = side_for(w, h)
+    local side, compact = side_for(w, h)
     state.side = side
+    state.compact = compact
     c.map:SetDimensions(side, side)
-    c.slider:SetWidth(math.max(60, side - 84))
+    c.slider:SetWidth(math.max(40, side - 60 - 56))
+    c.layersCard:SetHidden(compact)
+    c.legendCard:SetHidden(compact)
+    c.dockHint:SetHidden(compact)
+    set_text(c.dockChip.label, state.docked and "FLOAT" or "DOCK")
     if W.map_art_path then
         c.art:SetTexture(W.map_art_path)
         c.art:SetHidden(false)
@@ -343,6 +409,11 @@ local function apply_tiles(m)
 end
 
 local function mx(v) return v / 1000 * state.side end
+
+local function sz(base)
+    local k = math.max(0.6, math.min(1.6, state.side / 380))
+    return math.floor(base * k + 0.5)
+end
 
 local function polyline(xs, ys, n, color, thick, alpha)
     if n < 2 then return end
@@ -447,7 +518,7 @@ local function draw_deaths(geo, m, t)
             ic:SetTexture(SKULL)
             local col = (k.kind == "kill") and K.COLOR.gold or K.COLOR.accent
             ic:SetColor(col[1], col[2], col[3], 1)
-            ic:SetDimensions(18, 18)
+            ic:SetDimensions(sz(18), sz(18))
             ic:ClearAnchors()
             ic:SetAnchor(CENTER, c.map, TOPLEFT, mx(k.x), mx(k.y))
             ic:SetHidden(false)
@@ -469,7 +540,7 @@ local function draw_pins(geo, idx)
             local ic = c.icon_pool:acquire()
             ic:SetTexture(pin_texture(pin.ty[idx], pin.kind))
             ic:SetColor(1, 1, 1, 1)
-            ic:SetDimensions(30, 30)
+            ic:SetDimensions(sz(30), sz(30))
             ic:ClearAnchors()
             ic:SetAnchor(CENTER, c.map, TOPLEFT, mx(x), mx(y))
             ic:SetHidden(false)
@@ -491,7 +562,7 @@ local function draw_positions(geo, m, idx, t)
                 local d = c.dot_pool:acquire()
                 d:ClearAnchors()
                 d:SetAnchor(CENTER, c.map, TOPLEFT, mx(x), mx(y))
-                d:SetDimensions(7, 7)
+                d:SetDimensions(sz(7), sz(7))
                 local col = S.team_color(geo.team[name] or m.localTeam)
                 P.set_rect_color(d, { col[1], col[2], col[3], 0.9 })
                 d:SetHidden(false)
@@ -511,10 +582,16 @@ local function draw_positions(geo, m, idx, t)
         mx_, my_ = geo.pos[mine].x[idx], geo.pos[mine].y[idx]
     end
     if mx_ and my_ then
+        local ring = c.dot_pool:acquire()
+        ring:ClearAnchors()
+        ring:SetAnchor(CENTER, c.map, TOPLEFT, mx(mx_), mx(my_))
+        ring:SetDimensions(sz(21), sz(21))
+        P.set_rect_color(ring, { K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 0.28 })
+        ring:SetHidden(false)
         local d = c.dot_pool:acquire()
         d:ClearAnchors()
         d:SetAnchor(CENTER, c.map, TOPLEFT, mx(mx_), mx(my_))
-        d:SetDimensions(11, 11)
+        d:SetDimensions(sz(11), sz(11))
         P.set_rect_color(d, K.COLOR.you)
         d:SetHidden(false)
         local hit = c.hit_pool:acquire()
@@ -538,7 +615,7 @@ function M.render()
         S.color(t.label, on and K.COLOR.text or K.COLOR.text_dim)
         set_text(t.value, lay.cycle and (lay.names[v] or tostring(v)) or (on and "on" or "off"))
     end
-    if state.m ~= m then state.t = nil end
+    if state.m ~= m then state.t = nil; M.stop_play() end
     state.m = m
     state.geo = m and BGMeter.Match.geo(m) or nil
     apply_tiles(m or {})
@@ -591,6 +668,72 @@ end
 
 function M.time() return state.t end
 function M.is_docked() return state.docked end
+function M.is_playing() return state.playing end
+
+function M.on_wheel(delta)
+    if not state.geo then return end
+    M.stop_play()
+    local t = (state.t or 0) + ((delta or 0) > 0 and WHEEL_MS or -WHEEL_MS)
+    M.set_time(t, true)
+end
+
+function M.on_double_click(y)
+    if not built then return end
+    local top = c.win:GetTop()
+    if y == nil or y < top or y > top + HEAD_H + 12 then return end
+    c.win:SetDimensions(L.map_w, L.map_h)
+    local gg = sv_win()
+    gg.w, gg.h = 0, 0
+    dock()
+    Sound.play("nav")
+    M.render()
+end
+
+function M.toggle_dock()
+    if not built then return end
+    if state.docked then
+        undock(c.win:GetLeft(), c.win:GetTop() + 40)
+    else
+        dock()
+    end
+    Sound.play("nav")
+    M.render()
+end
+
+local function play_tick()
+    if not state.playing or not state.geo or c.win:IsHidden() then M.stop_play() return end
+    local tspan = state.geo.t[state.geo.n] or 1
+    local t = (state.t or 0) + PLAY_MS * PLAY_SPEED
+    if t >= tspan then
+        state.t = tspan - 1
+        M.set_time(tspan, true)
+        M.stop_play()
+        return
+    end
+    state.t = t - 1000
+    M.set_time(t, true)
+end
+
+function M.stop_play()
+    if not state.playing then return end
+    state.playing = false
+    BGMeter.zenimax.events.unregister_update(PLAY_NAME)
+    if c and c.playChip then set_text(c.playChip.label, "PLAY") end
+end
+
+function M.toggle_play()
+    if not built or not state.geo then return end
+    if state.playing then M.stop_play() return end
+    local tspan = state.geo.t[state.geo.n] or 1
+    if (state.t or tspan) >= tspan then
+        state.t = -1
+        M.set_time(0, true)
+    end
+    state.playing = true
+    set_text(c.playChip.label, "PAUSE")
+    BGMeter.zenimax.events.register_update(PLAY_NAME, PLAY_MS, play_tick)
+    Sound.play("nav")
+end
 
 function M.open()
     build()
@@ -604,6 +747,7 @@ end
 
 function M.close(silent)
     if not built or c.win:IsHidden() then return end
+    M.stop_play()
     c.win:SetHidden(true)
     sv_win().open = false
     if not silent then Sound.play("close") end
@@ -622,7 +766,7 @@ function M.on_report_render()
 end
 
 function M.on_report_hidden()
-    if built and not c.win:IsHidden() then c.win:SetHidden(true) end
+    if built and not c.win:IsHidden() then M.stop_play(); c.win:SetHidden(true) end
 end
 
 function M.on_report_shown()

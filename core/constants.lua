@@ -71,7 +71,7 @@ K.LAYOUT = {
     kills_h    = 44,
     map_h      = 560,
     map_w      = 760,
-    map_min    = 420,
+    map_min    = 280,
 }
 
 K.ALPHA = {
