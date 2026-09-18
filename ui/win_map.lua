@@ -652,11 +652,11 @@ function M.render()
         geo.me and ", your path every second" or ""))
 end
 
-function M.set_time(t, from_chart)
+function M.set_time(t, from_chart, force)
     if not built or c.win:IsHidden() or not state.geo then return end
     local tspan = state.geo.t[state.geo.n] or 1
     t = math.max(0, math.min(tspan, t or tspan))
-    if math.abs(t - (state.t or -1)) < 250 then return end
+    if not force and math.abs(t - (state.t or -1)) < 250 then return end
     state.t = t
     if from_chart then
         state.applying = true
@@ -705,13 +705,11 @@ local function play_tick()
     local tspan = state.geo.t[state.geo.n] or 1
     local t = (state.t or 0) + PLAY_MS * PLAY_SPEED
     if t >= tspan then
-        state.t = tspan - 1
-        M.set_time(tspan, true)
+        M.set_time(tspan, true, true)
         M.stop_play()
         return
     end
-    state.t = t - 1000
-    M.set_time(t, true)
+    M.set_time(t, true, true)
 end
 
 function M.stop_play()
@@ -726,8 +724,7 @@ function M.toggle_play()
     if state.playing then M.stop_play() return end
     local tspan = state.geo.t[state.geo.n] or 1
     if (state.t or tspan) >= tspan then
-        state.t = -1
-        M.set_time(0, true)
+        M.set_time(0, true, true)
     end
     state.playing = true
     set_text(c.playChip.label, "PAUSE")
