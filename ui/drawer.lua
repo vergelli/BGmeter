@@ -71,18 +71,19 @@ end
 local function make_row(self, i)
     local r = {}
     r.container = BGMeter.zenimax.ui.create_control(nil, self.drawer.list, CT_CONTROL)
-    r.container:SetHeight(ROW_H)
+    local rh = self.spec.row_h or ROW_H
+    r.container:SetHeight(rh)
     r.container:SetMouseEnabled(true)
     r.base, r.highlight = U.row_chrome(r.container)
     r.name = P.label(r.container, S.FONT.row, K.COLOR.text)
     r.name:SetAnchor(LEFT, r.container, LEFT, 12, 0)
     r.name:SetAnchor(RIGHT, r.container, RIGHT, -54, 0)
-    r.name:SetHeight(ROW_H)
+    r.name:SetHeight(rh)
     r.name:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
     U.clamp_line(r.name)
     r.count = P.label(r.container, S.FONT.row, K.COLOR.text)
     r.count:SetAnchor(RIGHT, r.container, RIGHT, -6, 0)
-    r.count:SetDimensions(46, ROW_H)
+    r.count:SetDimensions(46, rh)
     r.count:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     if self.spec.row_make then self.spec.row_make(self, r) end
     r.container:SetHandler("OnMouseEnter", function()
@@ -103,7 +104,7 @@ end
 
 function Drawer:visible_rows()
     if not self.drawer then return 0 end
-    return math.max(0, math.floor(self.drawer.list:GetHeight() / (ROW_H + 2)))
+    return math.max(0, math.floor(self.drawer.list:GetHeight() / ((self.spec.row_h or ROW_H) + 2)))
 end
 
 function Drawer:max_offset()
@@ -165,8 +166,9 @@ function Drawer:refresh()
             r.face = e
             r.container:SetHidden(false)
             r.container:ClearAnchors()
-            r.container:SetAnchor(TOPLEFT, self.drawer.list, TOPLEFT, 0, (i - 1) * (ROW_H + 2))
-            r.container:SetAnchor(TOPRIGHT, self.drawer.list, TOPRIGHT, 0, (i - 1) * (ROW_H + 2))
+            local rh = self.spec.row_h or ROW_H
+            r.container:SetAnchor(TOPLEFT, self.drawer.list, TOPLEFT, 0, (i - 1) * (rh + 2))
+            r.container:SetAnchor(TOPRIGHT, self.drawer.list, TOPRIGHT, 0, (i - 1) * (rh + 2))
             self.spec.row_fill(self, r, e)
         else
             r.entry, r.face = nil, nil

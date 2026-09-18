@@ -54,6 +54,7 @@ local D = Drawer.new({
     icon_down = TX.about.p,
     icon_over = TX.about.o,
     drag_name = "BGMeterAboutDrag",
+    row_h = 40,
     panel_h = 14 + 2 * LINE_H,
     cache_key = function(self)
         local Storage = BGMeter.Storage
@@ -78,11 +79,16 @@ local D = Drawer.new({
     end,
     row_make = function(self, r)
         r.name:ClearAnchors()
-        r.name:SetAnchor(LEFT, r.container, LEFT, 10, 0)
-        r.name:SetAnchor(RIGHT, r.container, RIGHT, -140, 0)
+        r.name:SetAnchor(TOPLEFT, r.container, TOPLEFT, 10, 4)
+        r.name:SetAnchor(TOPRIGHT, r.container, TOPRIGHT, -6, 4)
+        r.name:SetHeight(14)
+        if r.name.SetFont then r.name:SetFont(S.FONT.small) end
         S.color(r.name, K.COLOR.text_dim)
-        r.count:SetDimensions(134, Drawer.row_h())
-        if r.count.SetFont then r.count:SetFont(S.FONT.small) end
+        r.count:ClearAnchors()
+        r.count:SetAnchor(BOTTOMLEFT, r.container, BOTTOMLEFT, 10, -4)
+        r.count:SetAnchor(BOTTOMRIGHT, r.container, BOTTOMRIGHT, -6, -4)
+        r.count:SetHeight(18)
+        r.count:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
         U.clamp_line(r.count)
     end,
     row_fill = function(self, r, e)

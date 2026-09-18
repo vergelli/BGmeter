@@ -78,20 +78,27 @@ end
 
 function Panel.tier_of(rank) return trophy_tier(rank) end
 
-local function shimmer(word, col, u)
+local SWEEP_REST = 0.62
+
+local function shimmer(word, col, spot, u)
     local n = #word
     local parts = {}
     for i = 1, n do
         local d = ((i - 0.5) / n - u) / SWEEP_WIDTH
         local w = math.exp(-d * d)
-        local c = { col[1] + (1 - col[1]) * 0.9 * w, col[2] + (1 - col[2]) * 0.9 * w, col[3] + (1 - col[3]) * 0.9 * w }
+        local rest = SWEEP_REST + (1 - SWEEP_REST) * w
+        local c = {
+            col[1] * rest + (spot[1] - col[1] * rest) * w,
+            col[2] * rest + (spot[2] - col[2] * rest) * w,
+            col[3] * rest + (spot[3] - col[3] * rest) * w,
+        }
         parts[i] = "|c" .. F.hexc(c) .. word:sub(i, i)
     end
     return table.concat(parts) .. "|r"
 end
 
-local function word_text(st, tier, u)
-    if u then return st.rankText .. "  ·  " .. shimmer(tier.word, tier.col, u) end
+local function word_text(st, tier, u, spot)
+    if u then return st.rankText .. "  ·  " .. shimmer(tier.word, tier.col, spot or { 1, 1, 1 }, u) end
     return st.rankText .. "  ·  |c" .. F.hexc(tier.col) .. tier.word .. "|r"
 end
 
@@ -135,7 +142,12 @@ local function fx_tick()
     local g2 = ((t + GLINT_MS / 2) % GLINT_MS) / GLINT_MS
     glint_set(st.glint2, (FX.rank == 1 and g2 < GLINT_ON) and (g2 / GLINT_ON) or nil, -1)
     if g >= SWEEP_FROM and g < SWEEP_TO then
-        set_text(st.label, word_text(st, tier, (g - SWEEP_FROM) / (SWEEP_TO - SWEEP_FROM) * 1.3 - 0.15))
+        local spot = nil
+        if tier.hue then
+            local r, gg, b = hue_rgb((t % HUE_MS) / HUE_MS)
+            spot = { 0.55 + 0.45 * r, 0.55 + 0.45 * gg, 0.55 + 0.45 * b }
+        end
+        set_text(st.label, word_text(st, tier, (g - SWEEP_FROM) / (SWEEP_TO - SWEEP_FROM) * 1.3 - 0.15, spot))
         st.sweeping = true
     elseif st.sweeping then
         set_text(st.label, word_text(st, tier, nil))

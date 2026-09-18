@@ -669,7 +669,7 @@ function M.open_leaderboard()
     if Scene.push_bg_leaderboard(C.BATTLEGROUND_LEADERBOARD_TYPE_COMPETITIVE) then Sound.play("nav") end
 end
 
-local DEMO_RANKS = { 96, 42, 7, 3, 1 }
+local DEMO_RANKS = { 480, 200, 80, 40, 20, 7, 1 }
 function M.demo_trophy()
     if not built then build() end
     local idx = M._demo_idx or 0
