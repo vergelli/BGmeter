@@ -419,7 +419,6 @@ local function refresh_balance()
             all.wavg and string.format("  ·  wins %d", math.floor(all.wavg + 0.5)) or "",
             all.lavg and string.format("  ·  losses %d", math.floor(all.lavg + 0.5)) or "")
     end
-    lines[#lines + 1] = "100 is an even fight, 0 a stomp: kill ratio, score gap and contested time"
     st.tip = table.concat(lines, "\n")
 end
 
