@@ -921,11 +921,27 @@ function Match.balance(m)
     local margin = sumMargin / n
     local cont = contested / n
     local tspan = tl.t[n] or 0
+    local score = math.floor(100 * (ratio + (1 - margin) + cont) / 3 + 0.5)
+    local mine = m.localTeam
+    local myKills = mine and kills[mine] or nil
+    local other, otherKills = nil, -1
+    for t, k in pairs(kills) do
+        if t ~= mine and k > otherKills then other, otherKills = t, k end
+    end
+    local lean, leanTeam = 0, nil
+    if myKills and other and myKills ~= otherKills then
+        leanTeam = (myKills > otherKills) and mine or other
+        lean = (1 - score / 100) * ((myKills > otherKills) and 1 or -1)
+    elseif not myKills and other then
+        leanTeam = other
+        lean = -(1 - score / 100)
+    end
     return {
-        score = math.floor(100 * (ratio + (1 - margin) + cont) / 3 + 0.5),
+        score = score,
         killRatio = ratio, margin = margin, contested = cont,
         decidedMs = decided, decidedPct = (tspan > 0) and decided / tspan or 0,
         leaderChanged = changed, teams = teams, tspan = tspan,
+        lean = lean, leanTeam = leanTeam, mine = mine, other = other,
     }
 end
 

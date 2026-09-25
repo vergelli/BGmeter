@@ -550,13 +550,11 @@ local function soft(c)
     return { c[1] * 0.55 + t[1] * 0.45, c[2] * 0.55 + t[2] * 0.45, c[3] * 0.55 + t[3] * 0.45 }
 end
 
-local function tint_glyph(icon, glow, color, hidden)
+local function tint_glyph(icon, color, hidden)
     icon:SetHidden(hidden)
-    glow:SetHidden(hidden)
     if hidden then return end
     local c = soft(color)
     icon:SetColor(c[1], c[2], c[3], 1)
-    glow:SetColor(color[1], color[2], color[3], 0.22)
 end
 
 local function base_color(pct)
@@ -580,26 +578,35 @@ function SEC.balance(b, bal, sur, bal_h, bal_off)
     local bc = balance_color(bal.score)
     b.balScore:SetText(tostring(bal.score))
     S.color(b.balScore, bc)
-    tint_glyph(b.balIcon, b.balGlow, bc, false)
+    tint_glyph(b.balIcon, bc, false)
     local decided = bal.leaderChanged and ("decided at " .. F.duration(bal.decidedMs)) or "lead never changed"
-    local fillW = bal.leaderChanged and math.floor(64 * bal.decidedPct + 0.5) or 0
-    b.balDecFill:SetWidth(fillW)
-    local fc = soft(bc)
-    P.set_rect_color(b.balDecFill, { fc[1], fc[2], fc[3], 0.45 })
-    b.balDecDot:ClearAnchors()
-    b.balDecDot:SetAnchor(CENTER, b.balDecBar, LEFT, fillW, 0)
-    P.set_rect_color(b.balDecDot, { fc[1], fc[2], fc[3], 0.95 })
+    local mineCol = bal.mine and S.team_color(bal.mine) or K.COLOR.text_dim
+    local otherCol = bal.other and S.team_color(bal.other) or K.COLOR.text_dim
+    P.set_rect_color(b.balTiltL, { mineCol[1], mineCol[2], mineCol[3], 0.9 })
+    P.set_rect_color(b.balTiltR, { otherCol[1], otherCol[2], otherCol[3], 0.9 })
+    local tiltW = math.floor(32 * math.abs(bal.lean) + 0.5)
+    b.balTiltFill:ClearAnchors()
+    b.balTiltFill:SetWidth(tiltW)
+    if bal.lean >= 0 then
+        b.balTiltFill:SetAnchor(RIGHT, b.balTiltMid, CENTER, 0, 0)
+        P.set_rect_color(b.balTiltFill, { mineCol[1], mineCol[2], mineCol[3], 0.7 })
+    else
+        b.balTiltFill:SetAnchor(LEFT, b.balTiltMid, CENTER, 0, 0)
+        P.set_rect_color(b.balTiltFill, { otherCol[1], otherCol[2], otherCol[3], 0.7 })
+    end
+    b.balTiltFill:SetHidden(tiltW == 0)
     local base = sur and sur.base
-    tint_glyph(b.balBaseIcon, b.balBaseGlow, base and base_color(base.pct) or K.COLOR.text_dim, base == nil)
+    tint_glyph(b.balBaseIcon, base and base_color(base.pct) or K.COLOR.text_dim, base == nil)
     b.balBase:SetHidden(base == nil)
     if base then b.balBase:SetText(string.format("%d%%", math.floor(base.pct * 100 + 0.5))) end
     local st = sur and sur.stopped
     local hasStop = st ~= nil and st.of > 0
-    tint_glyph(b.balStopIcon, b.balStopGlow, hasStop and stop_color(st) or K.COLOR.text_dim, not hasStop)
+    tint_glyph(b.balStopIcon, hasStop and stop_color(st) or K.COLOR.text_dim, not hasStop)
     b.balStop:SetHidden(not hasStop)
     if hasStop then b.balStop:SetText(string.format("%d of %d", st.n, st.of)) end
     local lines = {
         string.format("Match balance %d / 100", bal.score),
+        bal.leanTeam and string.format("%s on top", team_name(bal.leanTeam)) or "no team on top",
         string.format("kill ratio %.2f", bal.killRatio),
         string.format("contested %d%%", math.floor(bal.contested * 100 + 0.5)),
         string.format("margin %d%%", math.floor(bal.margin * 100 + 0.5)),
