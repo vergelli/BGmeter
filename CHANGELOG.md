@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0]
 
 - MATCH BALANCE strip under the score chart: one number from 0 to 100 that says how much of a match there was, from the kill ratio between the teams, the average gap between leader and runner-up, and the share of the match spent within ten percent. The number sits on a scale from red (a stomp) through gold to green (an even match), with a marker at its value. Hover the strip for a card with the components, when the match was decided (the last lead change) or that the lead never changed, and which team was ahead. Every stored match gets it. A toggle in Settings, Result window, turns it off.
 - The recorder keeps every stretch the match spent RUNNING, so in Deathmatch and the other round formats the pause before a round and between rounds no longer counts as time at the base. Matches recorded before this keep counting every moment, as they did.
