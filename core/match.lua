@@ -1002,6 +1002,15 @@ function Match.spawn_point(m, geo)
     return { x = x, y = y, samples = #xs }
 end
 
+function Match.in_play(m, t)
+    local runs = m and m.runs
+    if not runs or #runs == 0 then return true end
+    for _, r in ipairs(runs) do
+        if t >= (r.a or 0) and (r.b == nil or t <= r.b) then return true end
+    end
+    return false
+end
+
 function Match.surrender(m, geo)
     if not m then return nil end
     local out = { spawn = nil, base = nil, stopped = { n = 0, of = 0, at = nil } }
@@ -1014,7 +1023,8 @@ function Match.surrender(m, geo)
             if geo.team[nm] == m.localTeam or nm == geo.mine then
                 for i = 1, geo.n do
                     local x, y = s.x[i], s.y[i]
-                    if x and y and (x > 0 or y > 0) and (geo.t[i] or 0) >= startT then
+                    local t = geo.t[i] or 0
+                    if x and y and (x > 0 or y > 0) and t >= startT and Match.in_play(m, t) then
                         total = total + 1
                         local dx, dy = x - spawn.x, y - spawn.y
                         local isNear = (dx * dx + dy * dy) <= BASE_RADIUS * BASE_RADIUS

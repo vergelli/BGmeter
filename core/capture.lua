@@ -577,6 +577,20 @@ local function stop_sampler()
     BGMeter.zenimax.events.unregister_update(ME_NAME)
 end
 
+local function open_run(now)
+    if not active then return end
+    active.runs = active.runs or {}
+    local last = active.runs[#active.runs]
+    if last and last.b == nil then return end
+    active.runs[#active.runs + 1] = { a = now - (active.startMs or 0) }
+end
+
+local function close_run(now)
+    if not active or not active.runs then return end
+    local last = active.runs[#active.runs]
+    if last and last.b == nil then last.b = math.max(last.a, now - (active.startMs or 0)) end
+end
+
 function Capture.begin()
     local A = BGMeter.zenimax.api
     local Match = BGMeter.Match
@@ -615,7 +629,10 @@ function Capture.begin()
     pcall(scan_group_experience)
 
     local C = BGMeter.zenimax.constants
-    if safe(A.get_bg_state) == C.BATTLEGROUND_STATE_RUNNING then active.runMs = active.startMs end
+    if safe(A.get_bg_state) == C.BATTLEGROUND_STATE_RUNNING then
+        active.runMs = active.startMs
+        open_run(active.startMs)
+    end
     BGMeter.Log.debug("match begin: bg=%s id=%s gameType=%s rounds=%s localTeam=%s teamSize=%s competitive=%s ap0=%d",
         tostring(active.name), tostring(active.bgId),
         tostring(C.GAME_TYPE_LABEL[active.gameType] or active.gameType),
@@ -693,6 +710,8 @@ function Capture.finalize()
     pcall(Match.pack_timeline, active)
 
     active.endMs = safe(A.now_ms) or active.startMs
+    close_run(active.endMs)
+    if active.runs and #active.runs == 0 then active.runs = nil end
     active.playedMs = math.max(0, active.endMs - (active.runMs or active.startMs))
     active.capturedAt = safe(A.get_timestamp)
     active.result = read_result(active.localTeam)
@@ -728,10 +747,19 @@ function Capture.rescan(reason)
 end
 
 function Capture.mark_running()
-    if not active or active.runMs then return end
+    if not active then return end
     local A = BGMeter.zenimax.api
-    active.runMs = safe(A.now_ms) or active.startMs
+    local now = safe(A.now_ms) or active.startMs
+    open_run(now)
+    if active.runMs then return end
+    active.runMs = now
     BGMeter.Log.debug("gates open at %s", BGMeter.Format.duration(active.runMs - (active.startMs or 0)))
+end
+
+function Capture.mark_paused()
+    if not active then return end
+    local A = BGMeter.zenimax.api
+    close_run(safe(A.now_ms) or active.startMs)
 end
 
 function Capture.abort()

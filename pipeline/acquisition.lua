@@ -35,6 +35,8 @@ local function on_state_change(_, previousState, currentState)
     if currentState == C.BATTLEGROUND_STATE_RUNNING and Capture.is_active() then
         Capture.mark_running()
         Capture.rescan("gates open")
+    elseif previousState == C.BATTLEGROUND_STATE_RUNNING and Capture.is_active() then
+        Capture.mark_paused()
     end
 
     if currentState == C.BATTLEGROUND_STATE_FINISHED then
