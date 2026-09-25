@@ -489,6 +489,52 @@ local function sample_me()
     tl.mt[i], tl.mx[i], tl.my[i] = now, qx, qy
 end
 
+local function note_experience(tag, name)
+    if not active or not active.exp then return end
+    local A = BGMeter.zenimax.api
+    local nm = name or clean_name(safe(A.get_unit_display_name, tag)) or clean_name(safe(A.get_unit_name, tag))
+    if not nm then return end
+    local vet = safe(A.get_unit_veterancy_rank_of, tag)
+    local ava = safe(A.get_unit_ava_rank_of, tag)
+    local team = safe(A.get_unit_bg_team, tag)
+    local e = active.exp[nm]
+    if not e then e = {}; active.exp[nm] = e end
+    if type(vet) == "number" and vet > 0 then e.vet = vet end
+    if type(ava) == "number" and ava > 0 then e.ava = ava end
+    if team and team ~= 0 then e.tm = team end
+end
+
+local function scan_group_experience()
+    if not active then return end
+    local A = BGMeter.zenimax.api
+    note_experience("player", active.localName)
+    local n = safe(A.get_group_size) or 0
+    for g = 1, math.min(n, 8) do
+        local tag = safe(A.get_group_unit_tag, g)
+        if tag and safe(A.are_units_equal, tag, "player") ~= true then note_experience(tag) end
+    end
+end
+
+function Capture.on_reticle_player()
+    if not active then return end
+    local A = BGMeter.zenimax.api
+    if safe(A.is_unit_player, "reticleover") ~= true then return end
+    note_experience("reticleover")
+end
+
+local function attach_experience(m)
+    local exp = m.exp
+    if not exp then return end
+    for _, row in ipairs(m.battle or {}) do
+        local e = (row.displayName and exp[row.displayName]) or (row.charName and exp[row.charName])
+        if e then
+            row.vet = e.vet
+            row.ava = e.ava
+        end
+    end
+    m.exp = nil
+end
+
 local function sample_scores()
     if not active or not active.timeline then return end
     local A = BGMeter.zenimax.api
@@ -547,6 +593,7 @@ function Capture.begin()
     if active.teamSize then active.competitive = (active.teamSize == 4) end
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
     active.killfeed  = {}
+    active.exp       = {}
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
     active.relics = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {}, who = {} }
     obj_lookup = {}
@@ -565,6 +612,7 @@ function Capture.begin()
     start_sampler()
     sample_scores()
     pcall(sample_positions)
+    pcall(scan_group_experience)
 
     local C = BGMeter.zenimax.constants
     if safe(A.get_bg_state) == C.BATTLEGROUND_STATE_RUNNING then active.runMs = active.startMs end
@@ -649,8 +697,10 @@ function Capture.finalize()
     active.capturedAt = safe(A.get_timestamp)
     active.result = read_result(active.localTeam)
 
+    pcall(scan_group_experience)
     Capture.read_battle(active)
     read_teams(active)
+    attach_experience(active)
 
     if baseline then
         local apNow = safe(A.get_alliance_points)

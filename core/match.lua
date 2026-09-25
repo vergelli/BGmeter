@@ -945,6 +945,36 @@ function Match.balance(m)
     }
 end
 
+function Match.experience(m)
+    if not m or not m.battle then return nil end
+    local teams, any = {}, false
+    for _, r in ipairs(m.battle) do
+        local t = r.team or 0
+        if t ~= 0 then
+            local e = teams[t]
+            if not e then
+                e = { team = t, n = 0, seen = 0, vet = 0, ava = 0, vetN = 0, avaN = 0 }
+                teams[t] = e
+            end
+            e.n = e.n + 1
+            if r.vet or r.ava then e.seen = e.seen + 1; any = true end
+            if r.vet then e.vet = e.vet + r.vet; e.vetN = e.vetN + 1 end
+            if r.ava then e.ava = e.ava + r.ava; e.avaN = e.avaN + 1 end
+        end
+    end
+    if not any then return nil end
+    for _, e in pairs(teams) do
+        e.vetAvg = (e.vetN > 0) and e.vet / e.vetN or nil
+        e.avaAvg = (e.avaN > 0) and e.ava / e.avaN or nil
+    end
+    local mine = m.localTeam and teams[m.localTeam] or nil
+    local other, best, bestT = nil, -1, nil
+    for t, e in pairs(teams) do
+        if t ~= m.localTeam and (e.n > best or (e.n == best and t < bestT)) then other, best, bestT = e, e.n, t end
+    end
+    return { mine = mine, other = other, teams = teams }
+end
+
 local function median_of(vals)
     local n = #vals
     if n == 0 then return nil end

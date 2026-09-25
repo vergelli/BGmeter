@@ -69,6 +69,9 @@ function Acquisition.init()
     E.register(PREFIX .. "CP",    C.EVENT_CHAMPION_POINT_GAINED,      Capture.on_cp)
     E.register(PREFIX .. "Vet",   C.EVENT_REWARD_TRACK_PROGRESS_GAINED, Capture.on_reward_track)
     E.register(PREFIX .. "Kill",  C.EVENT_BATTLEGROUND_KILL,          Capture.on_kill)
+    if C.EVENT_RETICLE_TARGET_PLAYER_CHANGED then
+        E.register(PREFIX .. "Reticle", C.EVENT_RETICLE_TARGET_PLAYER_CHANGED, Capture.on_reticle_player)
+    end
     E.register(PREFIX .. "Obj",   C.EVENT_CAPTURE_AREA_STATE_CHANGED, Capture.on_objective)
     if C.EVENT_CAPTURE_FLAG_STATE_CHANGED then
         E.register(PREFIX .. "Relic", C.EVENT_CAPTURE_FLAG_STATE_CHANGED, Capture.on_flag)
