@@ -611,10 +611,11 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     S.color(b.balScore, bc)
     tint_glyph(b.balIcon, bc, false)
     local decided = bal.leaderChanged and ("decided at " .. F.duration(bal.decidedMs)) or "lead never changed"
-    local gw = math.floor(b.balGaugeW * bal.score / 100 + 0.5)
-    b.balGaugeFill:SetWidth(gw)
-    P.set_rect_color(b.balGaugeFill, { bc[1], bc[2], bc[3], 0.8 })
-    b.balGaugeFill:SetHidden(gw == 0)
+    local mx = math.floor(b.balScaleW * bal.score / 100 + 0.5)
+    b.balMarkX = mx
+    b.balMark:ClearAnchors()
+    b.balMark:SetAnchor(CENTER, b.balScale, LEFT, mx, 0)
+    b.balMark:SetHidden(false)
     local topTex = bal.leanTeam and U.team_icon(bal.leanTeam) or nil
     if topTex then
         b.balTop:SetTexture(topTex)

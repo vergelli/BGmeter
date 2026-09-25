@@ -228,16 +228,24 @@ local function build_battle(win)
     end
     b.balIcon = glyph(Icons.BALANCE, 6)
     b.balScore = value(b.balIcon, 30)
-    b.balGaugeW = 72
-    b.balGauge = P.rect(b.bal, { 1, 1, 1, 0.10 })
-    b.balGauge:SetDimensions(b.balGaugeW, 5)
-    b.balGauge:SetAnchor(LEFT, b.balScore, RIGHT, 4, 0)
-    b.balGaugeFill = P.rect(b.bal, { 1, 1, 1, 0.8 })
-    b.balGaugeFill:SetAnchor(TOPLEFT, b.balGauge, TOPLEFT, 0, 0)
-    b.balGaugeFill:SetDimensions(0, 5)
+    b.balScaleW, b.balScaleN = 72, 12
+    b.balScale = BGMeter.zenimax.ui.create_control(nil, b.bal, CT_CONTROL)
+    b.balScale:SetDimensions(b.balScaleW, 5)
+    b.balScale:SetAnchor(LEFT, b.balScore, RIGHT, 4, 0)
+    b.balScaleSegs = {}
+    local segW = b.balScaleW / b.balScaleN
+    for i = 1, b.balScaleN do
+        local c = U.balance_scale_color((i - 0.5) / b.balScaleN)
+        local seg = P.rect(b.balScale, { c[1], c[2], c[3], 0.55 })
+        seg:SetDimensions(segW, 5)
+        seg:SetAnchor(TOPLEFT, b.balScale, TOPLEFT, (i - 1) * segW, 0)
+        b.balScaleSegs[i] = seg
+    end
+    b.balMark = P.rect(b.bal, { 1, 1, 1, 0.95 })
+    b.balMark:SetDimensions(3, 11)
     b.balTop = P.icon(b.bal)
     b.balTop:SetDimensions(18, 18)
-    b.balTop:SetAnchor(LEFT, b.balGauge, RIGHT, 5, 0)
+    b.balTop:SetAnchor(LEFT, b.balScale, RIGHT, 5, 0)
     b.balTiltEnd = 6 + BAL_ICON + 5 + 30 + 4 + 72 + 5 + 18
     b.balCampX = 180
     b.balBaseIcon = glyph(Icons.CAMP, b.balCampX)
