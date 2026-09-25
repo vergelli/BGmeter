@@ -566,18 +566,16 @@ function SEC.balance(b, bal, sur, bal_h, bal_off)
     if hasStop then b.balStop:SetText(string.format("stopped %d of %d", st.n, st.of)) end
     local lines = {
         string.format("Match balance %d / 100", bal.score),
-        string.format("kill ratio %.2f  ·  the weaker team's kills over the stronger's", bal.killRatio),
-        string.format("contested %d%%  ·  time with the scores within 10%%", math.floor(bal.contested * 100 + 0.5)),
-        string.format("margin %d%%  ·  average gap between leader and runner-up", math.floor(bal.margin * 100 + 0.5)),
+        string.format("kill ratio %.2f", bal.killRatio),
+        string.format("contested %d%%", math.floor(bal.contested * 100 + 0.5)),
+        string.format("margin %d%%", math.floor(bal.margin * 100 + 0.5)),
         decided,
     }
     if base then
-        lines[#lines + 1] = string.format("at base %d%%  ·  your team's positions within 15 m of the spawn after the gates opened (you %d%%)",
-            math.floor(base.pct * 100 + 0.5), math.floor(base.mine * 100 + 0.5))
+        lines[#lines + 1] = string.format("at base %d%%  ·  you %d%%", math.floor(base.pct * 100 + 0.5), math.floor(base.mine * 100 + 0.5))
     end
     if hasStop then
-        lines[#lines + 1] = string.format("stopped %d of %d  ·  teammates whose damage stopped growing for the last 90 s%s",
-            st.n, st.of, st.at and ("  ·  first at " .. F.duration(st.at)) or "")
+        lines[#lines + 1] = string.format("stopped %d of %d%s", st.n, st.of, st.at and ("  ·  first at " .. F.duration(st.at)) or "")
     end
     W.tips[b.bal] = table.concat(lines, "\n")
 end
