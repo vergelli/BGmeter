@@ -64,6 +64,15 @@ function U.balance_color(score)
     return K.COLOR.accent
 end
 
+function U.balance_scale_color(t)
+    local red, gold, green = K.COLOR.accent, K.COLOR.gold, K.COLOR.heal
+    local a, b, u
+    if t < 0.35 then a, b, u = red, gold, t / 0.35
+    elseif t < 0.60 then a, b, u = gold, green, (t - 0.35) / 0.25
+    else a, b, u = green, green, 0 end
+    return { a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, a[3] + (b[3] - a[3]) * u }
+end
+
 local MAP_ART = {
     ["temple"]            = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
     ["castle courtyard"]  = "esoui/art/loadingscreens/loadscreen_battleground_castle_courtyard_01.dds",

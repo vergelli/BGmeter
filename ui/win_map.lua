@@ -771,10 +771,15 @@ function M.set_heat_mode(mode)
     M.render()
 end
 
+local function raise()
+    if c and c.win and c.win.BringWindowToTop then c.win:BringWindowToTop() end
+end
+
 function M.open()
     build()
     if not W.win or W.win:IsHidden() then return end
     c.win:SetHidden(false)
+    raise()
     sv_win().open = true
     state.t = nil
     M.render()
@@ -797,6 +802,7 @@ function M.is_open() return built and not c.win:IsHidden() end
 
 function M.on_report_render()
     if not built or c.win:IsHidden() then return end
+    raise()
     M.render()
 end
 
