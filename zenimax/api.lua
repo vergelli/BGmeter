@@ -27,7 +27,11 @@ A.get_num_rounds     = GetBattlegroundNumRounds
 A.get_round_result   = GetCurrentBattlegroundRoundResult
 A.get_rounds_won     = GetCurrentBattlegroundRoundsWonByTeam
 A.get_team_score     = GetCurrentBattlegroundScore
-A.get_team_icon      = GetBattlegroundTeamIcon
+A.get_team_icon      = function(team)
+    local f = GetBattlegroundTeamIcon or ZO_GetBattlegroundTeamIcon
+    if not f then return nil end
+    return f(team)
+end
 A.get_team_name      = GetBattlegroundTeamName
 
 A.get_num_objectives          = GetNumObjectives

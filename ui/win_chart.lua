@@ -613,8 +613,18 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     local decided = bal.leaderChanged and ("decided at " .. F.duration(bal.decidedMs)) or "lead never changed"
     local mineCol = bal.mine and S.team_color(bal.mine) or K.COLOR.text_dim
     local otherCol = bal.other and S.team_color(bal.other) or K.COLOR.text_dim
-    P.set_rect_color(b.balTiltL, { mineCol[1], mineCol[2], mineCol[3], 0.9 })
-    P.set_rect_color(b.balTiltR, { otherCol[1], otherCol[2], otherCol[3], 0.9 })
+    local function emblem(ic, team, col)
+        local tex = team and U.team_icon(team) or nil
+        if tex then
+            ic:SetTexture(tex)
+            ic:SetColor(1, 1, 1, 1)
+            ic:SetHidden(false)
+        else
+            ic:SetHidden(true)
+        end
+    end
+    emblem(b.balTiltL, bal.mine, mineCol)
+    emblem(b.balTiltR, bal.other, otherCol)
     local tiltW = math.floor(32 * math.abs(bal.lean) + 0.5)
     b.balTiltFill:ClearAnchors()
     b.balTiltFill:SetWidth(tiltW)
