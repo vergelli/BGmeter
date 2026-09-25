@@ -622,7 +622,7 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     b.balStop:SetHidden(not hasStop)
     if hasStop then b.balStop:SetText(string.format("%d of %d", st.n, st.of)) end
     local A = BGMeter.zenimax.api
-    local vetIcon = ex and ex.mine and ex.mine.vetAvg and A.get_veterancy_rank_icon and A.get_veterancy_rank_icon(math.max(1, math.floor(ex.mine.vetAvg + 0.5))) or nil
+    local vetIcon = U.TX.vet.n
     local avaIcon = ex and ex.mine and ex.mine.avaAvg and A.get_ava_rank_icon and A.get_ava_rank_icon(math.max(1, math.floor(ex.mine.avaAvg + 0.5))) or nil
     local free = (b.bal:GetWidth() or 0) - b.balLeftW - 8
     local roomOne = free >= b.balAva.width + 6

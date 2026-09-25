@@ -251,11 +251,11 @@ local function build_battle(win)
     b.balStop = value(b.balStopIcon, 58)
     b.balLeftW = 350
     local EXP_W = 118
-    local function exp_block(right)
+    local function exp_block(right, iconSize)
         local e = { width = EXP_W }
         e.icon = P.icon(b.bal)
-        e.icon:SetDimensions(22, 22)
-        e.icon:SetAnchor(TOPRIGHT, b.bal, TOPRIGHT, -(right + 96), 21)
+        e.icon:SetDimensions(iconSize, iconSize)
+        e.icon:SetAnchor(TOPRIGHT, b.bal, TOPRIGHT, -(right + 96 + (22 - iconSize) / 2), 21 - (iconSize - 22) / 2)
         e.barM = P.rect(b.bal, { 1, 1, 1, 0.10 })
         e.barM:SetDimensions(44, 5)
         e.barM:SetAnchor(TOPRIGHT, b.bal, TOPRIGHT, -(right + 50), 22)
@@ -279,8 +279,8 @@ local function build_battle(win)
         e.all = { e.icon, e.barM, e.fillM, e.valM, e.barO, e.fillO, e.valO }
         return e
     end
-    b.balAva = exp_block(6)
-    b.balVet = exp_block(6 + EXP_W + 8)
+    b.balAva = exp_block(6, 28)
+    b.balVet = exp_block(6 + EXP_W + 8, 22)
     W.tip_dynamic(b.bal)
 
     strip("race", "DAMAGE RACE", nil)
