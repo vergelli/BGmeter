@@ -538,8 +538,52 @@ function SEC.clear_chart(b)
     b.occ:SetHidden(true)
     b.mom:SetHidden(true)
     b.kills:SetHidden(true)
+    b.bal:SetHidden(true)
     b.bloodiest:SetHidden(true)
     W.chart_state = nil
+end
+
+local function balance_color(score)
+    if score >= 60 then return K.COLOR.heal end
+    if score >= 35 then return K.COLOR.gold end
+    return K.COLOR.accent
+end
+
+function SEC.balance(b, bal, sur, bal_h, bal_off)
+    b.bal:ClearAnchors()
+    b.bal:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -bal_off)
+    b.bal:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -bal_off)
+    b.bal:SetHeight(bal_h)
+    b.bal:SetHidden(false)
+    b.balScore:SetText(tostring(bal.score))
+    S.color(b.balScore, balance_color(bal.score))
+    local decided = bal.leaderChanged and ("decided at " .. F.duration(bal.decidedMs)) or "lead never changed"
+    b.balNote:SetText("/ 100  ·  " .. decided)
+    local base = sur and sur.base
+    b.balBase:SetHidden(base == nil)
+    b.balBaseIcon:SetHidden(base == nil)
+    if base then b.balBase:SetText(string.format("at base %d%%", math.floor(base.pct * 100 + 0.5))) end
+    local st = sur and sur.stopped
+    local hasStop = st ~= nil and st.of > 0
+    b.balStop:SetHidden(not hasStop)
+    b.balStopIcon:SetHidden(not hasStop)
+    if hasStop then b.balStop:SetText(string.format("stopped %d of %d", st.n, st.of)) end
+    local lines = {
+        string.format("Match balance %d / 100", bal.score),
+        string.format("kill ratio %.2f  ·  the weaker team's kills over the stronger's", bal.killRatio),
+        string.format("contested %d%%  ·  time with the scores within 10%%", math.floor(bal.contested * 100 + 0.5)),
+        string.format("margin %d%%  ·  average gap between leader and runner-up", math.floor(bal.margin * 100 + 0.5)),
+        decided,
+    }
+    if base then
+        lines[#lines + 1] = string.format("at base %d%%  ·  your team's positions within 15 m of the spawn after the gates opened (you %d%%)",
+            math.floor(base.pct * 100 + 0.5), math.floor(base.mine * 100 + 0.5))
+    end
+    if hasStop then
+        lines[#lines + 1] = string.format("stopped %d of %d  ·  teammates whose damage stopped growing for the last 90 s%s",
+            st.n, st.of, st.at and ("  ·  first at " .. F.duration(st.at)) or "")
+    end
+    W.tips[b.bal] = table.concat(lines, "\n")
 end
 
 function W.repaint_chart()
@@ -582,6 +626,8 @@ local function derive(m, tl, tspan, gt)
     dc.kp = Match.kill_pressure(m.killfeed, tspan)
     dc.rounds = Match.round_marks(tl)
     dc.mine = Match.local_name(m)
+    dc.bal = Match.balance(m)
+    dc.sur = dc.bal and Match.surrender(m, Match.geo_cached(m)) or nil
     return dc
 end
 
@@ -624,11 +670,13 @@ function SEC.timeline(m)
 
     local race_h = (dc.race and Prefs.get("show_race")) and L.race_h or 0
     local kills_h = (dc.kp and Prefs.get("show_kills")) and L.kills_h or 0
+    local bal_h = (dc.bal and Prefs.get("show_balance")) and L.balance_h or 0
     local rows_h = 24 + #m.battle * L.row_h
     local cont_h = b.container:GetHeight()
     local function fits(extra) return cont_h - rows_h >= L.chart_h + extra + 8 end
-    if kills_h > 0 and not fits(race_h + mom_h + ribbon_h + occ_h + kills_h) then kills_h = 0 end
-    if race_h > 0 and not fits(race_h + mom_h + ribbon_h + occ_h) then race_h = 0 end
+    if kills_h > 0 and not fits(race_h + mom_h + ribbon_h + occ_h + kills_h + bal_h) then kills_h = 0 end
+    if race_h > 0 and not fits(race_h + mom_h + ribbon_h + occ_h + bal_h) then race_h = 0 end
+    if bal_h > 0 and not fits(mom_h + ribbon_h + occ_h + bal_h) then bal_h = 0 end
     if lanes and mom_h > 0 and not fits(mom_h + ribbon_h + occ_h) then
         mom_h, tdm_line = 0, false
     end
@@ -649,7 +697,9 @@ function SEC.timeline(m)
     local mom_off = rib_off + ((ribbon_h > 0) and (ribbon_h + 2) or 0)
     local kills_off = mom_off + ((mom_h > 0) and (mom_h + 2) or 0)
     local race_off = kills_off + ((kills_h > 0) and (kills_h + 2) or 0)
-    local chart_off = race_off + ((race_h > 0) and (race_h + 2) or 0)
+    local bal_off = race_off + ((race_h > 0) and (race_h + 2) or 0)
+    local chart_off = bal_off + ((bal_h > 0) and (bal_h + 2) or 0)
+    if bal_h > 0 then SEC.balance(b, dc.bal, dc.sur, bal_h, bal_off) end
     b.chart:SetHidden(false)
     b.chart:ClearAnchors()
     b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -chart_off)

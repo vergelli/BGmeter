@@ -210,6 +210,39 @@ local function build_battle(win)
 
     b.occ_pool = rect_pool(b.occ)
 
+    strip("bal", "MATCH BALANCE", nil, L.balance_h)
+    b.balIcon = P.icon(b.bal, Icons.BALANCE)
+    b.balIcon:SetDimensions(22, 22)
+    b.balIcon:SetAnchor(TOPLEFT, b.bal, TOPLEFT, 6, 19)
+    b.balScore = P.label(b.bal, S.FONT.row, K.COLOR.gold)
+    b.balScore:SetAnchor(LEFT, b.balIcon, RIGHT, 6, 0)
+    b.balScore:SetDimensions(34, 22)
+    b.balScore:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    b.balNote = P.label(b.bal, S.FONT.small, K.COLOR.text_dim)
+    U.clamp_line(b.balNote)
+    b.balNote:SetAnchor(LEFT, b.balScore, RIGHT, 4, 0)
+    b.balNote:SetDimensions(170, 22)
+    b.balNote:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    b.balStop = P.label(b.bal, S.FONT.small, K.COLOR.text)
+    U.clamp_line(b.balStop)
+    b.balStop:SetAnchor(TOPRIGHT, b.bal, TOPRIGHT, -6, 21)
+    b.balStop:SetDimensions(84, 18)
+    b.balStop:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    b.balStop:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    b.balStopIcon = P.icon(b.bal, Icons.SHEATHED)
+    b.balStopIcon:SetDimensions(18, 18)
+    b.balStopIcon:SetAnchor(RIGHT, b.balStop, LEFT, -3, 0)
+    b.balBase = P.label(b.bal, S.FONT.small, K.COLOR.text)
+    U.clamp_line(b.balBase)
+    b.balBase:SetAnchor(RIGHT, b.balStopIcon, LEFT, -12, 0)
+    b.balBase:SetDimensions(78, 18)
+    b.balBase:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    b.balBase:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    b.balBaseIcon = P.icon(b.bal, Icons.CAMP)
+    b.balBaseIcon:SetDimensions(18, 18)
+    b.balBaseIcon:SetAnchor(RIGHT, b.balBase, LEFT, -3, 0)
+    W.tip_dynamic(b.bal)
+
     strip("race", "DAMAGE RACE", nil)
     b.race_pool = rect_pool(b.race)
     b.race_line_pool = b.lines_ok and BGMeter.Plot.pool.new(
@@ -328,6 +361,7 @@ local function apply_dynamic_min_width(m)
     else
         extra = 46 + 2
     end
+    if BGMeter.Prefs.get("show_balance") then extra = extra + L.balance_h + 2 end
     local needed_h = L.header_h + 24 + #m.battle * L.row_h + L.chart_h + extra + 8 + L.footer_h + 12
     local dyn_h = math.max(L.min_h, math.min(needed_h, L.max_h))
 
