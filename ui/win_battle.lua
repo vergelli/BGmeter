@@ -243,10 +243,7 @@ local function build_battle(win)
     end
     b.balMark = P.rect(b.bal, { 1, 1, 1, 0.95 })
     b.balMark:SetDimensions(3, 11)
-    b.balTop = P.icon(b.bal)
-    b.balTop:SetDimensions(18, 18)
-    b.balTop:SetAnchor(LEFT, b.balScale, RIGHT, 5, 0)
-    b.balTiltEnd = 6 + BAL_ICON + 5 + 30 + 4 + 72 + 5 + 18
+    b.balTiltEnd = 6 + BAL_ICON + 5 + 30 + 4 + 72
     b.balCampX = 180
     b.balBaseIcon = glyph(Icons.CAMP, b.balCampX)
     b.balBase = value(b.balBaseIcon, 40)

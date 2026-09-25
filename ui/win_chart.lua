@@ -592,12 +592,8 @@ local function exp_paint(blk, icon, mineE, otherE, key, avgKey, room)
     end
     blk.valM:SetText(txt(mineE, mv))
     blk.valO:SetText(txt(otherE, ov))
-    local function line(e)
-        if not e then return "none" end
-        local avg = e[avgKey]
-        return string.format("%s%s", F.commas(e[key]), avg and string.format(" (avg %d, %d of %d)", math.floor(avg + 0.5), e.seen, e.n) or "")
-    end
-    return string.format("%s  ·  %s", line(mineE), line(otherE))
+    local cov = (otherE and otherE.seen < otherE.n) and string.format(" (%d/%d)", otherE.seen, otherE.n) or ""
+    return string.format("|c%s%s|r vs |c%s%s|r%s", hexc(mc), F.commas(mv), hexc(oc), F.commas(ov), cov)
 end
 
 function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
@@ -616,14 +612,6 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     b.balMark:ClearAnchors()
     b.balMark:SetAnchor(CENTER, b.balScale, LEFT, mx, 0)
     b.balMark:SetHidden(false)
-    local topTex = bal.leanTeam and U.team_icon(bal.leanTeam) or nil
-    if topTex then
-        b.balTop:SetTexture(topTex)
-        b.balTop:SetColor(1, 1, 1, 1)
-        b.balTop:SetHidden(false)
-    else
-        b.balTop:SetHidden(true)
-    end
     local base = sur and sur.base
     tint_glyph(b.balBaseIcon, base and base_color(base.pct) or K.COLOR.text_dim, base == nil)
     b.balBase:SetHidden(base == nil)
@@ -641,22 +629,28 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     local roomTwo = free >= 2 * b.balAva.width + 14
     local vetLine = exp_paint(b.balVet, vetIcon, ex and ex.mine, ex and ex.other, "vet", "vetAvg", roomTwo)
     local avaLine = exp_paint(b.balAva, avaIcon, ex and ex.mine, ex and ex.other, "ava", "avaAvg", roomOne)
+    local dim = hexc(K.COLOR.text_dim)
     local lines = {
-        string.format("Match balance %d / 100", bal.score),
-        bal.leanTeam and string.format("%s on top", team_name(bal.leanTeam)) or "no team on top",
-        string.format("kill ratio %.2f", bal.killRatio),
-        string.format("contested %d%%", math.floor(bal.contested * 100 + 0.5)),
-        string.format("margin %d%%", math.floor(bal.margin * 100 + 0.5)),
-        decided,
+        string.format("|c%sBALANCE %d|r", hexc(bc), bal.score),
+        string.format("kill ratio |c%s%.2f|r  ·  contested |c%s%d%%|r  ·  margin |c%s%d%%|r",
+            hexc(K.COLOR.gold), bal.killRatio, hexc(K.COLOR.gold), math.floor(bal.contested * 100 + 0.5), hexc(K.COLOR.gold), math.floor(bal.margin * 100 + 0.5)),
+        bal.leaderChanged and string.format("decided |c%s%s|r%s", hexc(K.COLOR.gold), F.duration(bal.decidedMs),
+            bal.leanTeam and string.format("  ·  |c%s%s|r ahead", hexc(S.team_color(bal.leanTeam)), team_name(bal.leanTeam)) or "")
+            or string.format("|c%slead never changed|r%s", dim,
+            bal.leanTeam and string.format("  ·  |c%s%s|r ahead", hexc(S.team_color(bal.leanTeam)), team_name(bal.leanTeam)) or ""),
     }
+    local team = {}
     if base then
-        lines[#lines + 1] = string.format("at base %d%%  ·  you %d%%", math.floor(base.pct * 100 + 0.5), math.floor(base.mine * 100 + 0.5))
+        team[#team + 1] = string.format("at base |c%s%d%%|r |c%s(you %d%%)|r", hexc(base_color(base.pct)), math.floor(base.pct * 100 + 0.5), dim, math.floor(base.mine * 100 + 0.5))
     end
     if hasStop then
-        lines[#lines + 1] = string.format("stopped %d of %d%s", st.n, st.of, st.at and ("  ·  first at " .. F.duration(st.at)) or "")
+        team[#team + 1] = string.format("stopped |c%s%d of %d|r", hexc(stop_color(st)), st.n, st.of)
     end
-    if vetLine then lines[#lines + 1] = "veterancy  " .. vetLine end
-    if avaLine then lines[#lines + 1] = "alliance rank  " .. avaLine end
+    if #team > 0 then lines[#lines + 1] = table.concat(team, "  ·  ") end
+    local exp = {}
+    if vetLine then exp[#exp + 1] = "veterancy " .. vetLine end
+    if avaLine then exp[#exp + 1] = "rank " .. avaLine end
+    if #exp > 0 then lines[#lines + 1] = table.concat(exp, "  ·  ") end
     W.tips[b.bal] = table.concat(lines, "\n")
 end
 
