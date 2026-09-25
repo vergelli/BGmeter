@@ -569,7 +569,38 @@ local function stop_color(st)
     return K.COLOR.accent
 end
 
-function SEC.balance(b, bal, sur, bal_h, bal_off)
+local function exp_paint(blk, icon, mineE, otherE, key, avgKey)
+    local mv = mineE and mineE[key] or 0
+    local ov = otherE and otherE[key] or 0
+    local top = math.max(mv, ov)
+    if top <= 0 then
+        for _, c in ipairs(blk.all) do c:SetHidden(true) end
+        return nil
+    end
+    for _, c in ipairs(blk.all) do c:SetHidden(false) end
+    if icon then blk.icon:SetTexture(icon) else blk.icon:SetHidden(true) end
+    local mc = mineE and S.team_color(mineE.team) or K.COLOR.text_dim
+    local oc = otherE and S.team_color(otherE.team) or K.COLOR.text_dim
+    blk.fillM:SetWidth(math.floor(60 * mv / top + 0.5))
+    blk.fillO:SetWidth(math.floor(60 * ov / top + 0.5))
+    P.set_rect_color(blk.fillM, { mc[1], mc[2], mc[3], 0.8 })
+    P.set_rect_color(blk.fillO, { oc[1], oc[2], oc[3], 0.8 })
+    local function txt(e, v)
+        if not e then return "" end
+        local cov = (e.seen < e.n) and string.format("  %d/%d", e.seen, e.n) or ""
+        return F.commas(v) .. cov
+    end
+    blk.valM:SetText(txt(mineE, mv))
+    blk.valO:SetText(txt(otherE, ov))
+    local function line(e)
+        if not e then return "none" end
+        local avg = e[avgKey]
+        return string.format("%s%s", F.commas(e[key]), avg and string.format(" (avg %d, %d of %d)", math.floor(avg + 0.5), e.seen, e.n) or "")
+    end
+    return string.format("%s  ·  %s", line(mineE), line(otherE))
+end
+
+function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     b.bal:ClearAnchors()
     b.bal:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -bal_off)
     b.bal:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -bal_off)
@@ -604,6 +635,11 @@ function SEC.balance(b, bal, sur, bal_h, bal_off)
     tint_glyph(b.balStopIcon, hasStop and stop_color(st) or K.COLOR.text_dim, not hasStop)
     b.balStop:SetHidden(not hasStop)
     if hasStop then b.balStop:SetText(string.format("%d of %d", st.n, st.of)) end
+    local A = BGMeter.zenimax.api
+    local vetIcon = ex and ex.mine and ex.mine.vetAvg and A.get_veterancy_rank_icon and A.get_veterancy_rank_icon(math.max(1, math.floor(ex.mine.vetAvg + 0.5))) or nil
+    local avaIcon = ex and ex.mine and ex.mine.avaAvg and A.get_ava_rank_icon and A.get_ava_rank_icon(math.max(1, math.floor(ex.mine.avaAvg + 0.5))) or nil
+    local vetLine = exp_paint(b.balVet, vetIcon, ex and ex.mine, ex and ex.other, "vet", "vetAvg")
+    local avaLine = exp_paint(b.balAva, avaIcon, ex and ex.mine, ex and ex.other, "ava", "avaAvg")
     local lines = {
         string.format("Match balance %d / 100", bal.score),
         bal.leanTeam and string.format("%s on top", team_name(bal.leanTeam)) or "no team on top",
@@ -618,6 +654,8 @@ function SEC.balance(b, bal, sur, bal_h, bal_off)
     if hasStop then
         lines[#lines + 1] = string.format("stopped %d of %d%s", st.n, st.of, st.at and ("  ·  first at " .. F.duration(st.at)) or "")
     end
+    if vetLine then lines[#lines + 1] = "veterancy  " .. vetLine end
+    if avaLine then lines[#lines + 1] = "alliance rank  " .. avaLine end
     W.tips[b.bal] = table.concat(lines, "\n")
 end
 
@@ -663,6 +701,7 @@ local function derive(m, tl, tspan, gt)
     dc.mine = Match.local_name(m)
     dc.bal = Match.balance(m)
     dc.sur = dc.bal and Match.surrender(m, Match.geo_cached(m)) or nil
+    dc.exp = dc.bal and Match.experience(m) or nil
     return dc
 end
 
@@ -734,7 +773,7 @@ function SEC.timeline(m)
     local race_off = kills_off + ((kills_h > 0) and (kills_h + 2) or 0)
     local bal_off = race_off + ((race_h > 0) and (race_h + 2) or 0)
     local chart_off = bal_off + ((bal_h > 0) and (bal_h + 2) or 0)
-    if bal_h > 0 then SEC.balance(b, dc.bal, dc.sur, bal_h, bal_off) end
+    if bal_h > 0 then SEC.balance(b, dc.bal, dc.sur, bal_h, bal_off, dc.exp) end
     b.chart:SetHidden(false)
     b.chart:ClearAnchors()
     b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -chart_off)
