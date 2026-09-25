@@ -231,6 +231,7 @@ local function build()
     W.cur_h = (sv and sv.window and sv.window.h and sv.window.h > 0) and sv.window.h or L.window_h
 
     local win = BGMeter.zenimax.ui.wm:CreateTopLevelWindow("BGMeterWindow")
+    win:SetDrawTier(DT_HIGH)
     win:SetDimensions(W.cur_w, W.cur_h)
     win:SetAnchor(CENTER, GuiRoot, CENTER, 0, 0)
     win:SetMouseEnabled(true)
