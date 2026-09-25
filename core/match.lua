@@ -474,11 +474,16 @@ function Match.geo(m)
         local nm = r.displayName or r.charName
         if nm then team[(nm:gsub("%^.*$", ""))] = r.team end
     end
+    local lr = Match.local_row(m)
+    local twin = lr and lr.charName
+    if not (twin and twin ~= mine and tl.pos[twin] and mine and tl.pos[mine]) then twin = nil end
     local pos, teammates = {}, 0
     for nm, rec in pairs(tl.pos) do
-        pos[nm] = { x = Match.unpack_series(rec.x, n), y = Match.unpack_series(rec.y, n) }
-        if not team[nm] then team[nm] = m.localTeam end
-        if nm ~= mine then teammates = teammates + 1 end
+        if nm ~= twin then
+            pos[nm] = { x = Match.unpack_series(rec.x, n), y = Match.unpack_series(rec.y, n) }
+            if not team[nm] then team[nm] = m.localTeam end
+            if nm ~= mine then teammates = teammates + 1 end
+        end
     end
     local pins = {}
     for i, pin in ipairs(tl.pin or {}) do
