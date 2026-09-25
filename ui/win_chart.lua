@@ -569,11 +569,11 @@ local function stop_color(st)
     return K.COLOR.accent
 end
 
-local function exp_paint(blk, icon, mineE, otherE, key, avgKey)
+local function exp_paint(blk, icon, mineE, otherE, key, avgKey, room)
     local mv = mineE and mineE[key] or 0
     local ov = otherE and otherE[key] or 0
     local top = math.max(mv, ov)
-    if top <= 0 then
+    if top <= 0 or not room then
         for _, c in ipairs(blk.all) do c:SetHidden(true) end
         return nil
     end
@@ -581,8 +581,8 @@ local function exp_paint(blk, icon, mineE, otherE, key, avgKey)
     if icon then blk.icon:SetTexture(icon) else blk.icon:SetHidden(true) end
     local mc = mineE and S.team_color(mineE.team) or K.COLOR.text_dim
     local oc = otherE and S.team_color(otherE.team) or K.COLOR.text_dim
-    blk.fillM:SetWidth(math.floor(60 * mv / top + 0.5))
-    blk.fillO:SetWidth(math.floor(60 * ov / top + 0.5))
+    blk.fillM:SetWidth(math.floor(44 * mv / top + 0.5))
+    blk.fillO:SetWidth(math.floor(44 * ov / top + 0.5))
     P.set_rect_color(blk.fillM, { mc[1], mc[2], mc[3], 0.8 })
     P.set_rect_color(blk.fillO, { oc[1], oc[2], oc[3], 0.8 })
     local function txt(e, v)
@@ -648,8 +648,11 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     local A = BGMeter.zenimax.api
     local vetIcon = ex and ex.mine and ex.mine.vetAvg and A.get_veterancy_rank_icon and A.get_veterancy_rank_icon(math.max(1, math.floor(ex.mine.vetAvg + 0.5))) or nil
     local avaIcon = ex and ex.mine and ex.mine.avaAvg and A.get_ava_rank_icon and A.get_ava_rank_icon(math.max(1, math.floor(ex.mine.avaAvg + 0.5))) or nil
-    local vetLine = exp_paint(b.balVet, vetIcon, ex and ex.mine, ex and ex.other, "vet", "vetAvg")
-    local avaLine = exp_paint(b.balAva, avaIcon, ex and ex.mine, ex and ex.other, "ava", "avaAvg")
+    local free = (b.bal:GetWidth() or 0) - b.balLeftW - 8
+    local roomOne = free >= b.balAva.width + 6
+    local roomTwo = free >= 2 * b.balAva.width + 14
+    local vetLine = exp_paint(b.balVet, vetIcon, ex and ex.mine, ex and ex.other, "vet", "vetAvg", roomTwo)
+    local avaLine = exp_paint(b.balAva, avaIcon, ex and ex.mine, ex and ex.other, "ava", "avaAvg", roomOne)
     local lines = {
         string.format("Match balance %d / 100", bal.score),
         bal.leanTeam and string.format("%s on top", team_name(bal.leanTeam)) or "no team on top",
