@@ -441,9 +441,10 @@ function Match.geo_index_of(times, n, t)
     return idx
 end
 
-function Match.geo_spline(xs, ys, n, sub)
+function Match.geo_spline(xs, ys, n, sub, ox, oy)
     sub = sub or 3
-    local ox, oy = {}, {}
+    ox, oy = ox or {}, oy or {}
+    local o = 0
     local function at(i) i = math.max(1, math.min(n, i)); return xs[i] or 0, ys[i] or 0 end
     for i = 1, n - 1 do
         local x0, y0 = at(i - 1)
@@ -453,13 +454,15 @@ function Match.geo_spline(xs, ys, n, sub)
         for k = 0, sub - 1 do
             local u = k / sub
             local u2, u3 = u * u, u * u * u
-            ox[#ox + 1] = 0.5 * ((2 * x1) + (-x0 + x2) * u + (2 * x0 - 5 * x1 + 4 * x2 - x3) * u2 + (-x0 + 3 * x1 - 3 * x2 + x3) * u3)
-            oy[#oy + 1] = 0.5 * ((2 * y1) + (-y0 + y2) * u + (2 * y0 - 5 * y1 + 4 * y2 - y3) * u2 + (-y0 + 3 * y1 - 3 * y2 + y3) * u3)
+            o = o + 1
+            ox[o] = 0.5 * ((2 * x1) + (-x0 + x2) * u + (2 * x0 - 5 * x1 + 4 * x2 - x3) * u2 + (-x0 + 3 * x1 - 3 * x2 + x3) * u3)
+            oy[o] = 0.5 * ((2 * y1) + (-y0 + y2) * u + (2 * y0 - 5 * y1 + 4 * y2 - y3) * u2 + (-y0 + 3 * y1 - 3 * y2 + y3) * u3)
         end
     end
     local xl, yl = at(n)
-    ox[#ox + 1], oy[#oy + 1] = xl, yl
-    return ox, oy
+    o = o + 1
+    ox[o], oy[o] = xl, yl
+    return ox, oy, o
 end
 
 function Match.geo(m)
@@ -494,6 +497,28 @@ function Match.geo(m)
     local startT = 0
     if m.playedMs and m.durationMs and m.durationMs > m.playedMs then startT = m.durationMs - m.playedMs end
     return { n = n, t = tl.pt, pos = pos, pins = pins, team = team, mine = mine, teammates = teammates, stepMs = stepMs, me = me, startT = startT }
+end
+
+local geo_cache = { m = nil, geo = nil, kb = 0 }
+
+function Match.geo_cached(m)
+    if m == nil then return nil end
+    if geo_cache.m == m then return geo_cache.geo end
+    collectgarbage("stop")
+    local k0 = collectgarbage("count")
+    local geo = Match.geo(m)
+    local kb = collectgarbage("count") - k0
+    collectgarbage("restart")
+    geo_cache.m, geo_cache.geo, geo_cache.kb = m, geo, (kb > 0) and kb or 0
+    return geo
+end
+
+function Match.geo_cache_clear()
+    geo_cache.m, geo_cache.geo, geo_cache.kb = nil, nil, 0
+end
+
+function Match.geo_cache_report()
+    return { held = geo_cache.geo ~= nil, bytes = math.floor(geo_cache.kb * 1024 + 0.5), m = geo_cache.m }
 end
 
 function Match.geo_index(geo, t)
