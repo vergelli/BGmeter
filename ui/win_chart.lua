@@ -545,25 +545,59 @@ end
 
 local balance_color = U.balance_color
 
+local function soft(c)
+    local t = K.COLOR.text
+    return { c[1] * 0.55 + t[1] * 0.45, c[2] * 0.55 + t[2] * 0.45, c[3] * 0.55 + t[3] * 0.45 }
+end
+
+local function tint_glyph(icon, glow, color, hidden)
+    icon:SetHidden(hidden)
+    glow:SetHidden(hidden)
+    if hidden then return end
+    local c = soft(color)
+    icon:SetColor(c[1], c[2], c[3], 1)
+    glow:SetColor(color[1], color[2], color[3], 0.22)
+end
+
+local function base_color(pct)
+    if pct <= 0.10 then return K.COLOR.text_dim end
+    if pct <= 0.25 then return K.COLOR.gold end
+    return K.COLOR.accent
+end
+
+local function stop_color(st)
+    if st.n == 0 then return K.COLOR.text_dim end
+    if st.n * 2 < st.of then return K.COLOR.gold end
+    return K.COLOR.accent
+end
+
 function SEC.balance(b, bal, sur, bal_h, bal_off)
     b.bal:ClearAnchors()
     b.bal:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -bal_off)
     b.bal:SetAnchor(BOTTOMRIGHT, b.container, BOTTOMRIGHT, 0, -bal_off)
     b.bal:SetHeight(bal_h)
     b.bal:SetHidden(false)
+    local bc = balance_color(bal.score)
     b.balScore:SetText(tostring(bal.score))
-    S.color(b.balScore, balance_color(bal.score))
+    S.color(b.balScore, bc)
+    tint_glyph(b.balIcon, b.balGlow, bc, false)
     local decided = bal.leaderChanged and ("decided at " .. F.duration(bal.decidedMs)) or "lead never changed"
-    b.balNote:SetText("/ 100  ·  " .. decided)
+    local fillW = bal.leaderChanged and math.floor(64 * bal.decidedPct + 0.5) or 0
+    b.balDecFill:SetWidth(fillW)
+    local fc = soft(bc)
+    P.set_rect_color(b.balDecFill, { fc[1], fc[2], fc[3], 0.45 })
+    b.balDecDot:ClearAnchors()
+    b.balDecDot:SetAnchor(CENTER, b.balDecBar, LEFT, fillW, 0)
+    P.set_rect_color(b.balDecDot, { fc[1], fc[2], fc[3], 0.95 })
     local base = sur and sur.base
+    tint_glyph(b.balBaseIcon, b.balBaseGlow, base and base_color(base.pct) or K.COLOR.text_dim, base == nil)
     b.balBase:SetHidden(base == nil)
-    b.balBaseIcon:SetHidden(base == nil)
-    if base then b.balBase:SetText(string.format("at base %d%%", math.floor(base.pct * 100 + 0.5))) end
+    if base then b.balBase:SetText(string.format("%d%%", math.floor(base.pct * 100 + 0.5))) end
     local st = sur and sur.stopped
     local hasStop = st ~= nil and st.of > 0
+    tint_glyph(b.balStopIcon, b.balStopGlow, hasStop and stop_color(st) or K.COLOR.text_dim, not hasStop)
     b.balStop:SetHidden(not hasStop)
-    b.balStopIcon:SetHidden(not hasStop)
-    if hasStop then b.balStop:SetText(string.format("stopped %d of %d", st.n, st.of)) end
+    if hasStop then b.balStop:SetText(string.format("%d of %d", st.n, st.of)) end
     local lines = {
         string.format("Match balance %d / 100", bal.score),
         string.format("kill ratio %.2f", bal.killRatio),
