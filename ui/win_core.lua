@@ -58,6 +58,12 @@ local function result_color(res)
     return K.COLOR.text_dim
 end
 
+function U.balance_color(score)
+    if score >= 60 then return K.COLOR.heal end
+    if score >= 35 then return K.COLOR.gold end
+    return K.COLOR.accent
+end
+
 local MAP_ART = {
     ["temple"]            = "esoui/art/loadingscreens/loadscreen_battleground_temple_01.dds",
     ["castle courtyard"]  = "esoui/art/loadingscreens/loadscreen_battleground_castle_courtyard_01.dds",

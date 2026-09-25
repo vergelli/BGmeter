@@ -543,11 +543,7 @@ function SEC.clear_chart(b)
     W.chart_state = nil
 end
 
-local function balance_color(score)
-    if score >= 60 then return K.COLOR.heal end
-    if score >= 35 then return K.COLOR.gold end
-    return K.COLOR.accent
-end
+local balance_color = U.balance_color
 
 function SEC.balance(b, bal, sur, bal_h, bal_off)
     b.bal:ClearAnchors()
