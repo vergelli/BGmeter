@@ -132,6 +132,8 @@ A.get_map_tile_texture       = GetMapTileTexture
 A.get_group_size             = GetGroupSize
 A.get_group_unit_tag         = GetGroupUnitTagByIndex
 A.get_unit_name              = GetUnitName
+A.get_unit_display_name      = GetUnitDisplayName
+A.are_units_equal            = AreUnitsEqual
 A.get_objective_pin_info     = GetObjectivePinInfo
 A.world_map_showing          = ZO_WorldMap_IsWorldMapShowing
 

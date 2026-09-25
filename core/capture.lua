@@ -446,8 +446,8 @@ local function sample_positions()
     local n = safe(A.get_group_size) or 0
     for g = 1, math.min(n, 8) do
         local tag = safe(A.get_group_unit_tag, g)
-        if tag then
-            local nm = clean_name(safe(A.get_unit_name, tag))
+        if tag and safe(A.are_units_equal, tag, "player") ~= true then
+            local nm = clean_name(safe(A.get_unit_display_name, tag)) or clean_name(safe(A.get_unit_name, tag))
             if nm and nm ~= active.localName then
                 local gx, gy, _, gin = safe(A.get_map_player_position, tag)
                 put(nm, gx, gy, gin)
