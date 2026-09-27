@@ -31,7 +31,7 @@ local PIP_ME = PIP_MATE
 local DOCK_SNAP = 48
 local FALLBACK_PIN = "EsoUI/Art/MapPins/battlegrounds_murderball_neutral.dds"
 local FALLBACK_AREA = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.dds"
-local LV = { tile = 1, heat = 2, path = 3, mark = 4, hit = 5 }
+local LV = { tile = 1, heat = 2, halo = 3, path = 4, mark = 5, hit = 6 }
 
 local LAYERS = {
     { key = "map_path",   label = "Your path",  tip = "Where you went, up to this second" },
@@ -224,6 +224,7 @@ local function build()
     if probe then
         probe:SetHidden(true)
         c.line_pool = leveled_pool(function() return P.line(c.map, { 1, 1, 1, 1 }, 2) end, LV.path)
+        c.team_pool = leveled_pool(function() return P.line(c.map, { 1, 1, 1, 1 }, 2) end, LV.path)
     end
     c.icon_pool = leveled_pool(function() return P.icon(c.map, "") end, LV.mark)
     c.hit_pool = BGMeter.Plot.pool.new(
@@ -406,9 +407,9 @@ local function sz(base)
     return math.floor(base * k + 0.5)
 end
 
-local function polyline(xs, ys, n, color, thick, alpha)
+local function polyline(pool, xs, ys, n, color, thick, alpha)
     if n < 2 then return end
-    if not c.line_pool then
+    if not pool then
         for i = 1, n do
             local d = c.dot_pool:acquire()
             d:ClearAnchors()
@@ -420,7 +421,7 @@ local function polyline(xs, ys, n, color, thick, alpha)
         return
     end
     for i = 2, n do
-        local ln = c.line_pool:acquire()
+        local ln = pool:acquire()
         ln:ClearAnchors()
         ln:SetAnchor(TOPLEFT, c.map, TOPLEFT, xs[i - 1], ys[i - 1])
         ln:SetAnchor(TOPRIGHT, c.map, TOPLEFT, xs[i], ys[i])
@@ -469,7 +470,7 @@ end
 local function release_all(keep_heat)
     if not keep_heat then c.heat_pool:release_all() end
     c.dot_pool:release_all()
-    if c.line_pool then c.line_pool:release_all() end
+    if c.team_pool then c.team_pool:release_all() end
     c.icon_pool:release_all()
     c.hit_pool:release_all()
 end
@@ -500,6 +501,87 @@ local function draw_heat(geo, m, mode)
     end
 end
 
+local PATH = { key = nil, xs = {}, ys = {}, cum = {}, total = 0, m = 0, sub = 1, halo = {}, line = {}, shown = 0 }
+
+local function path_reset()
+    PATH.key, PATH.total, PATH.m, PATH.sub, PATH.shown = nil, 0, 0, 1, 0
+    PATH.halo, PATH.line = {}, {}
+    if c.line_pool then c.line_pool:release_all() end
+end
+
+local function path_prepare(geo, m)
+    local me = geo.me
+    local s = me or (geo.mine and geo.pos[geo.mine])
+    if not s then
+        path_reset()
+        return nil
+    end
+    local n = me and me.n or geo.n
+    local key = tostring(m) .. "|" .. tostring(m.capturedAt) .. "|" .. tostring(state.side) .. "|" .. (me and "me" or "pos")
+    if PATH.key == key then return s end
+    path_reset()
+    PATH.key = key
+    local smooth = me ~= nil
+    local xs, ys, total = scaled(s, n, smooth)
+    for i = 1, total do PATH.xs[i], PATH.ys[i] = xs[i], ys[i] end
+    for i = total + 1, #PATH.xs do PATH.xs[i], PATH.ys[i] = nil, nil end
+    local cnt = 0
+    for i = 1, n do
+        local x, y = s.x[i] or 0, s.y[i] or 0
+        if x > 0 or y > 0 then cnt = cnt + 1 end
+        PATH.cum[i] = cnt
+    end
+    for i = n + 1, #PATH.cum do PATH.cum[i] = nil end
+    PATH.total, PATH.m = total, cnt
+    PATH.sub = (smooth and cnt >= 3) and 3 or 1
+    return s
+end
+
+local function path_segment(k)
+    local h, l = PATH.halo[k], PATH.line[k]
+    if h then return h, l end
+    local tc = S.team_color(state.m.localTeam)
+    local x0, y0, x1, y1 = PATH.xs[k], PATH.ys[k], PATH.xs[k + 1], PATH.ys[k + 1]
+    h = c.line_pool:acquire()
+    if h.SetDrawLevel then h:SetDrawLevel(LV.halo) end
+    h:ClearAnchors()
+    h:SetAnchor(TOPLEFT, c.map, TOPLEFT, x0, y0)
+    h:SetAnchor(TOPRIGHT, c.map, TOPLEFT, x1, y1)
+    h:SetColor(tc[1], tc[2], tc[3], 0.40)
+    if h.SetThickness then h:SetThickness(7) end
+    l = c.line_pool:acquire()
+    if l.SetDrawLevel then l:SetDrawLevel(LV.path) end
+    l:ClearAnchors()
+    l:SetAnchor(TOPLEFT, c.map, TOPLEFT, x0, y0)
+    l:SetAnchor(TOPRIGHT, c.map, TOPLEFT, x1, y1)
+    l:SetColor(K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 1)
+    if l.SetThickness then l:SetThickness(3) end
+    PATH.halo[k], PATH.line[k] = h, l
+    return h, l
+end
+
+local function path_show(upto)
+    local mt = PATH.cum[upto] or 0
+    local pts
+    if mt <= 0 then pts = 0
+    elseif mt >= PATH.m then pts = PATH.total
+    else pts = (mt - 1) * PATH.sub + 1 end
+    local want = math.max(0, pts - 1)
+    if want > PATH.shown then
+        for k = PATH.shown + 1, want do
+            local h, l = path_segment(k)
+            h:SetHidden(false)
+            l:SetHidden(false)
+        end
+    elseif want < PATH.shown then
+        for k = want + 1, PATH.shown do
+            PATH.halo[k]:SetHidden(true)
+            PATH.line[k]:SetHidden(true)
+        end
+    end
+    PATH.shown = want
+end
+
 local function draw_paths(geo, m, idx, t)
     local mine = geo.mine
     if Prefs.get("map_team") then
@@ -507,22 +589,30 @@ local function draw_paths(geo, m, idx, t)
         for name, s in pairs(geo.pos) do
             if name ~= mine then
                 local xs, ys, n = scaled(s, idx, false)
-                polyline(xs, ys, n, tc, 1, 0.45)
+                polyline(c.team_pool, xs, ys, n, tc, 1, 0.45)
             end
         end
     end
-    if Prefs.get("map_path") then
-        local me = geo.me
-        local upto = me and BGMeter.Match.geo_index_of(me.t, me.n, t) or idx
+    if not Prefs.get("map_path") then
+        if PATH.shown > 0 then path_show(0) end
+        return
+    end
+    local me = geo.me
+    local upto = me and BGMeter.Match.geo_index_of(me.t, me.n, t) or idx
+    if not c.line_pool then
         local s = me or (mine and geo.pos[mine])
         if s then
             local xs, ys, n = scaled(s, upto, me ~= nil)
             local tc = S.team_color(m.localTeam)
-            polyline(xs, ys, n, tc, 7, 0.40)
-            polyline(xs, ys, n, K.COLOR.you, 3, 1)
+            polyline(nil, xs, ys, n, tc, 7, 0.40)
+            polyline(nil, xs, ys, n, K.COLOR.you, 3, 1)
         end
+        return
     end
+    if path_prepare(geo, m) then path_show(upto) end
 end
+
+function M.path_state() return PATH end
 
 local function draw_deaths(geo, m, t)
     for _, k in ipairs(m.killfeed or {}) do
@@ -689,6 +779,8 @@ function M.render()
     apply_tiles(m or {})
     if not state.geo then
         state.heatKey = nil
+        state.lastM = nil
+        path_reset()
         c.empty:SetHidden(false)
         set_text(c.sub, m and (m.name or "Battleground") or "")
         for _, l in ipairs(c.nowLines) do set_text(l, "") end
@@ -707,6 +799,9 @@ function M.render()
     c.slider:SetValue(state.t)
     state.applying = false
     local idx = BGMeter.Match.geo_index(geo, state.t)
+    state.lastIdx = idx
+    state.lastMeIdx = geo.me and BGMeter.Match.geo_index_of(geo.me.t, geo.me.n, state.t) or idx
+    state.lastM = m
     set_text(c.sub, string.format("%s  ·  %s", m.name or "Battleground", m.map and m.map.name or ""))
     if hm ~= "off" and not keep_heat then draw_heat(geo, m, hm) end
     draw_paths(geo, m, idx, state.t)
@@ -716,6 +811,21 @@ function M.render()
     set_text(c.timeLabel, "t " .. F.duration(state.t))
     local lines = now_lines(m, geo, state.t)
     for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+end
+
+local function scrub_flush()
+    state.scrubQueued = false
+    if not built or c.win:IsHidden() or not state.geo then return end
+    local geo, m = state.geo, state.m
+    local idx = BGMeter.Match.geo_index(geo, state.t)
+    local meIdx = geo.me and BGMeter.Match.geo_index_of(geo.me.t, geo.me.n, state.t) or idx
+    if state.lastM == m and state.lastIdx == idx and state.lastMeIdx == meIdx then
+        set_text(c.timeLabel, "t " .. F.duration(state.t))
+        local lines = now_lines(m, geo, state.t)
+        for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+        return
+    end
+    M.render()
 end
 
 function M.set_time(t, from_chart, force)
@@ -729,7 +839,13 @@ function M.set_time(t, from_chart, force)
         c.slider:SetValue(t)
         state.applying = false
     end
-    M.render()
+    if force then
+        M.render()
+        return
+    end
+    if state.scrubQueued then return end
+    state.scrubQueued = true
+    if type(zo_callLater) == "function" then zo_callLater(scrub_flush, 0) else scrub_flush() end
 end
 
 function M.time() return state.t end

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Fixed: scrubbing the map redrew your whole path on every move of the slider, thousands of line segments per pixel, which kept the GPU busy for as long as you dragged. The path is now laid out once per match and the slider only shows or hides its tail; moves within the same second update the labels and nothing else. Measured on a full match in the harness: from 5 766 control acquisitions and 11 447 anchors per move to 59 and 31, from 4.7 ms to 0.3 ms.
+
 ## [0.5.0]
 
 - MATCH BALANCE strip under the score chart: one number from 0 to 100 that says how much of a match there was, from the kill ratio between the teams, the average gap between leader and runner-up, and the share of the match spent within ten percent. The number sits on a scale from red (a stomp) through gold to green (an even match), with a marker at its value. Hover the strip for a card with the components, when the match was decided (the last lead change) or that the lead never changed, and which team was ahead. Every stored match gets it. A toggle in Settings, Result window, turns it off.
