@@ -94,6 +94,14 @@ Fix for the map (this PR): no halo on the path (one control per segment instead 
 
 Next candidates: storage:report memoised on the History and Ledger revisions; drawer lists memoised on the same revisions.
 
+## Fourth and fifth sessions (2026-09-28, after #81-#85)
+
+Fourth (13.5 min): map:open max 9 ms (was 1 534); no pool created past its target; one map:paths call of 349 ms laying out 1 246 already-created segments (fixed in #84: draw-in over frames); PosSample 370 KB and ScoreSample 82 KB worst ticks when the roster arrived mid-countdown (fixed in #84: roster discovery on the scoreboard event); drawer:about about 246 KB per refresh in game against 2.5 KB in the harness (spans added in #85 to find the phase).
+
+Fifth (7.5 min, the first real 6v6v6): ev:BGMeter_Roster 285 calls at 0 KB; ScoreSample and PosSample 0 over; map:paths max 117 ms for a 120-segment draw-in step, so a segment costs the engine close to a millisecond in anchors alone (step lowered to 40 in this PR; /bgmeter probe anchors measures the calls one by one); up:BGMeterWarmup called 6 608 times while busy (this PR: one check a second while busy); ui:render 1 over. Validation 0 in every session so far.
+
+On ui:render's budget misses: the first render of a match runs derive (damage race, momentum, lanes, surrender, geo) once for that match, 130 to 590 KB, inside sec:timeline. That is cold cost accounted under a warm stage; the budget is meant for the renders after it. A separate stage for the first render per match is the honest fix and stays on the list.
+
 ## Reading the table
 
 - Two rows are over budget on every call: the Registry panel (26 KB per refresh, budget 16) and the samplers' array growth spikes (worst 48 KB in one tick of the own-track sampler).

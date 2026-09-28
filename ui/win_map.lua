@@ -566,7 +566,7 @@ local function path_segment(k)
     return l
 end
 
-local PATH_STEP = 120
+local PATH_STEP = 40
 local path_show
 local path_pending = false
 

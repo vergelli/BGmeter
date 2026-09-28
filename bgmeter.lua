@@ -474,6 +474,8 @@ local function on_slash(args)
     elseif args == "perf reset" and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.Diag.reset()
         Log.say("perf counters reset")
+    elseif args:find("^probe anchors") == 1 and BGMeter.Diag and BGMeter.Diag.on then
+        BGMeter.UI.export.show_text(table.concat(BGMeter.Diag.probe_anchors(tonumber(args:match("(%d+)"))), "\n"))
     elseif args:find("^gcprobe") == 1 and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.Diag.gcprobe(tonumber(args:match("(%d+)")))
     elseif args:find("^geo") == 1 and BGMeter.Geo then
