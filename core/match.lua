@@ -1020,11 +1020,15 @@ function Match.experience(m)
         e.avaAvg = (e.avaN > 0) and e.ava / e.avaN or nil
     end
     local mine = m.localTeam and teams[m.localTeam] or nil
-    local other, best, bestT = nil, -1, nil
+    local others = {}
     for t, e in pairs(teams) do
-        if t ~= m.localTeam and (e.n > best or (e.n == best and t < bestT)) then other, best, bestT = e, e.n, t end
+        if t ~= m.localTeam then others[#others + 1] = e end
     end
-    return { mine = mine, other = other, teams = teams }
+    table.sort(others, function(a, b)
+        if a.n ~= b.n then return a.n > b.n end
+        return a.team < b.team
+    end)
+    return { mine = mine, other = others[1], third = others[2], others = others, teams = teams }
 end
 
 local function median_of(vals)
