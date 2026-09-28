@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed: every refresh of the Registry rebuilt every stat and every row from scratch (26 KB per refresh in a measured session, 34 times over its budget). Stats now re-format only when their inputs change, the veterancy panel only after a veterancy event, and rows only when the match or its lock changes; the time-ago column updates by itself.
 - Fixed: the recorder's sample arrays grew by doubling in the middle of combat (up to 48 KB in one tick when the own-track arrays crossed 1 024 samples). Every series is now sized to its cap when the match begins, so a sample in combat allocates nothing.
 - Fixed: the decoded map of a match was thrown away whenever any match was added or deleted, and whenever you looked at another match, so a session decoded the same match over and over (34 decodes in 43 renders, 37 KB each, in one measured session). The three most recently viewed matches now stay decoded, up to 4 MB, and deleting a match forgets only that one.
 - Fixed: opening a match for the first time in a session took up to half a second and over a megabyte while the report created its chart controls all at once. The report now reserves its pools a few controls per tick right after you log in, outside combat and outside matches, so the first open costs the same as the tenth. Dev builds list every pool with what it created and what is in use in the profiler report.

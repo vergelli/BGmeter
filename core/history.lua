@@ -28,7 +28,12 @@ local function unpinned_count(matches)
     return n
 end
 
+History._rev = 0
+
+function History.rev() return History._rev end
+
 function History.push(match)
+    History._rev = History._rev + 1
     local data = sv()
     if not data then return end
     data.matches = data.matches or {}
@@ -66,6 +71,7 @@ function History.most_recent()
 end
 
 function History.delete(index)
+    History._rev = History._rev + 1
     local data = sv()
     if not data or not data.matches or not data.matches[index] then return false end
     local gone = data.matches[index]
@@ -75,6 +81,7 @@ function History.delete(index)
 end
 
 function History.clear()
+    History._rev = History._rev + 1
     local data = sv()
     if data then data.matches = {} end
     if BGMeter.Match.geo_cache_clear then BGMeter.Match.geo_cache_clear() end

@@ -31,10 +31,10 @@ Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every c
 | sec:haul | 43 | 0 / 1 / 15 | 4.6 / 61 | | | |
 | sec:kills | 18 | 0 / 8 / 12 | 3.5 / 16 | | | |
 | sec:header | 43 | 0 / 1 / 1 | 3.3 / 6 | | | |
-| menu:refresh | 43 | 2 / 2 / 5 | 26.5 / 53 | 30 ms, 64 KB | 0 | refreshes once per report render; coupling to review |
-| panel:refresh | 43 | 1 / 2 / 2 | 25.7 / 46 | 10 ms, 16 KB | **34** | strings rebuilt per stat on every refresh |
+| menu:refresh | 43 | 2 / 2 / 5 | 26.5 / 53 | 30 ms, 64 KB | 0 | rows memoised on match and lock; harness: 42 KB -> 0.0 KB per refresh with nothing changed |
+| panel:refresh | 43 | 1 / 2 / 2 | 25.7 / 46 | 10 ms, 16 KB | **34** | was strings rebuilt per stat; stats memoised on their inputs, veterancy re-read only after a veterancy event |
 | menu:show_menu | 10 | 2 / 4 / 5 | 25 / 60 | | | |
-| match:geo | **34** | 0 / 2 / 2 | 36 / 339 | | | 34 decodes in 43 renders: the one-entry cache is cleared by every History change; fix: memo per match |
+| match:geo | **34** | 0 / 2 / 2 | 36 / 339 | | | was 34 decodes in 43 renders; memo of the last three matches (#77) |
 | map:scrub | | | | 8 ms, 8 KB | | 0.28 ms / 2 KB per tick on the full synthetic match (#73) |
 | drawer:dev | 261 | 0 / 1 / 48 | 0.15 / 36 | | | dev only |
 
