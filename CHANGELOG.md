@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Dev builds: a profiler stage no longer charges a garbage-collector pause that landed inside it to its p50, p95, max or budget; those calls are counted apart with their own worst time.
 - The pool warm-up checks once a second instead of twenty times while a match is recorded or you are in combat; the map path draws in 40 segments per frame. Dev builds get /bgmeter probe anchors, which times the engine calls a path segment costs.
 - Fixed: on a three-sided match the MATCH BALANCE strip showed the veterancy and alliance rank of your team and one rival only; the third team was missing. The blocks now show three bars when there are three teams, and the hover reads all three.
 - Your path on the map draws in over a few frames when a match opens (120 new segments per frame) instead of laying out every segment in one (349 ms on a long match in a measured session). Players and objectives get their sample series when the scoreboard announces them, so the samplers themselves no longer pay for a roster arriving mid-countdown.
