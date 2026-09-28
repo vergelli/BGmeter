@@ -72,6 +72,44 @@ local function on_heap()
     if kb > heap.max then heap.max = kb end
 end
 
+function Diag.probe_anchors(count)
+    if not Diag.on then return { "probe: dev build only" } end
+    local MapUI = BGMeter.UI and BGMeter.UI.map
+    if not (MapUI and MapUI.ensure_built) then return { "probe: map not available" } end
+    MapUI.ensure_built()
+    local c = MapUI.controls()
+    local pool = c and c.line_pool
+    if not pool then return { "probe: no line pool" } end
+    count = count or 100
+    local map = c.map
+    local lines, keys = {}, {}
+    for i = 1, count do
+        local ln, key = pool:acquire()
+        lines[i], keys[i] = ln, key
+    end
+    local L = {}
+    local function bench(label, fn)
+        local t0 = now()
+        for i = 1, count do fn(lines[i], i) end
+        local dt = now() - t0
+        L[#L + 1] = string.format("  %-34s %5d ms for %d  ·  %.2f ms each", label, dt, count, dt / count)
+    end
+    bench("ClearAnchors + 2 SetAnchor", function(ln, i)
+        ln:ClearAnchors()
+        ln:SetAnchor(TOPLEFT, map, TOPLEFT, i, i)
+        ln:SetAnchor(TOPRIGHT, map, TOPLEFT, i + 10, i + 3)
+    end)
+    bench("SetColor", function(ln) ln:SetColor(1, 0.9, 0.5, 1) end)
+    bench("SetThickness", function(ln) if ln.SetThickness then ln:SetThickness(3) end end)
+    bench("SetHidden(false)", function(ln) ln:SetHidden(false) end)
+    bench("SetHidden(true)", function(ln) ln:SetHidden(true) end)
+    bench("SetDrawLevel", function(ln) if ln.SetDrawLevel then ln:SetDrawLevel(4) end end)
+    for i = 1, count do pool:release(keys[i]) end
+    table.insert(L, 1, string.format("--- anchor probe  ·  %d map line controls ---", count))
+    for _, l in ipairs(L) do BGMeter.Log.say(l) end
+    return L
+end
+
 function Diag.gcprobe(sec)
     if not Diag.on then return end
     sec = sec or 10

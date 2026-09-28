@@ -27,6 +27,7 @@ local ACTIONS = {
     { label = "Validation report", cmd = "validate", tip = "Every invariant that tripped since the last reset: clocks, caps, codec round-trips, finite numbers, handler errors." },
     { label = "Validation reset", cmd = "validate reset" },
     { label = "GC probe 10 s", cmd = "gcprobe 10", tip = "Measures allocation per frame for ten seconds, result in chat." },
+    { label = "Anchor probe", cmd = "probe anchors 100", tip = "Times ClearAnchors, SetAnchor, SetColor, SetThickness and SetHidden on 100 map line controls, in the copybox." },
     { label = "Debug log on/off", cmd = "debug", tip = "Echo debug lines to chat while it is on." },
     { label = "Layer debug", cmd = "layers", tip = "Paints every layer of the result window in a flat colour." },
     { label = "Mock: deathmatch", cmd = "mock dm" },

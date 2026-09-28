@@ -6,7 +6,17 @@ local Warm = { done = false, running = false, made = 0, ticks = 0 }
 
 local NAME = "BGMeterWarmup"
 local TICK_MS = 50
+local BUSY_MS = 1000
 local STEP = 8
+local rate = 0
+
+local function set_rate(ms)
+    if rate == ms then return end
+    local E = BGMeter.zenimax.events
+    if rate ~= 0 then E.unregister_update(NAME) end
+    rate = ms
+    E.register_update(NAME, ms, function() Warm.tick_now() end)
+end
 
 local TARGETS = {
     { "row_pool",       "battle.rows",   18,   8 },
@@ -63,13 +73,18 @@ end
 
 local function finish()
     BGMeter.zenimax.events.unregister_update(NAME)
+    rate = 0
     Warm.running = false
     Warm.done = true
     BGMeter.Log.debug("warm-up done: %d controls reserved in %d ticks", Warm.made, Warm.ticks)
 end
 
 local function tick()
-    if busy() then return end
+    if busy() then
+        set_rate(BUSY_MS)
+        return
+    end
+    set_rate(TICK_MS)
     local W = BGMeter.UI.window
     if not (W and W.battle) then finish() return end
     Warm.ticks = Warm.ticks + 1
@@ -104,13 +119,16 @@ function Warm.start()
     if MapUI and MapUI.ensure_built then MapUI.ensure_built() end
     label_pools()
     Warm.running = true
-    BGMeter.zenimax.events.register_update(NAME, TICK_MS, tick)
+    set_rate(TICK_MS)
 end
 
 function Warm.tick_now() tick() end
 
+function Warm.rate() return rate end
+
 function Warm.reset()
     if Warm.running then BGMeter.zenimax.events.unregister_update(NAME) end
+    rate = 0
     Warm.done, Warm.running, Warm.made, Warm.ticks = false, false, 0, 0
 end
 
