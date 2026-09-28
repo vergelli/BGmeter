@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Developer builds carry a profiler and a validation layer: every event handler, sampler, capture stage, render section, map layer, drawer and post-match step is a named stage with calls, p50, p95, worst case, allocation and a budget; invariants (monotonic clocks, buffer caps, codec round-trips, finite numbers, handler errors) are checked and reported. Both are a shared no-op in release builds and cost one empty call per stage. /bgmeter prof and /bgmeter validate open the reports in the copybox; the diagnostic report includes them.
 - Three-sided battlegrounds: the size tag reads the number of teams the game reports, so a 6v6v6 says 6v6v6. Developer drawer: five synthetic three-sided matches (deathmatch, domination, crazy king, chaosball, capture the relic) to see the report with three teams before queueing.
 - Fixed: scrubbing the map redrew your whole path on every move of the slider, thousands of line segments per pixel, which kept the GPU busy for as long as you dragged. The path is now laid out once per match and the slider only shows or hides its tail; moves within the same second update the labels and nothing else. Measured on a full match in the harness: from 5 766 control acquisitions and 11 447 anchors per move to 59 and 31, from 4.7 ms to 0.3 ms.
 

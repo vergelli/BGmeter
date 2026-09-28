@@ -20,6 +20,11 @@ local relic_lookup = {}
 
 local MAX_OBJ_EVENTS = 600
 
+local Prof = BGMeter.Prof
+local Val = BGMeter.Validate
+local MAX_SCORE_SAMPLES = 1000
+local MAX_KILLS = 1000
+
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
     local ok, a, b, c, d = pcall(fn, ...)
@@ -434,6 +439,7 @@ local function sample_positions()
     if i > 900 then return end
     local now = (safe(A.now_ms) or 0) - (active.startMs or 0)
     if i > 1 and tl.pt[i - 1] == now then return end
+    Val.monotonic("pos", tl.pt[i - 1], now)
     tl.pt[i] = now
     local function put(name, x, y, inMap)
         if not name or x == nil or inMap == false then return end
@@ -486,6 +492,7 @@ local function sample_me()
     local px, py = safe(A.get_map_player_position, "player")
     local qx, qy = q(px), q(py)
     if not qx or not qy then return end
+    Val.monotonic("me", tl.mt[i - 1], now)
     tl.mt[i], tl.mx[i], tl.my[i] = now, qx, qy
 end
 
@@ -548,6 +555,7 @@ local function sample_scores()
     active.lastRound = round
     local i = #tl.t + 1
     tl.t[i] = (safe(A.now_ms) or 0) - (active.startMs or 0)
+    Val.monotonic("score", tl.t[i - 1], tl.t[i])
     tl.r[i] = round
     local teams = team_list()
     tl.s1[i] = (teams[1] ~= nil and safe(A.get_team_score, round, teams[1])) or 0
@@ -704,11 +712,16 @@ function Capture.finalize()
     local Match = BGMeter.Match
 
     stop_sampler()
+    Prof.enter("cap:finalize.sample")
     local ok, err = pcall(sample_scores)
     if not ok then BGMeter.Log.debug("final sample failed: %s", tostring(err)) end
     pcall(sample_positions)
     pcall(sample_me)
+    Prof.exit("cap:finalize.sample")
+    Val.roundtrip("finalize", active)
+    Prof.enter("cap:finalize.pack")
     pcall(Match.pack_timeline, active)
+    Prof.exit("cap:finalize.pack")
 
     active.endMs = safe(A.now_ms) or active.startMs
     close_run(active.endMs)
@@ -717,10 +730,12 @@ function Capture.finalize()
     active.capturedAt = safe(A.get_timestamp)
     active.result = read_result(active.localTeam)
 
+    Prof.enter("cap:finalize.battle")
     pcall(scan_group_experience)
     Capture.read_battle(active)
     read_teams(active)
     attach_experience(active)
+    Prof.exit("cap:finalize.battle")
 
     if baseline then
         local apNow = safe(A.get_alliance_points)
@@ -736,6 +751,15 @@ function Capture.finalize()
     if lr then active.haul.medals = lr.medals end
 
     Match.derive(active)
+
+    local tl = active.timeline
+    Val.cap("score", #tl.t, MAX_SCORE_SAMPLES)
+    Val.cap("pos", tl.pt and #tl.pt or 0, 900)
+    Val.cap("me", tl.mt and (type(tl.mt[1]) == "number" and #tl.mt or 0) or 0, MAX_ME)
+    Val.cap("objectives", #active.objectives.t, MAX_OBJ_EVENTS)
+    Val.cap("relics", #active.relics.t, MAX_RELIC_EVENTS)
+    Val.cap("kills", #active.killfeed, MAX_KILLS)
+    Val.finite("match", active)
 
     local finished = active
     active, baseline = nil, nil
