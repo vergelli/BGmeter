@@ -484,6 +484,22 @@ local function sample_positions()
             end
         end
     end
+end
+
+local function discover_pins()
+    if not active or not active.timeline then return end
+    local A = BGMeter.zenimax.api
+    local tl = active.timeline
+    if not tl.pt then
+        tl.pt, tl.pos, tl.pin, tl.pinIdx = presize({}, MAX_POS), {}, {}, {}
+    end
+    local nobj = safe(A.get_num_objectives) or 0
+    for o = 1, math.min(nobj, MAX_PINS) do
+        local keepId, objectiveId, ctx = safe(A.get_objective_ids, o)
+        if keepId and objectiveId and safe(A.is_bg_objective, keepId, objectiveId, ctx) then
+            pin_slot(tl, keepId, objectiveId, ctx)
+        end
+    end
     if not active.map or not active.map.tex or active.map.tex[1] == "" then
         active.map = read_map() or active.map
     end
@@ -788,6 +804,7 @@ function Capture.mark_running()
     local A = BGMeter.zenimax.api
     local now = safe(A.now_ms) or active.startMs
     open_run(now)
+    pcall(discover_pins)
     if active.runMs then return end
     active.runMs = now
     BGMeter.Log.debug("gates open at %s", BGMeter.Format.duration(active.runMs - (active.startMs or 0)))

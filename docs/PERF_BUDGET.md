@@ -14,7 +14,7 @@ Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every c
 | ev:BGMeter_Reticle / cap:on_reticle_player | 5204 | 0 / 0 / 1 | 0.001 / 1.2 | 1 ms, 1 KB | 0 | |
 | ev:BGMeter_Obj / cap:on_objective | 340 | 0 / 0 / 1 | 0.10 / 3.1 | 2 ms, 2 KB | 3 | |
 | ev:BGMeter_Kill / cap:on_kill | 93 | 0 / 0 / 1 | 0.69 / 1.9 | 2 ms, 2 KB | 0 | |
-| up:BGMeterMiniPlay | 1471 | 0 / 1 / 2 | 0.16 / 8.0 | | | the haul minimap loop at 10 Hz while the report is open; the only steady cost of an open window |
+| up:BGMeterMiniPlay | 1471 | 0 / 1 / 2 | 0.16 / 8.0 | | | the haul minimap loop at 10 Hz while the report is open; second session 440 B per tick; markers now kept between ticks (0.1 acquisitions per tick in the harness, wrapper overhead 15 B) |
 | up:BGMeterStandingFx | 1400 | 0 / 0 / 1 | 0 / 0 | | | |
 
 ## Warm paths (per user action)
@@ -72,7 +72,7 @@ Controls are created by ZO_ObjectPool on first use and never destroyed. The firs
 | hits | 21 | 220 |
 | ribbon.rects / ribbon.pins / occupation | not exercised by that match | 260 / 60 / 12 |
 
-`ui/warmup.lua` reserves the targets 8 controls per 50 ms tick after the player activates, pausing during matches and combat, about 30 s for a cold session. The `pools` section of `/bgmeter prof` shows created and active per pool; a pool whose created count passes its target in a real session means the target is short and should be raised.
+`ui/warmup.lua` reserves the targets 8 cost units per 50 ms tick after the player activates (a scoreboard row weighs 8, a hit box 2, a rect or line 1; the second session showed one 33 ms tick when eight rows were created together), pausing during matches and combat, about 30 s for a cold session. The `pools` section of `/bgmeter prof` shows created and active per pool; a pool whose created count passes its target in a real session means the target is short and should be raised.
 
 ## Reading the table
 

@@ -983,6 +983,9 @@ local function mini_build(parent)
         mini.line_pool = leveled_pool(function() return P.line(r, { 1, 1, 1, 1 }, 2) end, LV.path)
     end
     mini.icon_pool = leveled_pool(function() return P.icon(r, "") end, LV.mark)
+    mini.dot_pool.label, mini.icon_pool.label = "mini.dots", "mini.icons"
+    if mini.line_pool then mini.line_pool.label = "mini.path" end
+    mini.slots, mini.used, mini.next = {}, 0, 0
     mini.glow = P.rect(r, gold(0))
     mini.glow:SetAnchorFill(r)
     if mini.glow.SetDrawLevel then mini.glow:SetDrawLevel(LV.hit) end
@@ -1059,12 +1062,24 @@ local function mini_prepare()
     mscratch.n, mscratch.drawn, mscratch.side, mscratch.geo = n, 0, mstate.side, geo
 end
 
+local function mini_slot()
+    local n = mini.next + 1
+    mini.next = n
+    local d = mini.slots[n]
+    if not d then
+        d = mini.icon_pool:acquire()
+        mini.slots[n] = d
+    end
+    d:SetHidden(false)
+    return d
+end
+
 local function mini_draw()
     local geo, m = mstate.geo, mstate.m
     if not geo then
-        mini.dot_pool:release_all()
         if mini.line_pool then mini.line_pool:release_all() end
-        mini.icon_pool:release_all()
+        for i = 1, mini.used do mini.slots[i]:SetHidden(true) end
+        mini.used = 0
         return
     end
     if mscratch.geo ~= geo or mscratch.side ~= mstate.side then mini_prepare() end
@@ -1093,41 +1108,40 @@ local function mini_draw()
         end
     end
     if upto > mscratch.drawn then mscratch.drawn = upto end
-    mini.icon_pool:release_all()
-    mini.dot_pool:release_all()
+    mini.next = 0
     if upto >= 1 and xs[upto] then
-        local d = mini.icon_pool:acquire()
-        d:SetTexture(PIP_ME)
+        local d = mini_slot()
+        if d._mini_tex ~= PIP_ME then d:SetTexture(PIP_ME); d._mini_tex = PIP_ME end
         d:ClearAnchors()
         d:SetAnchor(CENTER, mini.root, TOPLEFT, xs[upto], ys[upto])
         d:SetDimensions(16, 16)
         d:SetColor(K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 1)
-        d:SetHidden(false)
     end
     local tc = S.team_color(m.localTeam)
     for name, s in pairs(geo.pos) do
         if name ~= geo.mine and s.x[idx] and s.y[idx] and (s.x[idx] > 0 or s.y[idx] > 0) then
-            local d = mini.icon_pool:acquire()
-            d:SetTexture(PIP_MATE)
+            local d = mini_slot()
+            if d._mini_tex ~= PIP_MATE then d:SetTexture(PIP_MATE); d._mini_tex = PIP_MATE end
             d:ClearAnchors()
             d:SetAnchor(CENTER, mini.root, TOPLEFT, mini_scale(s.x[idx]), mini_scale(s.y[idx]))
             d:SetDimensions(10, 10)
             d:SetColor(tc[1], tc[2], tc[3], 1)
-            d:SetHidden(false)
         end
     end
     for _, pin in ipairs(geo.pins) do
         local x, y = pin.x[idx], pin.y[idx]
         if x and y and (x > 0 or y > 0) then
-            local ic = mini.icon_pool:acquire()
-            ic:SetTexture(pin_texture(pin.ty[idx], pin.kind))
+            local ic = mini_slot()
+            local tex = pin_texture(pin.ty[idx], pin.kind)
+            if ic._mini_tex ~= tex then ic:SetTexture(tex); ic._mini_tex = tex end
             ic:SetColor(1, 1, 1, 1)
             ic:SetDimensions(14, 14)
             ic:ClearAnchors()
             ic:SetAnchor(CENTER, mini.root, TOPLEFT, mini_scale(x), mini_scale(y))
-            ic:SetHidden(false)
         end
     end
+    for i = mini.next + 1, mini.used do mini.slots[i]:SetHidden(true) end
+    mini.used = mini.next
 end
 
 local function mini_stop()
