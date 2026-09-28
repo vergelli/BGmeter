@@ -8,9 +8,9 @@ Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every c
 
 | stage | calls (game) | ms p50 / p95 / max | KB avg / worst | budget | over | note |
 |---|---|---|---|---|---|---|
-| up:BGMeterScoreSample | 412 | 0 / 1 / 1 | 0.35 / 18.2 | 4 ms, 1 KB | 29 | worst is a new player's series being created; the rest is array growth |
-| up:BGMeterPosSample | 688 | 0 / 1 / 1 | 0.42 / 20.3 | 4 ms, 2 KB | 25 | array growth of the tracks |
-| up:BGMeterMeSample | 2061 | 0 / 0 / 1 | 0.08 / 48.0 | 2 ms, 1 KB | 15 | the 1024 to 2048 array doubling of three arrays in one tick; fix: preallocate to `MAX_ME` at begin |
+| up:BGMeterScoreSample | 412 | 0 / 1 / 1 | 0.35 / 18.2 | 4 ms, 1 KB | 29 | was array growth; after presizing (harness) worst tick 0.10 KB |
+| up:BGMeterPosSample | 688 | 0 / 1 / 1 | 0.42 / 20.3 | 4 ms, 2 KB | 25 | was array growth of tracks and pins; after presizing (harness) worst tick 0.20 KB |
+| up:BGMeterMeSample | 2061 | 0 / 0 / 1 | 0.08 / 48.0 | 2 ms, 1 KB | 15 | was the 1024 to 2048 doubling of three arrays in one tick; after presizing (harness) worst tick 0.00 KB |
 | ev:BGMeter_Reticle / cap:on_reticle_player | 5204 | 0 / 0 / 1 | 0.001 / 1.2 | 1 ms, 1 KB | 0 | |
 | ev:BGMeter_Obj / cap:on_objective | 340 | 0 / 0 / 1 | 0.10 / 3.1 | 2 ms, 2 KB | 3 | |
 | ev:BGMeter_Kill / cap:on_kill | 93 | 0 / 0 / 1 | 0.69 / 1.9 | 2 ms, 2 KB | 0 | |
