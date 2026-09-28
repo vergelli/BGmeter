@@ -74,6 +74,26 @@ Controls are created by ZO_ObjectPool on first use and never destroyed. The firs
 
 `ui/warmup.lua` reserves the targets 8 cost units per 50 ms tick after the player activates (a scoreboard row weighs 8, a hit box 2, a rect or line 1; the second session showed one 33 ms tick when eight rows were created together), pausing during matches and combat, about 30 s for a cold session. The `pools` section of `/bgmeter prof` shows created and active per pool; a pool whose created count passes its target in a real session means the target is short and should be raised.
 
+## Third session (21 min, 2026-09-28, after #76-#80)
+
+Confirmed: warm-up max tick 6 ms (was 33); PosSample 0 over budget, worst 0.3 KB (was 136 KB); MeSample 0 KB; ui:show_match 0 ms; panel:refresh 18 KB average over four calls, the first one 65 KB and the rest about 2 KB; validation 0 failures.
+
+New top of the table, the map's first open on a long match:
+
+| stage | calls | ms p50 / p95 / max | KB avg / worst | note |
+|---|---|---|---|---|
+| map:open | 1 | 256 / 256 / **1534** | 3359 | first open: 4 200 path line controls created (own track 700 points × spline sub 3 × halo and line) |
+| map:paths | 742 | 0 / 0 / 1359 | 3.9 / 2919 | the same creation, inside render |
+| map:scrub | 735 | 1 / 1 / 2 | 1.4 / 2.1 | per slider move, as designed (#73) |
+| map:heat | 4 | 4 / 128 / 146 | 146 / 278 | heat layer recompute on mode change or resize |
+| drawer:about | 6 | 0 / 32 / 59 | 359 / 1085 | storage:report walks every stored match (1 MB, 35 ms per open) |
+| drawer:faces | 226 | 0 / 1 / 53 | 2.2 / 255 | first open builds the list; scrolling is 2 KB |
+| drawer:arenas / marks / saved | 6-9 | max 49-57 | 37-58 per open | lists rebuilt per open |
+
+Fix for the map (this PR): no halo on the path (one control per segment instead of two), the spline subdivision chosen so the path never exceeds 1 500 segments, and the map pools reserved at login (path 1 500, heat 1 024, icons 64, hits 64). Harness: the heavy match's path went from 4 497 to 1 499 segments and a scrub tick from 0.28 to 0.12 ms. The race lost its halo pass too: three line controls per sample instead of five on a two-team match.
+
+Next candidates: storage:report memoised on the History and Ledger revisions; drawer lists memoised on the same revisions.
+
 ## Reading the table
 
 - Two rows are over budget on every call: the Registry panel (26 KB per refresh, budget 16) and the samplers' array growth spikes (worst 48 KB in one tick of the own-track sampler).

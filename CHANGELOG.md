@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The damage race lines and your path on the map lost their halos: three line passes fewer per sample on the race, one fewer per segment on the map, the same shapes. Your path is capped at 1 500 segments (the curve subdivides less on long matches), and the map's pools are reserved at login like the report's, so opening the map for the first time no longer pays for thousands of controls (1.5 s on a long match in a measured session).
 - The pool warm-up counts scoreboard rows as eight controls, so no tick creates more than one row (a tick had reached 33 ms). The haul minimap keeps its markers between ticks instead of releasing and re-acquiring them ten times a second, and its pools are named in the profiler. Objective pins are registered when the gates open, outside combat, instead of at the first position sample.
 - Fixed: every refresh of the Registry rebuilt every stat and every row from scratch (26 KB per refresh in a measured session, 34 times over its budget). Stats now re-format only when their inputs change, the veterancy panel only after a veterancy event, and rows only when the match or its lock changes; the time-ago column updates by itself.
 - Fixed: the recorder's sample arrays grew by doubling in the middle of combat (up to 48 KB in one tick when the own-track arrays crossed 1 024 samples). Every series is now sized to its cap when the match begins, so a sample in combat allocates nothing.

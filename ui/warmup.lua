@@ -17,11 +17,25 @@ local TARGETS = {
     { "pin_pool",       "ribbon.pins",   60,   1 },
     { "occ_pool",       "occupation",    12,   1 },
     { "race_pool",      "race.fill",     650,  1 },
-    { "race_line_pool", "race.lines",    1300, 1 },
+    { "race_line_pool", "race.lines",    800,  1 },
     { "mom_pool",       "momentum",      160,  1 },
     { "kills_pool",     "kills",         220,  1 },
     { "hit_pool",       "hits",          220,  2 },
+    { "line_pool",      "map.path",      1500, 1, "map" },
+    { "heat_pool",      "map.heat",      1024, 1, "map" },
+    { "icon_pool",      "map.icons",     64,   1, "map" },
+    { "hit_pool",       "map.hits",      64,   2, "map" },
 }
+
+local function pool_of(t)
+    if t[5] == "map" then
+        local MapUI = BGMeter.UI.map
+        local mc = MapUI and MapUI.controls and MapUI.controls()
+        return mc and mc[t[1]] or nil
+    end
+    local W = BGMeter.UI.window
+    return W and W.battle and W.battle[t[1]] or nil
+end
 
 Warm.TARGETS = TARGETS
 Warm.STEP = STEP
@@ -33,9 +47,9 @@ function Warm.take(need, weight, budget)
     return n
 end
 
-local function label_pools(b)
+local function label_pools()
     for _, t in ipairs(TARGETS) do
-        local pool = b[t[1]]
+        local pool = pool_of(t)
         if pool then pool.label = t[2] end
     end
 end
@@ -57,13 +71,12 @@ end
 local function tick()
     if busy() then return end
     local W = BGMeter.UI.window
-    local b = W and W.battle
-    if not b then finish() return end
+    if not (W and W.battle) then finish() return end
     Warm.ticks = Warm.ticks + 1
     local budget = STEP
     local pending = false
     for _, t in ipairs(TARGETS) do
-        local pool = b[t[1]]
+        local pool = pool_of(t)
         if pool then
             local need = t[3] - pool:total()
             if need > 0 then
@@ -87,7 +100,9 @@ function Warm.start()
     if not (W and W.ensure_built) then return end
     W.ensure_built()
     if not W.battle then return end
-    label_pools(W.battle)
+    local MapUI = BGMeter.UI.map
+    if MapUI and MapUI.ensure_built then MapUI.ensure_built() end
+    label_pools()
     Warm.running = true
     BGMeter.zenimax.events.register_update(NAME, TICK_MS, tick)
 end

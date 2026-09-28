@@ -445,12 +445,6 @@ function SEC.race(b, race, smooth, tl, n, tspan, w, race_h, race_off)
         end
     end
     for _, team in ipairs(race.teams) do
-        local py = py_of(smooth[team])
-        if b.lines_ok then
-            polyline(b, b.race_line_pool, b.race_pool, b.race, px, py, count, S.team_color(team), 5, K.ALPHA.race_halo)
-        end
-    end
-    for _, team in ipairs(race.teams) do
         polyline(b, b.race_line_pool, b.race_pool, b.race, px, py_of(smooth[team]), count, S.team_color(team), 2, 0.9)
     end
     if race.mine and smooth.mine then
