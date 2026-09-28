@@ -2,6 +2,7 @@ BGMeter = BGMeter or {}
 local BGMeter = BGMeter
 BGMeter.UI = BGMeter.UI or {}
 
+local Prof = BGMeter.Prof
 local U = BGMeter.UI._win
 local K = BGMeter.Constants
 local P = BGMeter.Plot.primitives
@@ -155,6 +156,7 @@ function Drawer:refresh()
     if not self.drawer or self.drawer.root:IsHidden() then return end
     local list = self:fetch()
     local vis = self:visible_rows()
+    Prof.enter("drawer:rows")
     local max_off = math.max(0, #list - vis)
     if self.offset > max_off then self.offset = max_off end
     if self.offset < 0 then self.offset = 0 end
@@ -178,8 +180,16 @@ function Drawer:refresh()
         end
     end
     self.last_count, self.last_vis = #list, vis
+    Prof.exit("drawer:rows")
+    Prof.enter("drawer:scrollbar")
     self:layout_scrollbar()
-    if self.spec.panel_refresh then self.spec.panel_refresh(self) end
+    Prof.exit("drawer:scrollbar")
+    if self.spec.panel_refresh then
+        Prof.enter("drawer:panel")
+        self.spec.panel_refresh(self)
+        Prof.exit("drawer:panel")
+    end
+    Prof.enter("drawer:foot")
     local foot
     if #list > vis then
         foot = string.format("%d-%d of %d  ·  scroll for more", self.offset + 1, math.min(#list, self.offset + vis), #list)
@@ -187,6 +197,7 @@ function Drawer:refresh()
         foot = self.spec.foot and self.spec.foot(self, list) or ""
     end
     set_text(self.drawer.foot, foot)
+    Prof.exit("drawer:foot")
 end
 
 function Drawer:scroll(delta)
