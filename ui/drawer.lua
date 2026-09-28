@@ -162,14 +162,16 @@ function Drawer:refresh()
         local r = self.rows[i] or make_row(self, i)
         local e = list[i + self.offset]
         if i <= vis and e then
+            local fresh = r.entry ~= e or r._list ~= list
             r.entry = e
             r.face = e
+            r._list = list
             r.container:SetHidden(false)
             r.container:ClearAnchors()
             local rh = self.spec.row_h or ROW_H
             r.container:SetAnchor(TOPLEFT, self.drawer.list, TOPLEFT, 0, (i - 1) * (rh + 2))
             r.container:SetAnchor(TOPRIGHT, self.drawer.list, TOPRIGHT, 0, (i - 1) * (rh + 2))
-            self.spec.row_fill(self, r, e)
+            if fresh or self.spec.row_always then self.spec.row_fill(self, r, e) end
         else
             r.entry, r.face = nil, nil
             r.container:SetHidden(true)
