@@ -9,22 +9,29 @@ local TICK_MS = 50
 local STEP = 8
 
 local TARGETS = {
-    { "row_pool",       "battle.rows",   18 },
-    { "dot_pool",       "chart.rects",   600 },
-    { "line_pool",      "chart.lines",   700 },
-    { "skull_pool",     "chart.skulls",  40 },
-    { "ribbon_pool",    "ribbon.rects",  260 },
-    { "pin_pool",       "ribbon.pins",   60 },
-    { "occ_pool",       "occupation",    12 },
-    { "race_pool",      "race.fill",     650 },
-    { "race_line_pool", "race.lines",    1300 },
-    { "mom_pool",       "momentum",      160 },
-    { "kills_pool",     "kills",         220 },
-    { "hit_pool",       "hits",          220 },
+    { "row_pool",       "battle.rows",   18,   8 },
+    { "dot_pool",       "chart.rects",   600,  1 },
+    { "line_pool",      "chart.lines",   700,  1 },
+    { "skull_pool",     "chart.skulls",  40,   1 },
+    { "ribbon_pool",    "ribbon.rects",  260,  1 },
+    { "pin_pool",       "ribbon.pins",   60,   1 },
+    { "occ_pool",       "occupation",    12,   1 },
+    { "race_pool",      "race.fill",     650,  1 },
+    { "race_line_pool", "race.lines",    1300, 1 },
+    { "mom_pool",       "momentum",      160,  1 },
+    { "kills_pool",     "kills",         220,  1 },
+    { "hit_pool",       "hits",          220,  2 },
 }
 
 Warm.TARGETS = TARGETS
 Warm.STEP = STEP
+
+function Warm.take(need, weight, budget)
+    if need <= 0 or budget < weight then return 0 end
+    local n = math.floor(budget / weight)
+    if n > need then n = need end
+    return n
+end
 
 local function label_pools(b)
     for _, t in ipairs(TARGETS) do
@@ -54,18 +61,23 @@ local function tick()
     if not b then finish() return end
     Warm.ticks = Warm.ticks + 1
     local budget = STEP
+    local pending = false
     for _, t in ipairs(TARGETS) do
         local pool = b[t[1]]
         if pool then
             local need = t[3] - pool:total()
             if need > 0 then
-                local n = math.min(need, budget)
-                Warm.made = Warm.made + pool:reserve(pool:total() + n)
-                budget = budget - n
+                local n = Warm.take(need, t[4] or 1, budget)
+                if n > 0 then
+                    Warm.made = Warm.made + pool:reserve(pool:total() + n)
+                    budget = budget - n * (t[4] or 1)
+                end
+                if need > n then pending = true end
                 if budget <= 0 then return end
             end
         end
     end
+    if pending then return end
     finish()
 end
 
