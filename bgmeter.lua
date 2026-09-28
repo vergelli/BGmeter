@@ -459,6 +459,16 @@ local function on_slash(args)
         BGMeter.Mock.vet(args:match("^vetmock%s*(.*)$"))
     elseif args:find("^mock") == 1 and BGMeter.Mock then
         BGMeter.Mock.run(args:match("^mock%s*(.*)$"))
+    elseif args == "prof" and BGMeter.Prof and BGMeter.Prof.on then
+        BGMeter.UI.export.show_text(table.concat(BGMeter.Prof.lines(), "\n"))
+    elseif args == "prof reset" and BGMeter.Prof and BGMeter.Prof.on then
+        BGMeter.Prof.reset()
+        Log.say("profiler reset")
+    elseif args == "validate" and BGMeter.Validate and BGMeter.Validate.on then
+        BGMeter.UI.export.show_text(table.concat(BGMeter.Validate.lines(), "\n"))
+    elseif args == "validate reset" and BGMeter.Validate and BGMeter.Validate.on then
+        BGMeter.Validate.reset()
+        Log.say("validation layer reset")
     elseif args == "perf" and BGMeter.Diag and BGMeter.Diag.on then
         BGMeter.UI.export.show_text(table.concat(BGMeter.Diag.lines(), "\n"))
     elseif args == "perf reset" and BGMeter.Diag and BGMeter.Diag.on then
@@ -475,7 +485,7 @@ local function on_slash(args)
     elseif args == "trophy" then
         BGMeter.UI.menu.demo_trophy()
     else
-        Log.say("dev: show, hide, toggle, last, demo, demo2, ap, dump, clear, debug, layers, mock <dm/dom/ck/ball/relic>, vet, vet claim, vetmock <below/r34/cap/h1/h2/h3/off>, perf, gcprobe [sec], sound [name], csa [rank], trophy, geo [on/off/dump/clear/mark]")
+        Log.say("dev: show, hide, toggle, last, demo, demo2, ap, dump, clear, debug, layers, mock <dm/dom/ck/ball/relic>, vet, vet claim, vetmock <below/r34/cap/h1/h2/h3/off>, perf, prof, prof reset, validate, validate reset, gcprobe [sec], sound [name], csa [rank], trophy, geo [on/off/dump/clear/mark]")
     end
 end
 

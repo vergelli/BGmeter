@@ -12,6 +12,7 @@ local L = BGMeter.Constants.LAYOUT
 local F = BGMeter.Format
 local P = BGMeter.Plot.primitives
 local S = BGMeter.Plot.style
+local Prof = BGMeter.Prof
 local Prefs = BGMeter.Prefs
 local Sound = BGMeter.Sound
 local Scene = BGMeter.zenimax.scene
@@ -803,17 +804,25 @@ function M.render()
     state.lastMeIdx = geo.me and BGMeter.Match.geo_index_of(geo.me.t, geo.me.n, state.t) or idx
     state.lastM = m
     set_text(c.sub, string.format("%s  ·  %s", m.name or "Battleground", m.map and m.map.name or ""))
-    if hm ~= "off" and not keep_heat then draw_heat(geo, m, hm) end
+    if hm ~= "off" and not keep_heat then
+        Prof.enter("map:heat")
+        draw_heat(geo, m, hm)
+        Prof.exit("map:heat")
+    end
+    Prof.enter("map:paths")
     draw_paths(geo, m, idx, state.t)
+    Prof.exit("map:paths")
+    Prof.enter("map:marks")
     if Prefs.get("map_deaths") then draw_deaths(geo, m, state.t) end
     if Prefs.get("map_pins") then draw_pins(geo, idx) end
     draw_positions(geo, m, idx, state.t)
+    Prof.exit("map:marks")
     set_text(c.timeLabel, "t " .. F.duration(state.t))
     local lines = now_lines(m, geo, state.t)
     for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
 end
 
-local function scrub_flush()
+local function scrub_impl()
     state.scrubQueued = false
     if not built or c.win:IsHidden() or not state.geo then return end
     local geo, m = state.geo, state.m
@@ -826,6 +835,10 @@ local function scrub_flush()
         return
     end
     M.render()
+end
+
+local function scrub_flush()
+    Prof.span("map:scrub", scrub_impl)
 end
 
 function M.set_time(t, from_chart, force)
