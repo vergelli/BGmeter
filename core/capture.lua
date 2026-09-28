@@ -817,6 +817,8 @@ function Capture.finalize()
     if lr then active.haul.medals = lr.medals end
 
     Match.derive(active)
+    local balOk, bal = pcall(Match.balance, active)
+    if balOk and bal then active.bal = bal.score end
 
     local tl = active.timeline
     Val.cap("score", #tl.t, MAX_SCORE_SAMPLES)

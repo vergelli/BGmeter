@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Every match keeps its balance score with it, so the Registry's balance stat and the Arenas cards still count a match after its charts were pruned; matches already stored get their score once at load while they still have charts.
 - Dev builds: a profiler stage no longer charges a garbage-collector pause that landed inside it to its p50, p95, max or budget; those calls are counted apart with their own worst time.
 - The pool warm-up checks once a second instead of twenty times while a match is recorded or you are in combat; the map path draws in 40 segments per frame. Dev builds get /bgmeter probe anchors, which times the engine calls a path segment costs.
 - Fixed: on a three-sided match the MATCH BALANCE strip showed the veterancy and alliance rank of your team and one rival only; the third team was missing. The blocks now show three bars when there are three teams, and the hover reads all three.
