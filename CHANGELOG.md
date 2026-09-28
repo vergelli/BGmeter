@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed: on a three-sided match the MATCH BALANCE strip showed the veterancy and alliance rank of your team and one rival only; the third team was missing. The blocks now show three bars when there are three teams, and the hover reads all three.
 - Your path on the map draws in over a few frames when a match opens (120 new segments per frame) instead of laying out every segment in one (349 ms on a long match in a measured session). Players and objectives get their sample series when the scoreboard announces them, so the samplers themselves no longer pay for a roster arriving mid-countdown.
 - The kill feed and the objective and relic event logs are sized to their caps when the match begins, like the sample series, so an event in combat never grows an array.
 - Fixed: opening the About drawer measured every stored match again (about 1 MB and 35 ms per open in a measured session). Each match's size is now remembered until it changes, and the faces and ledger sizes until they do; the drawers' rows refill only when their entry changes.
