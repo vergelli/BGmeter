@@ -566,7 +566,18 @@ local function path_segment(k)
     return l
 end
 
-local function path_show(upto)
+local PATH_STEP = 120
+local path_show
+local path_pending = false
+
+local function path_continue()
+    path_pending = false
+    if not built or c.win:IsHidden() or not state.geo or PATH.key == nil or PATH.upto == nil then return end
+    path_show(PATH.upto)
+end
+
+path_show = function(upto)
+    PATH.upto = upto
     local mt = PATH.cum[upto] or 0
     local pts
     if mt <= 0 then pts = 0
@@ -574,9 +585,22 @@ local function path_show(upto)
     else pts = (mt - 1) * PATH.sub + 1 end
     local want = math.max(0, pts - 1)
     if want > PATH.shown then
-        for k = PATH.shown + 1, want do
+        local made = 0
+        local k = PATH.shown + 1
+        while k <= want do
+            if not PATH.line[k] then
+                made = made + 1
+                if made > PATH_STEP then break end
+            end
             path_segment(k):SetHidden(false)
+            k = k + 1
         end
+        PATH.shown = k - 1
+        if k <= want and not path_pending then
+            path_pending = true
+            if type(zo_callLater) == "function" then zo_callLater(path_continue, 0) else path_continue() end
+        end
+        return
     elseif want < PATH.shown then
         for k = want + 1, PATH.shown do
             PATH.line[k]:SetHidden(true)
@@ -584,6 +608,8 @@ local function path_show(upto)
     end
     PATH.shown = want
 end
+
+function M.path_step() return PATH_STEP end
 
 local function draw_paths(geo, m, idx, t)
     local mine = geo.mine

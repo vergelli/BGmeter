@@ -78,6 +78,9 @@ function Acquisition.init()
         return Capture.on_reward_track(...)
     end)
     E.register(PREFIX .. "Kill",  C.EVENT_BATTLEGROUND_KILL,          Capture.on_kill)
+    if C.EVENT_BATTLEGROUND_SCOREBOARD_UPDATED then
+        E.register(PREFIX .. "Roster", C.EVENT_BATTLEGROUND_SCOREBOARD_UPDATED, Capture.on_scoreboard)
+    end
     if C.EVENT_RETICLE_TARGET_PLAYER_CHANGED then
         E.register(PREFIX .. "Reticle", C.EVENT_RETICLE_TARGET_PLAYER_CHANGED, Capture.on_reticle_player)
     end
