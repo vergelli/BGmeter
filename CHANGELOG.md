@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Three-sided battlegrounds: the size tag reads the number of teams the game reports, so a 6v6v6 says 6v6v6. Developer drawer: five synthetic three-sided matches (deathmatch, domination, crazy king, chaosball, capture the relic) to see the report with three teams before queueing.
 - Fixed: scrubbing the map redrew your whole path on every move of the slider, thousands of line segments per pixel, which kept the GPU busy for as long as you dragged. The path is now laid out once per match and the slider only shows or hides its tail; moves within the same second update the labels and nothing else. Measured on a full match in the harness: from 5 766 control acquisitions and 11 447 anchors per move to 59 and 31, from 4.7 ms to 0.3 ms.
 
 ## [0.5.0]
