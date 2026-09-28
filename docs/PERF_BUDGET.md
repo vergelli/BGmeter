@@ -1,65 +1,82 @@
 # Performance budget
 
-One row per instrumented stage. **Offline** columns come from the harness (`lua bgm_harness.lua ../bgmeter`, the `profiler and validation layers` case, mock clock so time is not meaningful there; allocation is exact). **In game** columns come from `/bgmeter prof` after a real match in a dev build; empty until measured. A PR that touches a stage updates its row with before and after and states where the numbers came from.
+One row per instrumented stage. **Offline** columns come from the harness (`lua bgm_harness.lua ../bgmeter`, the `profiler and validation layers` case; mock clock, so time is not meaningful there; allocation is exact). **In game** columns come from `/bgmeter prof` in a dev build; the first set was taken on 2026-09-28 over a 50-minute session with two matches recorded, the report, Registry and map used freely (86 stages, 0 unbalanced, validation 0 failures). A PR that touches a stage updates its row with before and after and states where the numbers came from.
 
-Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every call that exceeds one. `over` below is that count on the harness run.
-
-Baseline: develop at the validation-layer PR, 2026-09-28. Harness flow: one `mock dm` (16 players) shown and rendered, the Registry opened and refreshed, one recorded 12-sample capture finalised and published.
+Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every call that exceeds one.
 
 ## Hot paths (per sample, per event)
 
-| stage | calls | KB / call | worst KB | budget | over | in game ms p50 / p95 | note |
-|---|---|---|---|---|---|---|---|
-| up:BGMeterScoreSample | 12 | 0.24 | 1.0 | 4 ms, 1 KB | 0 | | includes player damage sampling |
-| up:BGMeterPosSample | 12 | 0.45 | 2.1 | 4 ms, 2 KB | 1 | | first tick allocates the tracks; steady state under 0.5 KB |
-| up:BGMeterMeSample | 12 | 0.08 | 0.4 | 2 ms, 1 KB | 0 | | |
-| cap:on_kill | | | | 2 ms, 2 KB | | | not exercised by the harness flow yet |
-| cap:on_objective / on_flag / on_murderball | | | | 2 ms, 2 KB | | | idem |
-| cap:on_reticle_player | | | | 1 ms, 1 KB | | | |
+| stage | calls (game) | ms p50 / p95 / max | KB avg / worst | budget | over | note |
+|---|---|---|---|---|---|---|
+| up:BGMeterScoreSample | 412 | 0 / 1 / 1 | 0.35 / 18.2 | 4 ms, 1 KB | 29 | worst is a new player's series being created; the rest is array growth |
+| up:BGMeterPosSample | 688 | 0 / 1 / 1 | 0.42 / 20.3 | 4 ms, 2 KB | 25 | array growth of the tracks |
+| up:BGMeterMeSample | 2061 | 0 / 0 / 1 | 0.08 / 48.0 | 2 ms, 1 KB | 15 | the 1024 to 2048 array doubling of three arrays in one tick; fix: preallocate to `MAX_ME` at begin |
+| ev:BGMeter_Reticle / cap:on_reticle_player | 5204 | 0 / 0 / 1 | 0.001 / 1.2 | 1 ms, 1 KB | 0 | |
+| ev:BGMeter_Obj / cap:on_objective | 340 | 0 / 0 / 1 | 0.10 / 3.1 | 2 ms, 2 KB | 3 | |
+| ev:BGMeter_Kill / cap:on_kill | 93 | 0 / 0 / 1 | 0.69 / 1.9 | 2 ms, 2 KB | 0 | |
+| up:BGMeterMiniPlay | 1471 | 0 / 1 / 2 | 0.16 / 8.0 | | | the haul minimap loop at 10 Hz while the report is open; the only steady cost of an open window |
+| up:BGMeterStandingFx | 1400 | 0 / 0 / 1 | 0 / 0 | | | |
 
 ## Warm paths (per user action)
 
-| stage | calls | KB / call | worst KB | budget | over | in game ms p50 / p95 | note |
-|---|---|---|---|---|---|---|---|
-| ui:render | 3 | 12.4 | 37.1 | 60 ms, 96 KB | 0 | | sum of the sections below plus layout |
-| sec:battle | 3 | 5.9 | 9.6 | | | | scoreboard rows |
-| sec:timeline | 3 | 5.8 | 17.5 | | | | score chart |
-| sec:header | 3 | 5.0 | 5.5 | | | | |
-| sec:haul | 3 | 4.7 | 7.8 | | | | |
-| sec:momentum | 3 | 4.7 | 6.3 | | | | calls match:combat_momentum (14 KB per derive, cached?) |
-| sec:kills | 2 | 4.2 | 4.8 | | | | |
-| sec:balance | 3 | 1.5 | 2.8 | | | | |
-| sec:haul_share | 3 | 1.4 | 2.2 | | | | |
-| sec:ribbon / race / duels | | 0.6–2.0 | | | | | |
-| ui:show_match | 1 | 14.2 | 14.2 | 80 ms | 0 | | |
-| map:render | | | | 40 ms, 48 KB | | | needs a match with positions; see the map scrub case (2 KB per tick) |
-| map:scrub | | | | 8 ms, 8 KB | | | 0.28 ms / 2 KB per tick on the full synthetic match (#73) |
-| menu:refresh | 2 | 53.3 | 61.8 | 30 ms, 64 KB | 0 | | first candidate for a fix |
-| panel:refresh | 2 | 47.4 | 53.0 | 10 ms, 16 KB | 2 | | over budget on every call: strings rebuilt for every stat |
-| menu:show_menu | 1 | 65.3 | 65.3 | | | | includes the first refresh |
-| drawer:* | 2 each | 0 | 0 | | | | drawers closed during the run; measure open |
+| stage | calls (game) | ms p50 / p95 / max | KB avg / worst | budget | over | note |
+|---|---|---|---|---|---|---|
+| ui:show_match | 4 | 0 / 256 / **621** | 359 / **1427** | 80 ms | 1 | the first open of a match size in a session; pool creation (fixed: warm-up) |
+| ui:render | 43 | 2 / 8 / **491** | 83 / **1218** | 60 ms, 96 KB | 8 | worst cases are the same first opens |
+| sec:timeline | 45 | 0 / 8 / 437 | 69 / 1100 | | | score chart: lines per sample per team, lead shading per sample |
+| sec:race | 18 | 2 / 128 / 233 | 23 / 387 | | | 7 line passes per sample (3 teams × halo + line, plus you) |
+| sec:battle | 43 | 1 / 1 / 36 | 7.3 / 41 | | | |
+| sec:ribbon | 17 | 0 / 32 / 39 | 7.3 / 41 | | | |
+| sec:momentum | 19 | 0 / 32 / 33 | 3.5 / 40 | | | |
+| sec:haul | 43 | 0 / 1 / 15 | 4.6 / 61 | | | |
+| sec:kills | 18 | 0 / 8 / 12 | 3.5 / 16 | | | |
+| sec:header | 43 | 0 / 1 / 1 | 3.3 / 6 | | | |
+| menu:refresh | 43 | 2 / 2 / 5 | 26.5 / 53 | 30 ms, 64 KB | 0 | refreshes once per report render; coupling to review |
+| panel:refresh | 43 | 1 / 2 / 2 | 25.7 / 46 | 10 ms, 16 KB | **34** | strings rebuilt per stat on every refresh |
+| menu:show_menu | 10 | 2 / 4 / 5 | 25 / 60 | | | |
+| match:geo | **34** | 0 / 2 / 2 | 36 / 339 | | | 34 decodes in 43 renders: the one-entry cache is cleared by every History change; fix: memo per match |
+| map:scrub | | | | 8 ms, 8 KB | | 0.28 ms / 2 KB per tick on the full synthetic match (#73) |
+| drawer:dev | 261 | 0 / 1 / 48 | 0.15 / 36 | | | dev only |
 
 ## Cold paths (per match, per session)
 
-| stage | calls | KB / call | worst KB | budget | over | in game ms | note |
-|---|---|---|---|---|---|---|---|
-| cap:begin | 1 | 12.2 | 12.2 | | | | allocates the match record and the timeline tables |
-| cap:finalize | 1 | 20.0 | 20.0 | 250 ms | 0 | | |
-| cap:finalize.pack | 1 | 8.1 | 8.1 | | | | codec packing; pack strings are the output |
-| cap:finalize.battle | 1 | 2.8 | 2.8 | | | | scoreboard read |
-| cap:finalize.sample | 1 | 0.1 | 0.1 | | | | |
-| pub:publish | 1 | 0.0 | | 250 ms | 0 | | children below |
-| pub:ledger.record | 1 | 2.5 | 2.5 | | | | |
-| pub:faces.record | 1 | 0.3 | 0.3 | | | | |
-| pub:records.evaluate | 1 | 0.1 | 0.1 | | | | |
-| match:geo | 2 | 10.2 | 19.9 | | | | decode, once per match thanks to `geo_cached` |
-| match:combat_momentum | 2 | 14.7 | 28.7 | | | | derived per render today; candidate for caching |
-| match:balance | 8 | 0.6 | 0.6 | | | | |
-| match:damage_race | 2 | 1.8 | 3.6 | | | | |
-| match:flag_lanes | 2 | 1.9 | 3.8 | | | | |
+| stage | calls (game) | ms max | KB avg / worst | budget | note |
+|---|---|---|---|---|---|
+| ev:BGMeter_State | 22 | 5 | 21 / 246 | | begin, finalize and publish run inside it |
+| cap:begin | 3 | 1 | 15 / 19 | | |
+| cap:finalize | 2 | 5 | 216 / 243 | 250 ms | |
+| cap:finalize.pack | 2 | 2 | 113 / 138 | | codec packing |
+| cap:finalize.battle | 2 | 0 | 19 / 20 | | |
+| pub:publish | 2 | 0 | 6 / 9 | 250 ms | |
+| pub:standing.on_data | 9 | 2 | 14 / 38 | | leaderboard pages |
+| match:damage_race | 8 | 2 | 49 / 83 | | once per match view (memoised in `derive`) |
+| match:combat_momentum | 8 | 0 | 27 / 40 | | idem |
+| match:surrender | 8 | 2 | 16 / 23 | | idem |
+| match:flag_lanes | 8 | 1 | 9 / 22 | | idem |
+| match:balance | 60 | 1 | 0.25 / 1 | | |
+
+## Pools
+
+Controls are created by ZO_ObjectPool on first use and never destroyed. The first open of a match large enough to need more controls than the pools hold pays the creation of every missing control in one frame: about 0.4 ms and 1 KB each. Measured in the harness on an 18-player, 180-sample, 3-team match with a 1000 px chart:
+
+| pool | controls active on that match | reserve target |
+|---|---|---|
+| battle.rows | 18 | 18 |
+| chart.rects (lead shading, ticks, marks) | 289 | 600 |
+| chart.lines (score lines) | 537 | 700 |
+| chart.skulls | 16 | 40 |
+| race.fill | 531 | 650 |
+| race.lines | 1253 | 1300 |
+| momentum | 16 | 160 |
+| kills | 44 | 220 |
+| hits | 21 | 220 |
+| ribbon.rects / ribbon.pins / occupation | not exercised by that match | 260 / 60 / 12 |
+
+`ui/warmup.lua` reserves the targets 8 controls per 50 ms tick after the player activates, pausing during matches and combat, about 30 s for a cold session. The `pools` section of `/bgmeter prof` shows created and active per pool; a pool whose created count passes its target in a real session means the target is short and should be raised.
 
 ## Reading the table
 
-- Allocation is what the harness can measure exactly; time needs the game. The first in-game `/bgmeter prof` after a real match fills the ms columns, and its copybox output is pasted into the PR that changes any row.
-- The two rows over budget today are the Registry panel (47 KB per refresh, budget 16) and the first position sample of a match (allocates the track tables; the budget is per steady-state tick and may be raised for the first call rather than fixed).
-- `match:combat_momentum` at 14 KB per derive is the largest derived cost on a render; it is recomputed on every report render and is the second fix candidate after the Registry.
+- Two rows are over budget on every call: the Registry panel (26 KB per refresh, budget 16) and the samplers' array growth spikes (worst 48 KB in one tick of the own-track sampler).
+- The first-open hitch (621 ms) is the pool creation; the warm-up moves it out of the first open and spreads it over idle ticks.
+- `match:geo` decodes far more often than it should; a per-match memo replaces the one-entry cache.
+- The order of the fixes: warm-up (this table's worst case), geo memo (1.2 MB of repeated decode), track preallocation (the in-combat spikes), the Registry panel.

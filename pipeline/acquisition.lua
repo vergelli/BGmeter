@@ -57,6 +57,9 @@ local function on_player_activated()
         if Capture.is_active() then Capture.abort() end
         BGMeter.Pipeline.presentation.on_player_activated()
     end
+    if BGMeter.UI and BGMeter.UI.warmup then
+        BGMeter.UI.warmup.start()
+    end
 end
 
 function Acquisition.init()

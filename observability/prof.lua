@@ -232,6 +232,18 @@ function Prof.lines()
             name, s.calls, s.ms, s.p50, s.p95, s.maxMs, s.kb, s.kb * 1024 / s.calls, s.maxKb, s.gc, budget)
     end
     if #names == 0 then L[#L + 1] = "  (no stage has run yet)" end
+    local pools = BGMeter.Plot and BGMeter.Plot.pool and BGMeter.Plot.pool.all and BGMeter.Plot.pool.all() or {}
+    if #pools > 0 then
+        local warm = BGMeter.UI and BGMeter.UI.warmup
+        L[#L + 1] = string.format("--- pools  ·  %d  ·  warm-up %s ---", #pools,
+            warm and (warm.done and string.format("done, %d reserved in %d ticks", warm.made, warm.ticks) or (warm.running and "running" or "not started")) or "n/a")
+        L[#L + 1] = "  pool                  created   active"
+        for _, p in ipairs(pools) do
+            if p.created > 0 then
+                L[#L + 1] = string.format("  %-20s %8d  %7d", tostring(p.label), p.created, p:active_count())
+            end
+        end
+    end
     return L
 end
 
