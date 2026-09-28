@@ -25,6 +25,14 @@ local Val = BGMeter.Validate
 local MAX_SCORE_SAMPLES = 1000
 local MAX_KILLS = 1000
 
+local MAX_POS = 900
+
+local function presize(t, n)
+    for i = 1, n do t[i] = 0 end
+    for i = n, 1, -1 do t[i] = nil end
+    return t
+end
+
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
     local ok, a, b, c, d = pcall(fn, ...)
@@ -384,7 +392,7 @@ local function sample_players(tl, i, round)
         local nm = clean_name(displayName or charName)
         if nm then
             local rec = tl.p[nm]
-            if not rec then rec = { d = {} }; tl.p[nm] = rec end
+            if not rec then rec = { d = presize({}, MAX_SCORE_SAMPLES) }; tl.p[nm] = rec end
             rec.d[i] = read_score(e, C.SCORE_TRACKER_TYPE_DAMAGE_DONE, round)
             if team and team ~= 0 then rec.tm = team end
         end
@@ -423,7 +431,8 @@ local function pin_slot(tl, keepId, objectiveId, ctx)
     local name, otype = safe(A.get_objective_info, keepId, objectiveId, ctx)
     idx = #tl.pin + 1
     tl.pin[idx] = { keepId = keepId, objectiveId = objectiveId, name = clean_name(name),
-                    kind = (otype == C.OBJECTIVE_CAPTURE_AREA) and "area" or "carry", x = {}, y = {}, ty = {} }
+                    kind = (otype == C.OBJECTIVE_CAPTURE_AREA) and "area" or "carry",
+                    x = presize({}, MAX_POS), y = presize({}, MAX_POS), ty = presize({}, MAX_POS) }
     tl.pinIdx[key] = idx
     return idx
 end
@@ -433,10 +442,10 @@ local function sample_positions()
     local A = BGMeter.zenimax.api
     local tl = active.timeline
     if not tl.pt then
-        tl.pt, tl.pos, tl.pin, tl.pinIdx = {}, {}, {}, {}
+        tl.pt, tl.pos, tl.pin, tl.pinIdx = presize({}, MAX_POS), {}, {}, {}
     end
     local i = #tl.pt + 1
-    if i > 900 then return end
+    if i > MAX_POS then return end
     local now = (safe(A.now_ms) or 0) - (active.startMs or 0)
     if i > 1 and tl.pt[i - 1] == now then return end
     Val.monotonic("pos", tl.pt[i - 1], now)
@@ -444,7 +453,7 @@ local function sample_positions()
     local function put(name, x, y, inMap)
         if not name or x == nil or inMap == false then return end
         local rec = tl.pos[name]
-        if not rec then rec = { x = {}, y = {} }; tl.pos[name] = rec end
+        if not rec then rec = { x = presize({}, MAX_POS), y = presize({}, MAX_POS) }; tl.pos[name] = rec end
         rec.x[i], rec.y[i] = q(x), q(y)
     end
     local px, py, _, pin = safe(A.get_map_player_position, "player")
@@ -484,7 +493,7 @@ local function sample_me()
     if not active or not active.timeline then return end
     local A = BGMeter.zenimax.api
     local tl = active.timeline
-    if not tl.mt then tl.mt, tl.mx, tl.my = {}, {}, {} end
+    if not tl.mt then tl.mt, tl.mx, tl.my = presize({}, MAX_ME), presize({}, MAX_ME), presize({}, MAX_ME) end
     local i = #tl.mt + 1
     if i > MAX_ME then return end
     local now = (safe(A.now_ms) or 0) - (active.startMs or 0)
@@ -614,7 +623,9 @@ function Capture.begin()
     active.teamSize  = active.bgId and safe(A.get_bg_team_size, active.bgId) or nil
     active.numTeams  = active.bgId and safe(A.get_bg_num_teams, active.bgId) or nil
     if active.teamSize then active.competitive = (active.teamSize == 4) end
-    active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
+    active.timeline  = { t = presize({}, MAX_SCORE_SAMPLES), r = presize({}, MAX_SCORE_SAMPLES),
+                         s1 = presize({}, MAX_SCORE_SAMPLES), s2 = presize({}, MAX_SCORE_SAMPLES), s3 = presize({}, MAX_SCORE_SAMPLES),
+                         teams = team_list() }
     active.killfeed  = {}
     active.exp       = {}
     active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
@@ -635,6 +646,7 @@ function Capture.begin()
     start_sampler()
     sample_scores()
     pcall(sample_positions)
+    pcall(sample_me)
     pcall(scan_group_experience)
 
     local C = BGMeter.zenimax.constants
@@ -754,7 +766,7 @@ function Capture.finalize()
 
     local tl = active.timeline
     Val.cap("score", #tl.t, MAX_SCORE_SAMPLES)
-    Val.cap("pos", tl.pt and #tl.pt or 0, 900)
+    Val.cap("pos", tl.pt and #tl.pt or 0, MAX_POS)
     Val.cap("me", tl.mt and (type(tl.mt[1]) == "number" and #tl.mt or 0) or 0, MAX_ME)
     Val.cap("objectives", #active.objectives.t, MAX_OBJ_EVENTS)
     Val.cap("relics", #active.relics.t, MAX_RELIC_EVENTS)
