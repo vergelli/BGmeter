@@ -484,6 +484,43 @@ local function sample_positions()
             end
         end
     end
+    if not active.map or not active.map.tex or active.map.tex[1] == "" then
+        active.map = read_map() or active.map
+    end
+end
+
+local function discover_roster()
+    if not active or not active.timeline then return end
+    local A = BGMeter.zenimax.api
+    local tl = active.timeline
+    local round = current_round()
+    local n = safe(A.get_num_entries, round) or 0
+    if n > 0 then
+        tl.p = tl.p or {}
+        for e = 1, n do
+            local charName, displayName, team = safe(A.get_entry_info, e, round)
+            local nm = clean_name(displayName or charName)
+            if nm and not tl.p[nm] then
+                tl.p[nm] = { d = presize({}, MAX_SCORE_SAMPLES), tm = (team and team ~= 0) and team or nil }
+            end
+        end
+    end
+    if not tl.pt then
+        tl.pt, tl.pos, tl.pin, tl.pinIdx = presize({}, MAX_POS), {}, {}, {}
+    end
+    if active.localName and not tl.pos[active.localName] then
+        tl.pos[active.localName] = { x = presize({}, MAX_POS), y = presize({}, MAX_POS) }
+    end
+    local g = safe(A.get_group_size) or 0
+    for i = 1, math.min(g, 8) do
+        local tag = safe(A.get_group_unit_tag, i)
+        if tag and safe(A.are_units_equal, tag, "player") ~= true then
+            local nm = clean_name(safe(A.get_unit_display_name, tag)) or clean_name(safe(A.get_unit_name, tag))
+            if nm and nm ~= active.localName and not tl.pos[nm] then
+                tl.pos[nm] = { x = presize({}, MAX_POS), y = presize({}, MAX_POS) }
+            end
+        end
+    end
 end
 
 local function discover_pins()
@@ -499,9 +536,6 @@ local function discover_pins()
         if keepId and objectiveId and safe(A.is_bg_objective, keepId, objectiveId, ctx) then
             pin_slot(tl, keepId, objectiveId, ctx)
         end
-    end
-    if not active.map or not active.map.tex or active.map.tex[1] == "" then
-        active.map = read_map() or active.map
     end
 end
 
@@ -662,6 +696,8 @@ function Capture.begin()
 
     active.map = read_map()
     start_sampler()
+    pcall(discover_roster)
+    pcall(discover_pins)
     sample_scores()
     pcall(sample_positions)
     pcall(sample_me)
@@ -796,6 +832,12 @@ function Capture.finalize()
     return finished
 end
 
+function Capture.on_scoreboard()
+    if not active then return end
+    pcall(discover_roster)
+    pcall(discover_pins)
+end
+
 function Capture.rescan(reason)
     if not active then return end
     scan_objectives(reason)
@@ -806,6 +848,7 @@ function Capture.mark_running()
     local A = BGMeter.zenimax.api
     local now = safe(A.now_ms) or active.startMs
     open_run(now)
+    pcall(discover_roster)
     pcall(discover_pins)
     if active.runMs then return end
     active.runMs = now

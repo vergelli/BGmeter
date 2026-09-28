@@ -40,6 +40,7 @@ local BUDGET = {
     ["cap:on_flag"]           = { ms = 2, kb = 2 },
     ["cap:on_murderball"]     = { ms = 2, kb = 2 },
     ["cap:on_reticle_player"] = { ms = 1, kb = 1 },
+    ["ev:BGMeter_Roster"]     = { ms = 4 },
     ["cap:finalize"]          = { ms = 250 },
     ["pub:publish"]           = { ms = 250 },
     ["ui:render"]             = { ms = 60, kb = 96 },
