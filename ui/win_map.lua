@@ -448,7 +448,9 @@ end
 
 local SCR = { xs = {}, ys = {}, px = {}, py = {}, sx = {}, sy = {} }
 
-local function scaled(series, upto, smooth)
+local MAX_PATH_SEGMENTS = 1500
+
+local function scaled(series, upto, smooth, sub)
     local xs, ys = SCR.xs, SCR.ys
     local first = present_span(series, upto)
     if not first then return xs, ys, 0 end
@@ -460,7 +462,7 @@ local function scaled(series, upto, smooth)
     end
     local n = 0
     if smooth and m >= 3 then
-        local sx, sy, sn = BGMeter.Match.geo_spline(px, py, m, 3, SCR.sx, SCR.sy)
+        local sx, sy, sn = BGMeter.Match.geo_spline(px, py, m, sub or 3, SCR.sx, SCR.sy)
         for i = 1, sn do xs[i], ys[i] = mx(sx[i]), mx(sy[i]) end
         n = sn
     else
@@ -504,12 +506,20 @@ local function draw_heat(geo, m, mode)
     end
 end
 
-local PATH = { key = nil, xs = {}, ys = {}, cum = {}, total = 0, m = 0, sub = 1, halo = {}, line = {}, shown = 0 }
+local PATH = { key = nil, xs = {}, ys = {}, cum = {}, total = 0, m = 0, sub = 1, line = {}, shown = 0 }
 
 local function path_reset()
     PATH.key, PATH.total, PATH.m, PATH.sub, PATH.shown = nil, 0, 0, 1, 0
-    PATH.halo, PATH.line = {}, {}
+    PATH.line = {}
     if c.line_pool then c.line_pool:release_all() end
+end
+
+local function path_sub(count)
+    if count < 3 then return 1 end
+    local sub = math.floor(MAX_PATH_SEGMENTS / count)
+    if sub > 3 then sub = 3 end
+    if sub < 1 then sub = 1 end
+    return sub
 end
 
 local function path_prepare(geo, m)
@@ -525,9 +535,6 @@ local function path_prepare(geo, m)
     path_reset()
     PATH.key = key
     local smooth = me ~= nil
-    local xs, ys, total = scaled(s, n, smooth)
-    for i = 1, total do PATH.xs[i], PATH.ys[i] = xs[i], ys[i] end
-    for i = total + 1, #PATH.xs do PATH.xs[i], PATH.ys[i] = nil, nil end
     local cnt = 0
     for i = 1, n do
         local x, y = s.x[i] or 0, s.y[i] or 0
@@ -535,23 +542,19 @@ local function path_prepare(geo, m)
         PATH.cum[i] = cnt
     end
     for i = n + 1, #PATH.cum do PATH.cum[i] = nil end
+    local sub = smooth and path_sub(cnt) or 1
+    local xs, ys, total = scaled(s, n, smooth, sub)
+    for i = 1, total do PATH.xs[i], PATH.ys[i] = xs[i], ys[i] end
+    for i = total + 1, #PATH.xs do PATH.xs[i], PATH.ys[i] = nil, nil end
     PATH.total, PATH.m = total, cnt
-    PATH.sub = (smooth and cnt >= 3) and 3 or 1
+    PATH.sub = (smooth and cnt >= 3) and sub or 1
     return s
 end
 
 local function path_segment(k)
-    local h, l = PATH.halo[k], PATH.line[k]
-    if h then return h, l end
-    local tc = S.team_color(state.m.localTeam)
+    local l = PATH.line[k]
+    if l then return l end
     local x0, y0, x1, y1 = PATH.xs[k], PATH.ys[k], PATH.xs[k + 1], PATH.ys[k + 1]
-    h = c.line_pool:acquire()
-    if h.SetDrawLevel then h:SetDrawLevel(LV.halo) end
-    h:ClearAnchors()
-    h:SetAnchor(TOPLEFT, c.map, TOPLEFT, x0, y0)
-    h:SetAnchor(TOPRIGHT, c.map, TOPLEFT, x1, y1)
-    h:SetColor(tc[1], tc[2], tc[3], 0.40)
-    if h.SetThickness then h:SetThickness(7) end
     l = c.line_pool:acquire()
     if l.SetDrawLevel then l:SetDrawLevel(LV.path) end
     l:ClearAnchors()
@@ -559,8 +562,8 @@ local function path_segment(k)
     l:SetAnchor(TOPRIGHT, c.map, TOPLEFT, x1, y1)
     l:SetColor(K.COLOR.you[1], K.COLOR.you[2], K.COLOR.you[3], 1)
     if l.SetThickness then l:SetThickness(3) end
-    PATH.halo[k], PATH.line[k] = h, l
-    return h, l
+    PATH.line[k] = l
+    return l
 end
 
 local function path_show(upto)
@@ -572,13 +575,10 @@ local function path_show(upto)
     local want = math.max(0, pts - 1)
     if want > PATH.shown then
         for k = PATH.shown + 1, want do
-            local h, l = path_segment(k)
-            h:SetHidden(false)
-            l:SetHidden(false)
+            path_segment(k):SetHidden(false)
         end
     elseif want < PATH.shown then
         for k = want + 1, PATH.shown do
-            PATH.halo[k]:SetHidden(true)
             PATH.line[k]:SetHidden(true)
         end
     end
@@ -606,8 +606,6 @@ local function draw_paths(geo, m, idx, t)
         local s = me or (mine and geo.pos[mine])
         if s then
             local xs, ys, n = scaled(s, upto, me ~= nil)
-            local tc = S.team_color(m.localTeam)
-            polyline(nil, xs, ys, n, tc, 7, 0.40)
             polyline(nil, xs, ys, n, K.COLOR.you, 3, 1)
         end
         return
@@ -951,6 +949,8 @@ function M.on_report_shown()
 end
 
 function M.controls() return c end
+
+function M.ensure_built() build() end
 
 local MINI_TICK_MS = 100
 local MINI_LOOP_MS = 22000
