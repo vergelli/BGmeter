@@ -68,8 +68,9 @@ end
 function History.delete(index)
     local data = sv()
     if not data or not data.matches or not data.matches[index] then return false end
+    local gone = data.matches[index]
     table.remove(data.matches, index)
-    if BGMeter.Match.geo_cache_clear then BGMeter.Match.geo_cache_clear() end
+    if BGMeter.Match.geo_cache_forget then BGMeter.Match.geo_cache_forget(gone) end
     return true
 end
 
