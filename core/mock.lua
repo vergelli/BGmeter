@@ -602,6 +602,7 @@ local function vet_install(p)
         p.unclaimed = {}
         p.claimed = p.claimed + (p.claimable or 0)
         p.claimable = 0
+        if BGMeter.UI and BGMeter.UI.panel then BGMeter.UI.panel.mark_vet_dirty() end
         if BGMeter.UI and BGMeter.UI.menu then BGMeter.UI.menu.refresh_if_visible() end
     end
 end
@@ -637,6 +638,7 @@ function Mock.vet(arg)
         m.haul.vetRankUp = false
         BGMeter.UI.window.show_match(1)
     end
+    if BGMeter.UI.panel then BGMeter.UI.panel.mark_vet_dirty() end
     if BGMeter.UI.menu then BGMeter.UI.menu.refresh() end
     Log.say("vetmock %s: rank=%d cur=%d prog=%s total=%s claimed=%d -> laps=%s within=%s pct=%.2f",
         key, p.rank, p.cur, tostring(p.prog), tostring(p.total), p.claimed,

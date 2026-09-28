@@ -94,7 +94,12 @@ function Ledger.arena_of(m)
     return "unknown arena"
 end
 
+Ledger._rev = 0
+
+function Ledger.rev() return Ledger._rev end
+
 function Ledger.record(m)
+    Ledger._rev = Ledger._rev + 1
     local L = root()
     if not L or not m then return false end
     local lr = BGMeter.Match.local_row(m)
@@ -120,6 +125,7 @@ function Ledger.record(m)
 end
 
 function Ledger.backfill()
+    Ledger._rev = Ledger._rev + 1
     local data = sv()
     if not data or data.ledger_seeded then return 0 end
     data.ledger_seeded = true
@@ -134,6 +140,7 @@ function Ledger.backfill()
 end
 
 function Ledger.backfill_balance()
+    Ledger._rev = Ledger._rev + 1
     local data = sv()
     if not data or data.ledger_balance_seeded then return 0 end
     data.ledger_balance_seeded = true
