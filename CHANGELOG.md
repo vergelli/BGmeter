@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The kill feed and the objective and relic event logs are sized to their caps when the match begins, like the sample series, so an event in combat never grows an array.
 - Fixed: opening the About drawer measured every stored match again (about 1 MB and 35 ms per open in a measured session). Each match's size is now remembered until it changes, and the faces and ledger sizes until they do; the drawers' rows refill only when their entry changes.
 - The damage race lines and your path on the map lost their halos: three line passes fewer per sample on the race, one fewer per segment on the map, the same shapes. Your path is capped at 1 500 segments (the curve subdivides less on long matches), and the map's pools are reserved at login like the report's, so opening the map for the first time no longer pays for thousands of controls (1.5 s on a long match in a measured session).
 - The pool warm-up counts scoreboard rows as eight controls, so no tick creates more than one row (a tick had reached 33 ms). The haul minimap keeps its markers between ticks instead of releasing and re-acquiring them ten times a second, and its pools are named in the profiler. Objective pins are registered when the gates open, outside combat, instead of at the first position sample.

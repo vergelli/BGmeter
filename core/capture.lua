@@ -642,10 +642,12 @@ function Capture.begin()
     active.timeline  = { t = presize({}, MAX_SCORE_SAMPLES), r = presize({}, MAX_SCORE_SAMPLES),
                          s1 = presize({}, MAX_SCORE_SAMPLES), s2 = presize({}, MAX_SCORE_SAMPLES), s3 = presize({}, MAX_SCORE_SAMPLES),
                          teams = team_list() }
-    active.killfeed  = {}
+    active.killfeed  = presize({}, MAX_KILLS)
     active.exp       = {}
-    active.objectives = { list = {}, t = {}, r = {}, o = {}, ev = {}, st = {}, own = {} }
-    active.relics = { list = {}, t = {}, r = {}, o = {}, ev = {}, hold = {}, last = {}, who = {} }
+    active.objectives = { list = {}, t = presize({}, MAX_OBJ_EVENTS), r = presize({}, MAX_OBJ_EVENTS), o = presize({}, MAX_OBJ_EVENTS),
+                          ev = presize({}, MAX_OBJ_EVENTS), st = presize({}, MAX_OBJ_EVENTS), own = presize({}, MAX_OBJ_EVENTS) }
+    active.relics = { list = {}, t = presize({}, MAX_RELIC_EVENTS), r = presize({}, MAX_RELIC_EVENTS), o = presize({}, MAX_RELIC_EVENTS),
+                      ev = presize({}, MAX_RELIC_EVENTS), hold = presize({}, MAX_RELIC_EVENTS), last = presize({}, MAX_RELIC_EVENTS), who = {} }
     obj_lookup = {}
     obj_last = {}
     relic_lookup = {}
