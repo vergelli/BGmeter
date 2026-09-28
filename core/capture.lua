@@ -604,6 +604,7 @@ function Capture.begin()
     active.localTeam = safe(A.get_local_team)
     active.localName = clean_name(safe(A.get_display_name)) or clean_name(safe(A.get_char_name))
     active.teamSize  = active.bgId and safe(A.get_bg_team_size, active.bgId) or nil
+    active.numTeams  = active.bgId and safe(A.get_bg_num_teams, active.bgId) or nil
     if active.teamSize then active.competitive = (active.teamSize == 4) end
     active.timeline  = { t = {}, r = {}, s1 = {}, s2 = {}, s3 = {}, teams = team_list() }
     active.killfeed  = {}
@@ -787,6 +788,7 @@ function Capture.snapshot_now()
     m.gameType = safe(A.get_bg_game_type)
     m.localTeam = safe(A.get_local_team)
     m.teamSize = m.bgId and safe(A.get_bg_team_size, m.bgId) or nil
+    m.numTeams = m.bgId and safe(A.get_bg_num_teams, m.bgId) or nil
     if m.teamSize then m.competitive = (m.teamSize == 4) end
     m.result   = read_result(m.localTeam)
     Capture.read_battle(m)
