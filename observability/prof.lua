@@ -61,7 +61,7 @@ local function stage(name)
     local s = stages[name]
     if s then return s end
     if nstages >= MAX_STAGES then return nil end
-    s = { name = name, calls = 0, ms = 0, maxMs = 0, kb = 0, maxKb = 0, gc = 0, over = 0, b = {} }
+    s = { name = name, calls = 0, ms = 0, maxMs = 0, kb = 0, maxKb = 0, gc = 0, gcMs = 0, gcMax = 0, over = 0, b = {} }
     for i = 1, NB do s.b[i] = 0 end
     nstages = nstages + 1
     stages[name] = s
@@ -113,15 +113,17 @@ function Prof.exit(name)
     if not s then return end
     s.calls = s.calls + 1
     s.ms = s.ms + dt
+    if dk < 0 then
+        s.gc = s.gc + 1
+        s.gcMs = s.gcMs + dt
+        if dt > s.gcMax then s.gcMax = dt end
+        return
+    end
     if dt > s.maxMs then s.maxMs = dt end
     local bi = bucket(dt)
     s.b[bi] = s.b[bi] + 1
-    if dk >= 0 then
-        s.kb = s.kb + dk
-        if dk > s.maxKb then s.maxKb = dk end
-    else
-        s.gc = s.gc + 1
-    end
+    s.kb = s.kb + dk
+    if dk > s.maxKb then s.maxKb = dk end
     local bud = BUDGET[name]
     if bud and ((bud.ms and dt > bud.ms) or (bud.kb and dk > bud.kb)) then
         s.over = s.over + 1
@@ -184,7 +186,7 @@ function Prof.budget_of(name) return BUDGET[name] end
 function Prof.reset()
     for i = 1, nstages do
         local s = order[i]
-        s.calls, s.ms, s.maxMs, s.kb, s.maxKb, s.gc, s.over = 0, 0, 0, 0, 0, 0, 0
+        s.calls, s.ms, s.maxMs, s.kb, s.maxKb, s.gc, s.gcMs, s.gcMax, s.over = 0, 0, 0, 0, 0, 0, 0, 0, 0
         for j = 1, NB do s.b[j] = 0 end
     end
     top = 0
@@ -209,7 +211,7 @@ function Prof.report()
         local s = order[i]
         if s.calls > 0 then
             r[s.name] = { calls = s.calls, ms = s.ms, maxMs = s.maxMs, p50 = percentile(s, 0.5), p95 = percentile(s, 0.95),
-                          kb = s.kb, maxKb = s.maxKb, gc = s.gc, over = s.over, budget = BUDGET[s.name] }
+                          kb = s.kb, maxKb = s.maxKb, gc = s.gc, gcMs = s.gcMs, gcMax = s.gcMax, over = s.over, budget = BUDGET[s.name] }
         end
     end
     return r, (now() - started) / 1000
@@ -224,13 +226,14 @@ function Prof.lines()
         if x.ms ~= y.ms then return x.ms > y.ms end
         return x.kb > y.kb
     end)
-    local L = { string.format("--- profiler  ·  %.0fs window  ·  %d stages  ·  %d unbalanced ---", secs, #names, unbalanced) }
-    L[#L + 1] = "  stage                       calls   total ms   p50   p95   max      KB   avg B   worst KB  gc  over"
+    local L = { string.format("--- profiler  ·  %.0fs window  ·  %d stages  ·  %d unbalanced  ·  calls that saw a GC step count in gc and gc max, not in p50/p95/max ---", secs, #names, unbalanced) }
+    L[#L + 1] = "  stage                       calls   total ms   p50   p95   max      KB   avg B   worst KB  gc  gc max  over"
     for _, name in ipairs(names) do
         local s = r[name]
         local budget = s.budget and string.format("%d/%s%s", s.over, s.budget.ms and (s.budget.ms .. "ms") or "-", s.budget.kb and ("," .. s.budget.kb .. "KB") or "") or "-"
-        L[#L + 1] = string.format("  %-26s %6d  %8d  %4d  %4d  %4d  %7.1f  %6.0f  %8.1f  %2d  %s",
-            name, s.calls, s.ms, s.p50, s.p95, s.maxMs, s.kb, s.kb * 1024 / s.calls, s.maxKb, s.gc, budget)
+        local clean = s.calls - s.gc
+        L[#L + 1] = string.format("  %-26s %6d  %8d  %4d  %4d  %4d  %7.1f  %6.0f  %8.1f  %2d  %6d  %s",
+            name, s.calls, s.ms, s.p50, s.p95, s.maxMs, s.kb, (clean > 0) and (s.kb * 1024 / clean) or 0, s.maxKb, s.gc, s.gcMax, budget)
     end
     if #names == 0 then L[#L + 1] = "  (no stage has run yet)" end
     local pools = BGMeter.Plot and BGMeter.Plot.pool and BGMeter.Plot.pool.all and BGMeter.Plot.pool.all() or {}
