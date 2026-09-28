@@ -75,5 +75,6 @@ ui/win_dev.lua
 ui/win_panel.lua
 ui/win_queue.lua
 ui/win_menu.lua
+ui/warmup.lua
 
 bgmeter.lua

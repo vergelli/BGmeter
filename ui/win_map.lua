@@ -228,6 +228,8 @@ local function build()
         c.team_pool = leveled_pool(function() return P.line(c.map, { 1, 1, 1, 1 }, 2) end, LV.path)
     end
     c.icon_pool = leveled_pool(function() return P.icon(c.map, "") end, LV.mark)
+    c.heat_pool.label, c.dot_pool.label, c.icon_pool.label = "map.heat", "map.dots", "map.icons"
+    if c.line_pool then c.line_pool.label, c.team_pool.label = "map.path", "map.team" end
     c.hit_pool = BGMeter.Plot.pool.new(
         function()
             local h = BGMeter.zenimax.ui.create_control(nil, c.map, CT_CONTROL)
