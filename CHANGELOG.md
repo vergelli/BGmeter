@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0]
+
+The performance release. Every path the addon runs, from the samplers in combat to the report, the Registry and the map, was measured in real matches in a developer build, and what the measurements ranked was fixed in that order. Three-sided battlegrounds from Update 51 are supported.
+
+- Three-sided battlegrounds: the size tag reads the number of teams the game reports (6v6v6), and the MATCH BALANCE strip shows the veterancy and alliance rank of all three teams, with the hover reading all three.
+- Every match keeps its balance score with it, so the Registry's balance stat and the Arenas cards still count a match after its charts were pruned; matches already stored get their score once at load.
+- Opening a match for the first time in a session no longer pauses the game: the report reserves its chart controls a few per tick after you log in, outside combat and outside matches (a first open cost up to half a second before). The map's controls are reserved the same way, and your path draws in over a few frames instead of all at once (a long match cost 1.5 s on its first map open).
+- Scrubbing the map slider costs a fraction of what it did: the path is laid out once per match and the slider only shows or hides its tail; moves within the same second update the labels alone (from 11 447 anchors per move to 31).
+- The decoded map of the three matches you looked at last stays in memory; deleting a match forgets only that one (a session decoded the same match 34 times before).
+- The recorder allocates nothing in combat: every sample series, the kill feed and the objective and relic logs are sized to their caps when the match begins, players and objectives get their series when the scoreboard announces them, and objective pins are registered when the gates open.
+- The Registry refreshes only what changed: stats re-format when their inputs move, the veterancy panel after a veterancy event, rows when the match or its lock changes; drawers refill only the rows whose entry changed. The About drawer remembers each match's size instead of measuring every match on every open.
+- The damage race lines and your path on the map lost their halos, the same shapes with fewer controls; your path is capped at 1 500 segments. The haul minimap keeps its markers between ticks instead of rebuilding them ten times a second.
+- Developer builds carry a profiler and a validation layer: every event handler, sampler, capture stage, render section, map layer, drawer and post-match step is a named stage with calls, p50, p95, worst case, allocation, budget and collector pauses set apart; invariants (monotonic clocks, buffer caps, codec round-trips, finite numbers, handler errors) are checked and reported. Both are a shared no-op in release builds. /bgmeter prof, /bgmeter validate and /bgmeter probe anchors, plus five synthetic three-sided matches and the pools table in the Developer drawer. docs/PERF_RULES.md and docs/PERF_BUDGET.md hold the rules and the measured tables.
+
 ## [0.5.0]
 
 - MATCH BALANCE strip under the score chart: one number from 0 to 100 that says how much of a match there was, from the kill ratio between the teams, the average gap between leader and runner-up, and the share of the match spent within ten percent. The number sits on a scale from red (a stomp) through gold to green (an even match), with a marker at its value. Hover the strip for a card with the components, when the match was decided (the last lead change) or that the lead never changed, and which team was ahead. Every stored match gets it. A toggle in Settings, Result window, turns it off.
