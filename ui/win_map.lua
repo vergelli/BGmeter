@@ -506,11 +506,19 @@ local function draw_heat(geo, m, mode)
     end
 end
 
-local PATH = { key = nil, xs = {}, ys = {}, cum = {}, total = 0, m = 0, sub = 1, line = {}, shown = 0 }
+local function presized(n)
+    local t = {}
+    for i = 1, n do t[i] = 0 end
+    for i = n, 1, -1 do t[i] = nil end
+    return t
+end
+
+local PATH = { key = nil, xs = presized(MAX_PATH_SEGMENTS + 2), ys = presized(MAX_PATH_SEGMENTS + 2), cum = presized(1600),
+               total = 0, m = 0, sub = 1, line = presized(MAX_PATH_SEGMENTS + 2), shown = 0 }
 
 local function path_reset()
     PATH.key, PATH.total, PATH.m, PATH.sub, PATH.shown = nil, 0, 0, 1, 0
-    PATH.line = {}
+    for k = #PATH.line, 1, -1 do PATH.line[k] = nil end
     if c.line_pool then c.line_pool:release_all() end
 end
 

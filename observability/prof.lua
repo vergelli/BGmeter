@@ -195,8 +195,9 @@ function Prof.reset()
 end
 
 local function percentile(s, p)
-    if s.calls == 0 then return 0 end
-    local target = s.calls * p
+    local clean = s.calls - s.gc
+    if clean <= 0 then return 0 end
+    local target = clean * p
     local cum = 0
     for i = 1, NB do
         cum = cum + s.b[i]
