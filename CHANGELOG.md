@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.6.1]
 
 - Settings, Result window: Group players by team. The scoreboard keeps its sort column inside each team and lists your team first; the PLAYER header says so while it is on. Suggested by ruskiii.
 - ruskiii joins the credits in About.
