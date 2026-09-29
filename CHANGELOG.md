@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Settings, Result window: Group players by team. The scoreboard keeps its sort column inside each team and lists your team first; the PLAYER header says so while it is on. Suggested by ruskiii.
+- ruskiii joins the credits in About.
+
 ## [0.6.0]
 
 The performance release. Every path the addon runs, from the samplers in combat to the report, the Registry and the map, was measured in real matches in a developer build, and what the measurements ranked was fixed in that order. Three-sided battlegrounds from Update 51 are supported.
