@@ -657,8 +657,8 @@ function SEC.balance(b, bal, sur, bal_h, bal_off, ex)
     local dim = hexc(K.COLOR.text_dim)
     local lines = {
         string.format("|c%sBALANCE %d|r", hexc(bc), bal.score),
-        string.format("kill ratio |c%s%.2f|r  ·  contested |c%s%d%%|r  ·  margin |c%s%d%%|r",
-            hexc(K.COLOR.gold), bal.killRatio, hexc(K.COLOR.gold), math.floor(bal.contested * 100 + 0.5), hexc(K.COLOR.gold), math.floor(bal.margin * 100 + 0.5)),
+        string.format("= ( kill ratio |c%s%.2f|r + closeness |c%s%.2f|r + contested |c%s%.2f|r ) / 3",
+            hexc(K.COLOR.gold), bal.killRatio, hexc(K.COLOR.gold), 1 - bal.margin, hexc(K.COLOR.gold), bal.contested),
         bal.leaderChanged and string.format("decided |c%s%s|r%s", hexc(K.COLOR.gold), F.duration(bal.decidedMs),
             bal.leanTeam and string.format("  ·  |c%s%s|r ahead", hexc(S.team_color(bal.leanTeam)), team_name(bal.leanTeam)) or "")
             or string.format("|c%slead never changed|r%s", dim,

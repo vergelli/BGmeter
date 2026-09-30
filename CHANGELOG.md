@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The MATCH BALANCE hover prints the formula with its values, ( kill ratio + closeness + contested ) / 3, so the score is never a number on its own. docs/BALANCE.md holds the definition, the reasoning and the references.
+
 ## [0.6.1]
 
 - Settings, Result window: Group players by team. The scoreboard keeps its sort column inside each team and lists your team first; the PLAYER header says so while it is on. Suggested by ruskiii.
