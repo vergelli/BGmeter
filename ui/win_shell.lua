@@ -63,7 +63,7 @@ local SETTINGS_SECTIONS = {
         { kind = "toggle", key = "show_awards",    label = "MVP / column leaders" },
         { kind = "toggle", key = "show_timeline",  label = "Match timeline chart" },
         { kind = "toggle", key = "show_balance",   label = "Match balance strip" },
-        { kind = "toggle", key = "show_race",      label = "Damage race strip" },
+        { kind = "toggle", key = "show_race",      label = "Damage lead strip" },
         { kind = "toggle", key = "show_kills",     label = "Kill pressure strip" },
         { kind = "toggle", key = "show_faces",     label = "Familiar faces" },
         { kind = "slider", key = "opacity",        label = "Background opacity",

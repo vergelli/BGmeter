@@ -353,8 +353,12 @@ local function build_battle(win)
     b.balVet = exp_block(6 + EXP_W + 8, 22)
     W.tip_dynamic(b.bal)
 
-    strip("race", "DAMAGE RACE", nil)
+    strip("race", "DAMAGE LEAD", nil)
     b.race_pool = rect_pool(b.race)
+    b.raceLegend = P.label(b.race, S.FONT.small, K.COLOR.text_dim)
+    b.raceLegend:SetAnchor(TOPRIGHT, b.race, TOPRIGHT, -4, 2)
+    b.raceLegend:SetHeight(14)
+    b.raceLegend:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     b.race_line_pool = b.lines_ok and BGMeter.Plot.pool.new(
         function() return P.line(b.race, { 1, 1, 1, 1 }, 2) end,
         function(ln) ln:SetHidden(true); ln:ClearAnchors() end) or nil
