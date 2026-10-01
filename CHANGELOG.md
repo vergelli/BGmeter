@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The scoreboard is laid out by a grid: every column has one x and one width shared by its header and its cells, computed once per window width; columns step aside by priority when the window is too narrow (assists first, then captures) and return when it widens; the rows sit inside a thin frame.
 - The MATCH BALANCE hover prints the formula with its values, ( kill ratio + closeness + contested ) / 3, so the score is never a number on its own. docs/BALANCE.md holds the definition, the reasoning and the references.
 
 ## [0.6.1]

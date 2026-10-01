@@ -58,6 +58,7 @@ pipeline/presentation.lua
 
 ui/templates.xml
 ui/export.lua
+ui/grid.lua
 ui/win_core.lua
 ui/win_header.lua
 ui/win_battle.lua

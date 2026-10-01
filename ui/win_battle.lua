@@ -20,15 +20,15 @@ local Prefs = BGMeter.Prefs
 local Faces = BGMeter.Faces
 
 local COLS = {
-    { key = "damage",  right = 230, w = 56, label = "DMG", shift = true },
-    { key = "healing", right = 170, w = 50, label = "HEAL", shift = true },
-    { key = "kills",   right = 122, w = 22, label = "K", shift = true },
-    { key = "deaths",  right = 94,  w = 22, label = "D", shift = true },
-    { key = "assists", right = 66,  w = 22, label = "A", shift = true },
-    { key = "caps",    right = 66,  w = 34, label = "CAP", flag = true },
-    { key = "score",   right = 10,  w = 50, label = "PTS"  },
+    { key = "damage",  label = "DMG",  w = 56, priority = 100 },
+    { key = "healing", label = "HEAL", w = 50, priority = 90,  fmt = "abbrev" },
+    { key = "kills",   label = "K",    w = 26, priority = 95 },
+    { key = "deaths",  label = "D",    w = 26, priority = 95 },
+    { key = "assists", label = "A",    w = 26, priority = 80 },
+    { key = "caps",    label = "CAP",  w = 40, priority = 85, flag = true },
+    { key = "score",   label = "PTS",  w = 50, priority = 100 },
 }
-local CAPS_SHIFT = 40
+local Grid = BGMeter.UI.Grid
 local caps_shown = false
 local FACE_ICON = "EsoUI/Art/Help/help_tabIcon_overview_up.dds"
 
@@ -48,17 +48,9 @@ local function face_badge(e)
 end
 
 
-local function col_right(col)
-    if not col.flag and caps_shown and col.shift then return col.right + CAPS_SHIFT end
-    return col.right
-end
-
-local function col_hidden(col)
-    return (col.flag and not caps_shown) and true or false
-end
 local INDEX_X, ICON_X, NAME_X = 6, 24, 50
-local NAME_RIGHT = 296
 local BAR_X, BAR_RIGHT = 50, 6
+local GRID_TOP = 20
 
 local function one_line(lbl)
     lbl:SetHeight(14)
@@ -80,13 +72,14 @@ local function build_battle(win)
     make_clickable(nameH, function() W.sort_by("name") end)
     b.headers.name = nameH
 
+    b.grid = Grid.new({ columns = COLS, left = NAME_X, right = 10, name_min = 96 })
+    b.grid:set_enabled("caps", false)
     for _, col in ipairs(COLS) do
         local lbl = P.label(b.container, S.FONT.small, K.COLOR.text_dim)
         lbl:SetText(col.label)
-        lbl:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -col_right(col), 0)
         lbl:SetDimensions(col.w, 16)
         lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-        lbl:SetHidden(col_hidden(col))
+        lbl:SetHidden(true)
         if col.key == "caps" then
             make_clickable(lbl, function() W.sort_by(W.flagcol_key or "caps") end)
             W.tip_dynamic(lbl)
@@ -96,10 +89,13 @@ local function build_battle(win)
         b.headers[col.key] = lbl
     end
 
-    b.rule = P.rect(b.container, { 1, 1, 1, 0.10 })
-    b.rule:SetAnchor(TOPLEFT, b.container, TOPLEFT, 0, 18)
-    b.rule:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, 0, 18)
-    b.rule:SetHeight(1)
+    b.gridFrame = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
+    b.gridFrame:SetAnchor(TOPLEFT, b.container, TOPLEFT, 0, GRID_TOP)
+    b.gridFrame:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, 0, GRID_TOP)
+    b.gridFrame:SetHeight(1)
+    local gedge = K.COLOR.text_dim
+    b.gridBox = P.hairline_box(b.gridFrame, { gedge[1], gedge[2], gedge[3], K.ALPHA.chart_edge })
+    b.gridFrame:SetHidden(true)
 
     b.row_pool = BGMeter.Plot.pool.new(function() return W._make_row(b.container) end,
         function(row) row.container:SetHidden(true) end)
@@ -359,7 +355,6 @@ function W._make_row(parent)
 
     row.name = P.label(row.container, S.FONT.row, K.COLOR.text)
     row.name:SetAnchor(LEFT, row.container, LEFT, NAME_X, 0)
-    row.name:SetAnchor(RIGHT, row.container, RIGHT, -NAME_RIGHT, 0)
     row.name:SetHeight(L.row_h)
     row.name:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
     if row.name.SetMaxLineCount then row.name:SetMaxLineCount(1) end
@@ -369,13 +364,12 @@ function W._make_row(parent)
 
     for _, col in ipairs(COLS) do
         local lbl = P.label(row.container, S.FONT.row, K.COLOR.text)
-        lbl:SetAnchor(RIGHT, row.container, RIGHT, -col_right(col), 0)
         lbl:SetDimensions(col.w, L.row_h)
         lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-        lbl:SetHidden(col_hidden(col))
+        lbl:SetHidden(true)
         row.cells[col.key] = lbl
     end
-    row.capsLayout = false
+    row.layoutKey = nil
 
     row.container:SetHandler("OnMouseEnter", function()
         if W._last_row_log ~= row then
@@ -403,7 +397,7 @@ local function apply_dynamic_min_width(m)
         if tw > maxw then maxw = tw end
     end
     if maxw <= 0 then return end
-    local needed = math.ceil(maxw) + 26 + NAME_X + NAME_RIGHT + (caps_shown and CAPS_SHIFT or 0) + 2 * L.margin + L.haul_w + L.gap
+    local needed = math.ceil(maxw) + 26 + NAME_X + W.battle.grid:fixed_width() + 2 * L.margin + L.haul_w + L.gap
     local dyn = math.max(L.min_w, math.min(needed, L.dyn_min_cap))
 
     local extra
@@ -461,49 +455,21 @@ local function caps_count(m, v)
     return v
 end
 
-local function name_right()
-    return NAME_RIGHT + (caps_shown and CAPS_SHIFT or 0)
-end
-
-local function layout_headers(b)
-    for _, col in ipairs(COLS) do
-        local lbl = b.headers[col.key]
-        if lbl then
-            lbl:ClearAnchors()
-            lbl:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -col_right(col), 0)
-            lbl:SetHidden(col_hidden(col))
-        end
-    end
-end
-
-local function layout_row_cells(row)
-    for _, col in ipairs(COLS) do
-        local cell = row.cells[col.key]
-        cell:ClearAnchors()
-        cell:SetAnchor(RIGHT, row.container, RIGHT, -col_right(col), 0)
-        cell:SetHidden(col_hidden(col))
-    end
-    row.name:ClearAnchors()
-    row.name:SetAnchor(LEFT, row.container, LEFT, NAME_X, 0)
-    row.name:SetAnchor(RIGHT, row.container, RIGHT, -name_right(), 0)
-    row.capsLayout = caps_shown
-end
-
 function SEC.battle(m, animate)
     local b = W.battle
     b.row_pool:release_all()
     local want_caps = caps_relevant(m)
-    if want_caps ~= caps_shown then
-        caps_shown = want_caps
-        layout_headers(b)
-    end
+    caps_shown = want_caps
+    b.grid:set_enabled("caps", want_caps)
     local fkey, flabel, ftip = flag_col_spec(m)
     W.flagcol_key = fkey
     if b.headers.caps then W.tips[b.headers.caps] = ftip end
     apply_dynamic_min_width(m)
+    if b.grid:layout(list_width()) then b.grid:apply_header(b.headers, b.container) end
 
     local key = Prefs.get("sort_key") or "damage"
     if (key == "caps" or key == "carried") and not caps_shown then key = "damage" end
+    if key ~= "name" and key ~= "caps" and key ~= "carried" and not b.grid:is_shown(key) then key = "damage" end
     if key == "caps" or key == "carried" then key = fkey end
     if key == "name" then
         local desc = Prefs.get("sort_desc")
@@ -542,7 +508,7 @@ function SEC.battle(m, animate)
     for i, prow in ipairs(m.battle) do
         local row = b.row_pool:acquire()
         row.prow = prow
-        if row.capsLayout ~= caps_shown then layout_row_cells(row) end
+        if row.layoutKey ~= b.grid.key then b.grid:apply_row(row) end
         row.container:SetHidden(false)
         row.container:ClearAnchors()
         row.container:SetAnchor(TOPLEFT, b.container, TOPLEFT, 0, y)
@@ -626,6 +592,8 @@ function SEC.battle(m, animate)
 
         y = y + L.row_h
     end
+    b.gridFrame:SetHeight(#m.battle * L.row_h + 8)
+    b.gridFrame:SetHidden(#m.battle == 0)
 end
 
 U.build_battle = build_battle
