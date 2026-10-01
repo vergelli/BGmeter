@@ -20,15 +20,20 @@ local Prefs = BGMeter.Prefs
 local Faces = BGMeter.Faces
 
 local COLS = {
-    { key = "damage",  label = "DMG",  w = 56, priority = 100 },
-    { key = "healing", label = "HEAL", w = 50, priority = 90 },
-    { key = "taken",   label = "TKN",  w = 56, priority = 82 },
-    { key = "kills",   label = "K",    w = 26, priority = 95 },
-    { key = "deaths",  label = "D",    w = 26, priority = 95 },
-    { key = "assists", label = "A",    w = 26, priority = 80 },
-    { key = "caps",    label = "CAP",  w = 40, priority = 85, flag = true },
-    { key = "score",   label = "PTS",  w = 50, priority = 100 },
+    { key = "damage",  label = "DMG",  w = 56, priority = 100, words = "Damage dealt", icon = "esoui/art/icons/progression_tabicon_2handed" },
+    { key = "healing", label = "HEAL", w = 50, priority = 90,  words = "Healing done", icon = "esoui/art/icons/progression_tabicon_healinglight" },
+    { key = "taken",   label = "TKN",  w = 56, priority = 82,  words = "Damage taken", icon = "esoui/art/icons/progression_tabicon_avadefender" },
+    { key = "kills",   label = "K",    w = 30, priority = 95,  words = "Kills",        icon = "esoui/art/treeicons/tutorial_idexicon_combat" },
+    { key = "deaths",  label = "D",    w = 30, priority = 95,  words = "Deaths",       icon = "esoui/art/treeicons/tutorial_idexicon_death" },
+    { key = "assists", label = "A",    w = 30, priority = 80,  words = "Assists",      icon = "esoui/art/icons/progression_tabicon_avaleadership" },
+    { key = "caps",    label = "CAP",  w = 40, priority = 85,  flag = true },
+    { key = "score",   label = "PTS",  w = 50, priority = 100, words = "Medal score",  icon = "esoui/art/journal/journal_tabicon_leaderboard" },
 }
+local FLAG_ICONS = {
+    caps    = "esoui/art/icons/mapkey/mapkey_bg_flag_neutral.dds",
+    carried = "esoui/art/icons/mapkey/mapkey_bg_murderball.dds",
+}
+local HEADER_ICON = 18
 local Grid = BGMeter.UI.Grid
 local caps_shown = false
 local FACE_ICON = "EsoUI/Art/Help/help_tabIcon_overview_up.dds"
@@ -53,6 +58,53 @@ local INDEX_X, ICON_X, NAME_X = 6, 24, 50
 local BAR_X, BAR_RIGHT = 50, 6
 local GRID_TOP = 20
 
+local function tint(icon, color)
+    icon:SetColor(color[1], color[2], color[3], 1)
+end
+
+local function header_art(h, up, over, down)
+    h.up, h.over, h.down = up, over or up, down or up
+    h.icon:SetTexture(up)
+end
+
+local function make_header(b, col)
+    local h = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
+    h:SetDimensions(col.w, HEADER_ICON)
+    h:SetMouseEnabled(true)
+    h.col = col
+    h.label = P.label(h, S.FONT.small, K.COLOR.text_dim)
+    h.label:SetText(col.label)
+    h.label:SetAnchor(TOPRIGHT, h, TOPRIGHT, 0, 0)
+    h.label:SetDimensions(col.w, 16)
+    h.label:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    h.icon = P.icon(h)
+    h.icon:SetDimensions(HEADER_ICON, HEADER_ICON)
+    h.icon:SetAnchor(TOPRIGHT, h, TOPRIGHT, 0, 0)
+    h.icon:SetHidden(true)
+    h.arrow = P.icon(h)
+    h.arrow:SetDimensions(10, 10)
+    h.arrow:SetAnchor(RIGHT, h.icon, LEFT, -1, 0)
+    h.arrow:SetHidden(true)
+    h.tint = K.COLOR.text_dim
+    h:SetHandler("OnMouseEnter", function()
+        if h.over and not h.icon:IsHidden() then h.icon:SetTexture(h.over); tint(h.icon, K.COLOR.text) end
+        local t = W.tips[h]
+        if t and t ~= "" and U.card_show then U.card_show(h, BOTTOM, t) end
+    end)
+    h:SetHandler("OnMouseExit", function()
+        if h.up then h.icon:SetTexture(h.up); tint(h.icon, h.tint) end
+        if U.card_hide then U.card_hide() end
+    end)
+    h:SetHandler("OnMouseDown", function()
+        if h.down and not h.icon:IsHidden() then h.icon:SetTexture(h.down) end
+    end)
+    h:SetHandler("OnMouseUp", function(_, _, upInside)
+        if h.up then h.icon:SetTexture(h.up) end
+        if upInside then W.sort_by(col.key == "caps" and (W.flagcol_key or "caps") or col.key) end
+    end)
+    return h
+end
+
 local function one_line(lbl)
     lbl:SetHeight(14)
     if TEXT_WRAP_MODE_ELLIPSIS and lbl.SetWrapMode then lbl:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS) end
@@ -76,21 +128,14 @@ local function build_battle(win)
     b.grid = Grid.new({ columns = COLS, left = NAME_X, right = 10, name_min = 96 })
     b.grid:set_enabled("caps", false)
     for _, col in ipairs(COLS) do
-        local lbl = P.label(b.container, S.FONT.small, K.COLOR.text_dim)
-        lbl:SetText(col.label)
-        lbl:SetDimensions(col.w, 16)
-        lbl:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-        lbl:SetHidden(true)
-        if col.key == "caps" then
-            make_clickable(lbl, function() W.sort_by(W.flagcol_key or "caps") end)
-            W.tip_dynamic(lbl)
-        else
-            make_clickable(lbl, function() W.sort_by(col.key) end)
+        local h = make_header(b, col)
+        h:SetHidden(true)
+        if col.icon then header_art(h, col.icon .. "_up.dds", col.icon .. "_over.dds", col.icon .. "_down.dds") end
+        if col.words then
+            W.tips[h] = col.words .. "  ·  " .. col.label
+            if col.key == "taken" then W.tips[h] = W.tips[h] .. "\nHover a value for the damage taken per death." end
         end
-        if col.key == "taken" then
-            W.tip_static(lbl, "Damage taken over the match.\nHover a value for the damage taken per death.")
-        end
-        b.headers[col.key] = lbl
+        b.headers[col.key] = h
     end
 
     b.gridFrame = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
@@ -482,7 +527,10 @@ function SEC.battle(m, animate)
     b.grid:set_enabled("taken", Prefs.get("show_taken") ~= false)
     local fkey, flabel, ftip = flag_col_spec(m)
     W.flagcol_key = fkey
-    if b.headers.caps then W.tips[b.headers.caps] = ftip end
+    if b.headers.caps then
+        W.tips[b.headers.caps] = ftip
+        header_art(b.headers.caps, FLAG_ICONS[fkey] or FLAG_ICONS.caps)
+    end
     apply_dynamic_min_width(m)
     if b.grid:layout(list_width()) then b.grid:apply_header(b.headers, b.container) end
 
@@ -504,15 +552,35 @@ function SEC.battle(m, animate)
     local grouped = Prefs.get("group_by_team") and true or false
     if grouped then BGMeter.Match.group_by_team(m) end
 
-    for ckey, lbl in pairs(b.headers) do
-        local base = (ckey == "name") and (grouped and "PLAYER  ·  by team" or "PLAYER") or ckey
-        for _, col in ipairs(COLS) do if col.key == ckey then base = col.label end end
+    local icons = Prefs.get("icon_headers") ~= false
+    local arrow = Prefs.get("sort_desc") and ICON_SORTDN or ICON_SORTUP
+    for ckey, h in pairs(b.headers) do
+        local col = h.col
+        local base = (ckey == "name") and (grouped and "PLAYER  ·  by team" or "PLAYER") or (col and col.label or ckey)
         if ckey == "caps" then base = flabel end
-        if (ckey == "caps" and key == fkey) or ckey == key then
-            S.color(lbl, K.COLOR.text)
-            set_text(lbl, base .. " " .. F.icon(Prefs.get("sort_desc") and ICON_SORTDN or ICON_SORTUP, 16))
+        local active = (ckey == "caps" and key == fkey) or ckey == key
+        if col and icons and h.up then
+            h.label:SetHidden(true)
+            h.icon:SetHidden(false)
+            h.tint = active and K.COLOR.text or K.COLOR.text_dim
+            h.icon:SetTexture(h.up)
+            tint(h.icon, h.tint)
+            h.arrow:SetTexture(arrow)
+            h.arrow:SetHidden(not active)
         else
-            S.color(lbl, K.COLOR.text_dim); set_text(lbl, base)
+            local lbl = h
+            if col then
+                h.icon:SetHidden(true)
+                h.arrow:SetHidden(true)
+                h.label:SetHidden(false)
+                lbl = h.label
+            end
+            if active then
+                S.color(lbl, K.COLOR.text)
+                set_text(lbl, base .. " " .. F.icon(arrow, 16))
+            else
+                S.color(lbl, K.COLOR.text_dim); set_text(lbl, base)
+            end
         end
     end
 
