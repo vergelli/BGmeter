@@ -6,6 +6,7 @@
 - Scoreboard: a TKN column (damage taken) sits after HEAL, sortable like the others; hover a value for the damage taken per death. Settings > Result window > Damage taken column turns it off. Suggested by unit220.
 - Report background: the arena art is chosen by map id first, then by zone name, then by the battleground name as before. Abbreviated names from the three-team queue ("MK DOM 50", "Ald C Chaos ball 50") no longer fall back to the generic backdrop. Dev build: `/bgmeter art` lists every recorded match with the background it resolves to.
 - Scoreboard headers are icons from the game's own tab-icon set (sword, healing light, shield, combat, skull, leadership, flag or ball, podium); they light up on hover like the game's tabs, the hover card names the column in words and letters, the sorted column shows the arrow beside its icon. Settings > Result window > Icon column headers brings the letters back.
+- Group players by team: each team's block of rows sits in a faint box of its colour with a slightly stronger edge, so the eye finds the teams without reading the strips.
 - The MATCH BALANCE hover prints the formula with its values, ( kill ratio + closeness + contested ) / 3, so the score is never a number on its own. docs/BALANCE.md holds the definition, the reasoning and the references.
 
 ## [0.6.1]

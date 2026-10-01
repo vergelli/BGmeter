@@ -23,17 +23,18 @@ local COLS = {
     { key = "damage",  label = "DMG",  w = 56, priority = 100, words = "Damage dealt", icon = "esoui/art/icons/progression_tabicon_2handed" },
     { key = "healing", label = "HEAL", w = 50, priority = 90,  words = "Healing done", icon = "esoui/art/icons/progression_tabicon_healinglight" },
     { key = "taken",   label = "TKN",  w = 56, priority = 82,  words = "Damage taken", icon = "esoui/art/icons/progression_tabicon_avadefender" },
-    { key = "kills",   label = "K",    w = 30, priority = 95,  words = "Kills",        icon = "esoui/art/treeicons/tutorial_idexicon_combat" },
-    { key = "deaths",  label = "D",    w = 30, priority = 95,  words = "Deaths",       icon = "esoui/art/treeicons/tutorial_idexicon_death" },
-    { key = "assists", label = "A",    w = 30, priority = 80,  words = "Assists",      icon = "esoui/art/icons/progression_tabicon_avaleadership" },
+    { key = "kills",   label = "K",    w = 36, priority = 95,  words = "Kills",        icon = "esoui/art/treeicons/tutorial_idexicon_combat" },
+    { key = "deaths",  label = "D",    w = 36, priority = 95,  words = "Deaths",       icon = "esoui/art/treeicons/tutorial_idexicon_death" },
+    { key = "assists", label = "A",    w = 36, priority = 80,  words = "Assists",      icon = "esoui/art/icons/progression_tabicon_avaleadership" },
     { key = "caps",    label = "CAP",  w = 40, priority = 85,  flag = true },
     { key = "score",   label = "PTS",  w = 50, priority = 100, words = "Medal score",  icon = "esoui/art/journal/journal_tabicon_leaderboard" },
 }
 local FLAG_ICONS = {
-    caps    = "esoui/art/icons/mapkey/mapkey_bg_flag_neutral.dds",
+    caps    = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.dds",
     carried = "esoui/art/icons/mapkey/mapkey_bg_murderball.dds",
 }
-local HEADER_ICON = 18
+local HEADER_ICON = 24
+local ROWS_TOP = 30
 local Grid = BGMeter.UI.Grid
 local caps_shown = false
 local FACE_ICON = "EsoUI/Art/Help/help_tabIcon_overview_up.dds"
@@ -56,7 +57,7 @@ end
 
 local INDEX_X, ICON_X, NAME_X = 6, 24, 50
 local BAR_X, BAR_RIGHT = 50, 6
-local GRID_TOP = 20
+local GRID_TOP = 26
 
 local function tint(icon, color)
     icon:SetColor(color[1], color[2], color[3], 1)
@@ -145,6 +146,16 @@ local function build_battle(win)
     local gedge = K.COLOR.text_dim
     b.gridBox = P.hairline_box(b.gridFrame, { gedge[1], gedge[2], gedge[3], K.ALPHA.chart_edge })
     b.gridFrame:SetHidden(true)
+    b.teamBoxes, b.runs = {}, {}
+    for i = 1, 3 do
+        local c = BGMeter.zenimax.ui.create_control(nil, b.container, CT_CONTROL)
+        c:SetHeight(1)
+        c:SetHidden(true)
+        local fill = P.rect(c, { 0, 0, 0, 0 })
+        fill:SetAnchorFill(c)
+        b.teamBoxes[i] = { container = c, fill = fill, box = P.hairline_box(c, { 0, 0, 0, 0 }) }
+        b.runs[i] = { team = 0, y0 = 0, n = 0 }
+    end
 
     b.row_pool = BGMeter.Plot.pool.new(function() return W._make_row(b.container) end,
         function(row) row.container:SetHidden(true) end)
@@ -473,7 +484,7 @@ local function apply_dynamic_min_width(m)
         extra = 46 + 2
     end
     if BGMeter.Prefs.get("show_balance") then extra = extra + L.balance_h + 2 end
-    local needed_h = L.header_h + 24 + #m.battle * L.row_h + L.chart_h + extra + 8 + L.footer_h + 12
+    local needed_h = L.header_h + ROWS_TOP + #m.battle * L.row_h + L.chart_h + extra + 8 + L.footer_h + 12
     local dyn_h = math.max(L.min_h, math.min(needed_h, L.max_h))
 
     if dyn ~= W.dyn_min or dyn_h ~= W.dyn_min_h then
@@ -590,11 +601,25 @@ function SEC.battle(m, animate)
     local maxVal = BGMeter.Match.column_max(m, barKey)
     local barBase = (barKey == "healing") and K.COLOR.heal or K.COLOR.accent
     local listW = list_width()
-    local y = 24
+    local y = ROWS_TOP
+    local nruns, run = 0, nil
 
     for i, prow in ipairs(m.battle) do
         local row = b.row_pool:acquire()
         row.prow = prow
+        if grouped then
+            local t = prow.team or 0
+            if not run or run.team ~= t then
+                if nruns < 3 then
+                    nruns = nruns + 1
+                    run = b.runs[nruns]
+                    run.team, run.y0, run.n = t, y, 0
+                else
+                    run = nil
+                end
+            end
+            if run then run.n = run.n + 1 end
+        end
         if row.layoutKey ~= b.grid.key then b.grid:apply_row(row) end
         row.container:SetHidden(false)
         row.container:ClearAnchors()
@@ -687,6 +712,26 @@ function SEC.battle(m, animate)
     end
     b.gridFrame:SetHeight(#m.battle * L.row_h + 8)
     b.gridFrame:SetHidden(#m.battle == 0)
+    for i = 1, 3 do
+        local tb = b.teamBoxes[i]
+        local r = b.runs[i]
+        if grouped and i <= nruns and r.n > 0 then
+            local tc = S.team_color(r.team)
+            tb.container:ClearAnchors()
+            tb.container:SetAnchor(TOPLEFT, b.container, TOPLEFT, 2, r.y0 + 1)
+            tb.container:SetAnchor(TOPRIGHT, b.container, TOPRIGHT, -2, r.y0 + 1)
+            tb.container:SetHeight(r.n * L.row_h - 2)
+            P.set_rect_color(tb.fill, { tc[1], tc[2], tc[3], K.ALPHA.team_box })
+            local edge = { tc[1], tc[2], tc[3], K.ALPHA.team_box_edge }
+            P.set_rect_color(tb.box.top, edge)
+            P.set_rect_color(tb.box.bottom, edge)
+            P.set_rect_color(tb.box.left, edge)
+            P.set_rect_color(tb.box.right, edge)
+            tb.container:SetHidden(false)
+        else
+            tb.container:SetHidden(true)
+        end
+    end
 end
 
 U.build_battle = build_battle
