@@ -388,6 +388,22 @@ local function build_battle(win)
     return b
 end
 
+local function cell_hover(row, cell)
+    cell:SetMouseEnabled(true)
+    cell:SetHandler("OnMouseEnter", function()
+        P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
+        local t = W.tips[cell]
+        if t and U.card_show then U.card_show(cell, BOTTOM, t) end
+    end)
+    cell:SetHandler("OnMouseExit", function()
+        P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 })
+        if U.card_hide then U.card_hide() end
+    end)
+    cell:SetHandler("OnMouseUp", function(_, _, upInside)
+        if upInside and row.prow then W.select(row.prow) end
+    end)
+end
+
 function W._make_row(parent)
     local row = { cells = {} }
     row.container = BGMeter.zenimax.ui.create_control(nil, parent, CT_CONTROL)
@@ -430,20 +446,8 @@ function W._make_row(parent)
         row.cells[col.key] = lbl
     end
     row.layoutKey = nil
-    local tk = row.cells.taken
-    tk:SetMouseEnabled(true)
-    tk:SetHandler("OnMouseEnter", function()
-        P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
-        local t = W.tips[tk]
-        if t and U.card_show then U.card_show(tk, BOTTOM, t) end
-    end)
-    tk:SetHandler("OnMouseExit", function()
-        P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 })
-        if U.card_hide then U.card_hide() end
-    end)
-    tk:SetHandler("OnMouseUp", function(_, _, upInside)
-        if upInside and row.prow then W.select(row.prow) end
-    end)
+    cell_hover(row, row.cells.taken)
+    cell_hover(row, row.cells.caps)
 
     row.container:SetHandler("OnMouseEnter", function()
         if W._last_row_log ~= row then
@@ -663,8 +667,15 @@ function SEC.battle(m, animate)
                 end
             elseif ck == "carried" then
                 txt = (v > 0) and F.duration(v * 1000) or "0"
+                local def = prow.defPts or 0
+                if v <= 0 and def <= 0 then W.tips[cell] = nil
+                else W.tips[cell] = string.format("held the ball %s\n%d defense points", F.duration(v * 1000), def) end
             elseif ck == "caps" then
-                txt = tostring(caps_count(m, v))
+                local n = caps_count(m, v)
+                txt = tostring(n)
+                local def = prow.defPts or 0
+                if n <= 0 and def <= 0 then W.tips[cell] = nil
+                else W.tips[cell] = string.format("%d capture%s\n%d defense points", n, (n == 1) and "" or "s", def) end
             else
                 txt = tostring(v)
             end
