@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.0] - 2026-10-01
 
 - The scoreboard is laid out by a grid: every column has one x and one width shared by its header and its cells, computed once per window width; columns step aside by priority when the window is too narrow (assists first, then captures) and return when it widens; the rows sit inside a thin frame.
 - Scoreboard: a TKN column (damage taken) sits after HEAL, sortable like the others; hover a value for the damage taken per death. Settings > Result window > Damage taken column turns it off. Suggested by unit220.
