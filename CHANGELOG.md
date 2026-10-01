@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0] - 2026-10-01
+
+- The scoreboard is laid out by a grid: every column has one x and one width shared by its header and its cells, computed once per window width; columns step aside by priority when the window is too narrow (assists first, then captures) and return when it widens; the rows sit inside a thin frame.
+- Scoreboard: a TKN column (damage taken) sits after HEAL, sortable like the others; hover a value for the damage taken per death. Settings > Result window > Damage taken column turns it off. Suggested by unit220.
+- Report background: the arena art is chosen by map id first, then by zone name, then by the battleground name as before. Abbreviated names from the three-team queue ("MK DOM 50", "Ald C Chaos ball 50") no longer fall back to the generic backdrop. Dev build: `/bgmeter art` lists every recorded match with the background it resolves to.
+- Scoreboard headers are icons from the game's own tab-icon set (sword, healing light, shield, combat, skull, leadership, flag or ball, podium); they light up on hover like the game's tabs, the hover card names the column in words and letters, the sorted column shows the arrow beside its icon. Settings > Result window > Icon column headers brings the letters back.
+- Group players by team: each team's block of rows sits in a faint box of its colour with a slightly stronger edge, so the eye finds the teams without reading the strips.
+- Scoreboard: hover a CAP value for the captures and the defense points the game awards for holding objectives (in Chaosball, the time held and the defense points). Defense points were only in the detail line before.
+- The damage race strip is now the damage lead: instead of one cumulative line per team squeezed against the floor, one band whose height is the gap between the leading team's damage and the runner-up's, in the colour of the team ahead, with a tick at every change of hands. Hover a stretch for who was ahead, from when to when and by how much; the legend gives the max lead, the changes of hands and your share of your team's damage. Same time axis as the timeline above.
+- The MATCH BALANCE hover prints the formula with its values, ( kill ratio + closeness + contested ) / 3, so the score is never a number on its own. docs/BALANCE.md holds the definition, the reasoning and the references.
+
 ## [0.6.1]
 
 - Settings, Result window: Group players by team. The scoreboard keeps its sort column inside each team and lists your team first; the PLAYER header says so while it is on. Suggested by ruskiii.
