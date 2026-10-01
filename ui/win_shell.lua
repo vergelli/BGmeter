@@ -55,6 +55,7 @@ local SETTINGS_SECTIONS = {
     } },
     { title = "RESULT WINDOW", rows = {
         { kind = "toggle", key = "group_by_team",  label = "Group players by team" },
+        { kind = "toggle", key = "show_taken",     label = "Damage taken column" },
         { kind = "toggle", key = "show_haul",      label = "Haul panel" },
         { kind = "toggle", key = "show_veterancy", label = "Veterancy track" },
         { kind = "toggle", key = "show_standing",  label = "Standing / session panel" },

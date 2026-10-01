@@ -21,7 +21,8 @@ local Faces = BGMeter.Faces
 
 local COLS = {
     { key = "damage",  label = "DMG",  w = 56, priority = 100 },
-    { key = "healing", label = "HEAL", w = 50, priority = 90,  fmt = "abbrev" },
+    { key = "healing", label = "HEAL", w = 50, priority = 90 },
+    { key = "taken",   label = "TKN",  w = 56, priority = 82 },
     { key = "kills",   label = "K",    w = 26, priority = 95 },
     { key = "deaths",  label = "D",    w = 26, priority = 95 },
     { key = "assists", label = "A",    w = 26, priority = 80 },
@@ -85,6 +86,9 @@ local function build_battle(win)
             W.tip_dynamic(lbl)
         else
             make_clickable(lbl, function() W.sort_by(col.key) end)
+        end
+        if col.key == "taken" then
+            W.tip_static(lbl, "Damage taken over the match.\nHover a value for the damage taken per death.")
         end
         b.headers[col.key] = lbl
     end
@@ -370,6 +374,20 @@ function W._make_row(parent)
         row.cells[col.key] = lbl
     end
     row.layoutKey = nil
+    local tk = row.cells.taken
+    tk:SetMouseEnabled(true)
+    tk:SetHandler("OnMouseEnter", function()
+        P.set_rect_color(row.highlight, { 1, 1, 1, K.ALPHA.row_hover })
+        local t = W.tips[tk]
+        if t and U.card_show then U.card_show(tk, BOTTOM, t) end
+    end)
+    tk:SetHandler("OnMouseExit", function()
+        P.set_rect_color(row.highlight, row.baseHL or { 0, 0, 0, 0 })
+        if U.card_hide then U.card_hide() end
+    end)
+    tk:SetHandler("OnMouseUp", function(_, _, upInside)
+        if upInside and row.prow then W.select(row.prow) end
+    end)
 
     row.container:SetHandler("OnMouseEnter", function()
         if W._last_row_log ~= row then
@@ -461,6 +479,7 @@ function SEC.battle(m, animate)
     local want_caps = caps_relevant(m)
     caps_shown = want_caps
     b.grid:set_enabled("caps", want_caps)
+    b.grid:set_enabled("taken", Prefs.get("show_taken") ~= false)
     local fkey, flabel, ftip = flag_col_spec(m)
     W.flagcol_key = fkey
     if b.headers.caps then W.tips[b.headers.caps] = ftip end
@@ -541,8 +560,14 @@ function SEC.battle(m, animate)
             local ck = (col.key == "caps") and fkey or col.key
             local cell, v = row.cells[col.key], (prow[ck] or 0) + 0
             local txt
-            if col.key == "damage" or col.key == "healing" or col.key == "score" then
+            if col.key == "damage" or col.key == "healing" or col.key == "score" or col.key == "taken" then
                 txt = F.abbrev(v)
+                if col.key == "taken" then
+                    local deaths = prow.deaths or 0
+                    if v <= 0 then W.tips[cell] = nil
+                    elseif deaths > 0 then W.tips[cell] = string.format("%s damage taken\n%s per death", F.abbrev(v), F.abbrev(v / deaths))
+                    else W.tips[cell] = string.format("%s damage taken\nnever died", F.abbrev(v)) end
+                end
             elseif ck == "carried" then
                 txt = (v > 0) and F.duration(v * 1000) or "0"
             elseif ck == "caps" then
