@@ -24,7 +24,7 @@ Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every c
 | ui:show_match | 4 | 0 / 256 / **621** | 359 / **1427** | 80 ms | 1 | the first open of a match size in a session; pool creation (fixed: warm-up) |
 | ui:render | 43 | 2 / 8 / **491** | 83 / **1218** | 60 ms, 96 KB | 8 | worst cases are the same first opens |
 | sec:timeline | 45 | 0 / 8 / 437 | 69 / 1100 | | | score chart: lines per sample per team, lead shading per sample |
-| sec:race | 18 | 2 / 128 / 233 | 23 / 387 | | | 7 line passes per sample (3 teams × halo + line, plus you) |
+| sec:race | 18 | 2 / 128 / 233 | 23 / 387 | | | now the damage lead: one band and one line per sample, a tick per change of hands, a hover per stretch |
 | sec:battle | 43 | 1 / 1 / 36 | 7.3 / 41 | | | |
 | sec:ribbon | 17 | 0 / 32 / 39 | 7.3 / 41 | | | |
 | sec:momentum | 19 | 0 / 32 / 33 | 3.5 / 40 | | | |
