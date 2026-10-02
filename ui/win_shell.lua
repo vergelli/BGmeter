@@ -283,8 +283,14 @@ local function build()
     W.detail = P.label(win, S.FONT.small, K.COLOR.text_dim)
     U.clamp_line(W.detail)
     W.detail:SetAnchor(BOTTOMLEFT, win, BOTTOMLEFT, L.margin, -10)
-    W.detail:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -L.margin, -10)
+    W.detail:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -(L.margin + 48), -10)
     W.detail:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    W.version = P.label(win, S.FONT.small, K.COLOR.text_dim)
+    W.version:SetText("v" .. K.VERSION)
+    W.version:SetAnchor(BOTTOMRIGHT, win, BOTTOMRIGHT, -12, -11)
+    W.version:SetDimensions(48, 12)
+    W.version:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    if W.version.SetAlpha then W.version:SetAlpha(0.55) end
 
     W.win      = win
     W.header   = build_header(win)

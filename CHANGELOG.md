@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The report carries the addon version in the bottom right corner of the footer, small and dim, so a shared screenshot says which build it came from.
+
 ## [0.7.0] - 2026-10-01
 
 - The scoreboard is laid out by a grid: every column has one x and one width shared by its header and its cells, computed once per window width; columns step aside by priority when the window is too narrow (assists first, then captures) and return when it widens; the rows sit inside a thin frame.
