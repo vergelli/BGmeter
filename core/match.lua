@@ -765,6 +765,80 @@ function Match.damage_lead(race, smooth, tl)
              maxT = (tl and tl.t and tl.t[maxI]) or 0, changes = changes }
 end
 
+function Match.geo_pace(geo)
+    local me = geo and geo.me
+    if not me or (me.n or 0) < 2 then return nil end
+    if geo.pace then return geo.pace end
+    local v, maxv = { 0 }, 0
+    for i = 2, me.n do
+        local dt = ((me.t[i] or 0) - (me.t[i - 1] or 0)) / 1000
+        local x0, y0, x1, y1 = me.x[i - 1] or 0, me.y[i - 1] or 0, me.x[i] or 0, me.y[i] or 0
+        local present = (x0 > 0 or y0 > 0) and (x1 > 0 or y1 > 0)
+        local sp = 0
+        if dt > 0 and present then
+            local dx, dy = x1 - x0, y1 - y0
+            sp = math.sqrt(dx * dx + dy * dy) / dt
+        end
+        v[i] = sp
+        if sp > maxv then maxv = sp end
+    end
+    if maxv <= 0 then return nil end
+    geo.pace = { n = me.n, t = me.t, values = v, max = maxv }
+    return geo.pace
+end
+
+function Match.geo_cohesion(geo, m)
+    if not geo or (geo.n or 0) < 2 or not m then return nil end
+    if geo.cohesion ~= nil then return geo.cohesion or nil end
+    local names = {}
+    for nm in pairs(geo.pos) do
+        if geo.team[nm] == m.localTeam or nm == geo.mine then names[#names + 1] = nm end
+    end
+    if #names < 2 then geo.cohesion = false return nil end
+    local v, maxv, any = {}, 0, false
+    for i = 1, geo.n do
+        local sx, sy, k = 0, 0, 0
+        for _, nm in ipairs(names) do
+            local s = geo.pos[nm]
+            local x, y = s.x[i], s.y[i]
+            if x and y and (x > 0 or y > 0) then sx, sy, k = sx + x, sy + y, k + 1 end
+        end
+        if k >= 2 then
+            local cx, cy, d = sx / k, sy / k, 0
+            for _, nm in ipairs(names) do
+                local s = geo.pos[nm]
+                local x, y = s.x[i], s.y[i]
+                if x and y and (x > 0 or y > 0) then
+                    local dx, dy = x - cx, y - cy
+                    d = d + math.sqrt(dx * dx + dy * dy)
+                end
+            end
+            v[i] = d / k
+            any = true
+            if v[i] > maxv then maxv = v[i] end
+        else
+            v[i] = 0
+        end
+    end
+    if not any or maxv <= 0 then geo.cohesion = false return nil end
+    geo.cohesion = { n = geo.n, t = geo.t, values = v, max = maxv, members = #names }
+    return geo.cohesion
+end
+
+function Match.kill_pressure_series(kp)
+    if not kp or not kp.bins or kp.bins < 1 then return nil end
+    local t = { 0 }
+    for b = 1, kp.bins do t[b + 1] = b * kp.binMs end
+    local series = {}
+    for s, team in ipairs(kp.teams) do
+        if s > 3 then break end
+        local vals = { 0 }
+        for b = 1, kp.bins do vals[b + 1] = kp.counts[team][b] or 0 end
+        series[s] = { values = vals, team = team }
+    end
+    return { n = kp.bins + 1, t = t, series = series, max = kp.max }
+end
+
 function Match.combat_momentum(killfeed, tspan, windowMs, stepMs)
     if not killfeed or #killfeed < 4 or not tspan or tspan <= 0 then return nil end
     windowMs = windowMs or 60000

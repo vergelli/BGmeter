@@ -21,7 +21,7 @@ local M = {}
 
 local PAD = 16
 local SCRUB_H = 26
-local LEGEND_W = 200
+local LEGEND_W = 260
 local HEAD_H = 34
 local MIN_SIDE = 418
 local BINS = 32
@@ -64,9 +64,19 @@ end
 local built = false
 local c = nil
 local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, race = nil, docked = true, heatKey = nil, tcM = nil, fromChart = false }
-local CHART_Y = 48 + (30 + 24 + 22 + 4 * 24 + 6) + 10 + (30 + 4 * 16 + 8) + 10
-local CHART_MIN_H = 70
-local CHART_MAX_H = 136
+local LAY_H = 30 + 24 + 2 * 24 + 6
+local NOW_H = 30 + 4 * 16 + 8
+local CHART_Y = 48 + LAY_H + 10 + NOW_H + 10
+local CARD_H = 96
+local CARD_GAP = 8
+local HINT_H = 18
+local CARDS = {
+    { key = "score",    title = "SCORE  ·  TO THIS SECOND", tip = "Team scores up to the slider's second" },
+    { key = "cohesion", title = "TEAM COHESION",            tip = "How far your teammates stand from the team's centre, on average.\nHigh = the team is split" },
+    { key = "kills",    title = "KILL PRESSURE",            tip = "Kills per minute, one line per team" },
+    { key = "pace",     title = "YOUR PACE",                tip = "How fast you were moving.\nZero = standing or fighting" },
+}
+local CHART_MIN_H = CARD_H
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -265,7 +275,6 @@ local function build()
     c.close = mk_button(c.head, TX.close, 20, function() M.close() end, "Close")
     c.close:SetAnchor(RIGHT, c.head, RIGHT, -8, 0)
 
-    local LAY_H = 30 + 24 + 22 + #LAYERS * 24 + 6
     c.layersCard = card(win, 48, LAY_H, "LAYERS")
     local y = 30
     c.heatRow = BGMeter.zenimax.ui.create_control(nil, c.layersCard, CT_CONTROL)
@@ -282,22 +291,22 @@ local function build()
     c.heatRow:SetHandler("OnMouseUp", function(_, _, upInside) if upInside then M.toggle_heat() end end)
     c.heatRow:SetHandler("OnMouseEnter", function() if U.card_show then U.card_show(c.heatRow, RIGHT, "Heat on / off") end end)
     c.heatRow:SetHandler("OnMouseExit", function() if U.card_hide then U.card_hide() end end)
-    y = y + 24
     c.heatSeg = {}
-    local segW = math.floor((LEGEND_W - 16 - 12 - 4) / 2)
+    local segW = 66
     for i, mode in ipairs(HEAT_MODES) do
-        local sg = segment(c.layersCard, mode.label, segW, mode.tip, function() M.set_heat_mode(mode.key) end)
-        sg.hit:SetAnchor(TOPLEFT, c.layersCard, TOPLEFT, 8 + 12 + (i - 1) * (segW + 4), y)
+        local sg = segment(c.heatRow, mode.label, segW, mode.tip, function() M.set_heat_mode(mode.key) end)
+        sg.hit:SetAnchor(RIGHT, c.heatRow, RIGHT, -(#HEAT_MODES - i) * (segW + 4), 0)
         sg.key = mode.key
         c.heatSeg[i] = sg
     end
-    y = y + 22
+    y = y + 24
     c.toggles = {}
+    local colW = math.floor((LEGEND_W - 16) / 2)
     for i, lay in ipairs(LAYERS) do
         local t = {}
         t.hit = BGMeter.zenimax.ui.create_control(nil, c.layersCard, CT_CONTROL)
-        t.hit:SetAnchor(TOPLEFT, c.layersCard, TOPLEFT, 8, y)
-        t.hit:SetDimensions(LEGEND_W - 16, 22)
+        t.hit:SetAnchor(TOPLEFT, c.layersCard, TOPLEFT, 8 + ((i - 1) % 2) * colW, y + math.floor((i - 1) / 2) * 24)
+        t.hit:SetDimensions(colW - 4, 22)
         t.hit:SetMouseEnabled(true)
         t.mark = P.rect(t.hit, K.COLOR.accent)
         t.mark:SetAnchor(LEFT, t.hit, LEFT, 0, 0)
@@ -308,7 +317,7 @@ local function build()
         set_text(t.label, lay.label)
         t.value = P.label(t.hit, S.FONT.small, K.COLOR.text_dim)
         t.value:SetAnchor(RIGHT, t.hit, RIGHT, -4, 0)
-        t.value:SetDimensions(40, 22)
+        t.value:SetDimensions(26, 22)
         t.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
         t.hit:SetHandler("OnMouseUp", function(_, _, upInside)
             if not upInside then return end
@@ -320,10 +329,9 @@ local function build()
         t.hit:SetHandler("OnMouseExit", function() if U.card_hide then U.card_hide() end end)
         t.lay = lay
         c.toggles[i] = t
-        y = y + 24
     end
 
-    c.nowCard = card(win, 48 + LAY_H + 10, 30 + 4 * 16 + 8, "AT THIS SECOND")
+    c.nowCard = card(win, 48 + LAY_H + 10, NOW_H, "AT THIS SECOND")
     c.nowLines = {}
     for i = 1, 4 do
         local l = P.label(c.nowCard, S.FONT.small, K.COLOR.text)
@@ -333,11 +341,30 @@ local function build()
         c.nowLines[i] = l
     end
 
-    c.chartCard = card(win, CHART_Y, CHART_MIN_H, "SCORE  ·  TO THIS SECOND")
-    c.timechart = BGMeter.UI.timechart.new(c.chartCard, "map.timechart")
-    c.timechart.root:SetAnchor(TOPLEFT, c.chartCard, TOPLEFT, 8, 28)
-    c.tc_line_pool = c.timechart.line_pool
-    c.chartCard:SetHidden(true)
+    c.cards = {}
+    for i, spec in ipairs(CARDS) do
+        local cd = { spec = spec, has = false }
+        cd.box = card(win, CHART_Y + (i - 1) * (CARD_H + CARD_GAP), CARD_H, spec.title)
+        cd.chart = BGMeter.UI.timechart.new(cd.box, "map." .. spec.key)
+        cd.chart.root:SetAnchor(TOPLEFT, cd.box, TOPLEFT, 8, 28)
+        cd.box:SetHidden(true)
+        cd.box:SetMouseEnabled(true)
+        cd.box:SetHandler("OnMouseEnter", function() if U.card_show then U.card_show(cd.box, LEFT, spec.tip) end end)
+        cd.box:SetHandler("OnMouseExit", function() if U.card_hide then U.card_hide() end end)
+        c.cards[i] = cd
+    end
+    c.chartCard = c.cards[1].box
+    c.timechart = c.cards[1].chart
+    c.tc_line_pool = c.cards[1].chart.line_pool
+    c.tc_cohesion = c.cards[2].chart.line_pool
+    c.tc_kills = c.cards[3].chart.line_pool
+    c.tc_pace = c.cards[4].chart.line_pool
+    c.moreHint = P.label(win, S.FONT.small, K.COLOR.gold)
+    c.moreHint:SetText("more cards below  ·  make the window taller")
+    c.moreHint:SetDimensions(LEGEND_W, HINT_H)
+    c.moreHint:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    c.moreHint:SetHidden(true)
+    state.stack, state.shown, state.hidden = {}, 0, 0
 
     c.timeLabel = P.label(win, S.FONT.small, K.COLOR.gold)
     c.timeLabel:SetAnchor(BOTTOMLEFT, c.map, BOTTOMLEFT, 0, SCRUB_H)
@@ -371,21 +398,65 @@ function M.snap_size()
     return w, h
 end
 
+local function pulse_hint()
+    if not built or c.moreHint:IsHidden() or not Prefs.get("animate") or state.pulsing then return end
+    local Anim = BGMeter.Anim
+    if not Anim or not Anim.value then return end
+    state.pulsing = true
+    local function down()
+        Anim.value(1, 0.35, 900, function(a) if c.moreHint.SetAlpha then c.moreHint:SetAlpha(a) end end, function()
+            if c.moreHint:IsHidden() then state.pulsing = false return end
+            Anim.value(0.35, 1, 900, function(a) if c.moreHint.SetAlpha then c.moreHint:SetAlpha(a) end end, function()
+                if c.moreHint:IsHidden() then state.pulsing = false return end
+                down()
+            end)
+        end)
+    end
+    down()
+end
+
+local function place_cards(side)
+    local stack = state.stack
+    local n = 0
+    for _, cd in ipairs(c.cards) do
+        if cd.has then n = n + 1; stack[n] = cd end
+    end
+    for i = n + 1, #stack do stack[i] = nil end
+    local avail = side - CHART_Y
+    local shown = math.floor((avail + CARD_GAP) / (CARD_H + CARD_GAP))
+    if shown > n then shown = n end
+    if shown < n and shown > 0 and shown * (CARD_H + CARD_GAP) - CARD_GAP + HINT_H > avail then shown = shown - 1 end
+    if shown < 0 then shown = 0 end
+    state.shown, state.hidden = shown, n - shown
+    for i, cd in ipairs(c.cards) do
+        local at = nil
+        for k = 1, shown do if stack[k] == cd then at = k end end
+        if at then
+            cd.box:ClearAnchors()
+            cd.box:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, CHART_Y + (at - 1) * (CARD_H + CARD_GAP))
+            cd.box:SetHidden(false)
+        else
+            cd.box:SetHidden(true)
+        end
+    end
+    if n > shown then
+        c.moreHint:ClearAnchors()
+        c.moreHint:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, CHART_Y + shown * (CARD_H + CARD_GAP))
+        c.moreHint:SetHidden(false)
+        pulse_hint()
+    else
+        c.moreHint:SetHidden(true)
+    end
+end
+
 local function layout()
     local win = c.win
     local side = side_for(win:GetWidth(), win:GetHeight())
     state.side = side
     c.map:SetDimensions(side, side)
     c.slider:SetWidth(math.max(40, side - 60))
-    local chart_h = math.min(CHART_MAX_H, side - CHART_Y)
-    if chart_h >= CHART_MIN_H then
-        c.chartCard:SetHeight(chart_h)
-        c.timechart:layout(LEGEND_W - 16, chart_h - 28 - 8)
-        c.chartCard:SetHidden(false)
-    else
-        c.chartCard:SetHidden(true)
-        c.timechart:layout(0, 0)
-    end
+    for _, cd in ipairs(c.cards) do cd.chart:layout(LEGEND_W - 16, CARD_H - 28 - 8) end
+    place_cards(side)
     if W.map_art_path then
         c.art:SetTexture(W.map_art_path)
         c.art:SetHidden(false)
@@ -832,7 +903,21 @@ function M.render()
     apply_tiles(m or {})
     if state.tcM ~= m then
         state.tcM = m
-        c.timechart:set_series(m and m.timeline or nil)
+        local Match = BGMeter.Match
+        local tl = m and m.timeline
+        local tspan = (tl and tl.t and tl.t[#tl.t]) or 0
+        c.cards[1].chart:set_series(tl)
+        local coh = state.geo and Match.geo_cohesion(state.geo, m) or nil
+        if coh then coh.series = coh.series or { { values = coh.values, color = K.COLOR.accent } } end
+        c.cards[2].chart:set_data(coh)
+        local ks = (m and tspan > 0) and Match.kill_pressure_series(Match.kill_pressure(m.killfeed, tspan)) or nil
+        if ks then for _, sr in ipairs(ks.series) do sr.color = S.team_color(sr.team) end end
+        c.cards[3].chart:set_data(ks)
+        local pace = state.geo and Match.geo_pace(state.geo) or nil
+        if pace then pace.series = pace.series or { { values = pace.values, color = K.COLOR.you } } end
+        c.cards[4].chart:set_data(pace)
+        for _, cd in ipairs(c.cards) do cd.has = cd.chart.cols > 0 end
+        place_cards(state.side)
     end
     if not state.geo then
         state.heatKey = nil
@@ -844,7 +929,7 @@ function M.render()
         set_text(c.timeLabel, "")
         c.slider:SetHidden(true)
         Prof.enter("map:timechart")
-        c.timechart:set_time(nil)
+        for _, cd in ipairs(c.cards) do cd.chart:set_time(nil) end
         Prof.exit("map:timechart")
         return
     end
@@ -880,7 +965,7 @@ function M.render()
     local lines = now_lines(m, geo, state.t)
     for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
     Prof.enter("map:timechart")
-    c.timechart:set_time(state.t)
+    for k = 1, state.shown do state.stack[k].chart:set_time(state.t) end
     Prof.exit("map:timechart")
     if not state.fromChart and W.chart_cursor_at then W.chart_cursor_at(state.t) end
 end
@@ -896,7 +981,7 @@ local function scrub_impl()
         local lines = now_lines(m, geo, state.t)
         for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
         Prof.enter("map:timechart")
-        c.timechart:set_time(state.t)
+        for k = 1, state.shown do state.stack[k].chart:set_time(state.t) end
         Prof.exit("map:timechart")
         if not state.fromChart and W.chart_cursor_at then W.chart_cursor_at(state.t) end
         return
@@ -1020,8 +1105,9 @@ end
 function M.controls() return c end
 
 function M.column_state()
-    return { side = state.side, chart_y = CHART_Y, chart_min_h = CHART_MIN_H, chart_max_h = CHART_MAX_H,
-             min_side = MIN_SIDE, chart_h = c.chartCard:GetHeight() }
+    return { side = state.side, chart_y = CHART_Y, chart_min_h = CHART_MIN_H, card_h = CARD_H, card_gap = CARD_GAP,
+             min_side = MIN_SIDE, chart_h = c.chartCard:GetHeight(), shown = state.shown, hidden = state.hidden,
+             available = #state.stack, hint = not c.moreHint:IsHidden() }
 end
 
 function M.ensure_built() build() end

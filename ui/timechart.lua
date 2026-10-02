@@ -37,31 +37,44 @@ function TC.new(parent, label)
     self.legend:SetHeight(12)
     self.legend:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     self.w, self.h = 0, 0
-    self.n, self.cols, self.drawn, self.smax, self.tspan = 0, 0, 0, 0, 0
-    self.series, self.teams, self.col = {}, {}, {}
+    self.n, self.cols, self.drawn, self.max, self.tspan = 0, 0, 0, 0, 0
+    self.series, self.col = {}, {}
+    self.nseries = 0
     self.t = nil
     return self
 end
 
-function TC:set_series(tl)
-    self.tl = tl
-    local n = (tl and tl.t) and #tl.t or 0
+function TC:set_data(data)
+    self.data = data
+    local n = (data and data.t) and (data.n or #data.t) or 0
     self.n = n
-    self.series[1], self.series[2], self.series[3] = tl and tl.s1, tl and tl.s2, tl and tl.s3
-    self.teams = (tl and tl.teams) or {}
-    local smax = 0
+    self.nseries = 0
     for s = 1, MAX_SERIES do
-        local arr = self.series[s]
-        if arr and self.teams[s] then
-            for i = 1, n do
+        local src = data and data.series and data.series[s]
+        self.series[s] = src
+        if src then self.nseries = s end
+    end
+    self.max = (data and data.max) or 0
+    self.tspan = (n > 0 and data.t[n]) or 0
+    self.fmt = data and data.fmt or nil
+    self:reset()
+end
+
+function TC:set_series(tl)
+    if not tl or not tl.t or not tl.teams then self:set_data(nil) return end
+    local series, max = {}, 0
+    local arrays = { tl.s1, tl.s2, tl.s3 }
+    for s = 1, MAX_SERIES do
+        local team, arr = tl.teams[s], arrays[s]
+        if team and arr then
+            series[#series + 1] = { values = arr, color = S.team_color(team) }
+            for i = 1, #tl.t do
                 local v = arr[i] or 0
-                if v > smax then smax = v end
+                if v > max then max = v end
             end
         end
     end
-    self.smax = smax
-    self.tspan = (n > 0 and tl.t[n]) or 0
-    self:reset()
+    self:set_data({ n = #tl.t, t = tl.t, series = series, max = max })
 end
 
 function TC:layout(w, h)
@@ -83,8 +96,8 @@ function TC:reset()
     self.cursor:SetHidden(true)
     self.legend:SetText("")
     local n, plot_w = self.n, self.w - 1
-    if n < 2 or plot_w < 2 or self.tspan <= 0 or self.smax <= 0 then self.cols = 0 return end
-    local t, col = self.tl.t, self.col
+    if n < 2 or plot_w < 2 or self.tspan <= 0 or self.max <= 0 or self.nseries == 0 then self.cols = 0 return end
+    local t, col = self.data.t, self.col
     local i = 1
     for x = 0, plot_w do
         local tx = (x / plot_w) * self.tspan
@@ -95,8 +108,8 @@ function TC:reset()
 end
 
 local function y_of(self, s, idx)
-    local v = (self.series[s] and self.series[s][idx]) or 0
-    return math.floor((1 - v / self.smax) * (self.h - 1) + 0.5)
+    local v = (self.series[s].values[idx]) or 0
+    return math.floor((1 - v / self.max) * (self.h - 1) + 0.5)
 end
 
 local function seg(self, x0, y0, x1, y1, tc)
@@ -119,10 +132,10 @@ end
 
 local function draw_to(self, xT)
     for x = self.drawn + 1, xT do
-        for s = 1, MAX_SERIES do
-            local team = self.teams[s]
-            if team and self.series[s] then
-                seg(self, x - 1, y_of(self, s, self.col[x]), x, y_of(self, s, self.col[x + 1]), S.team_color(team))
+        for s = 1, self.nseries do
+            local sr = self.series[s]
+            if sr then
+                seg(self, x - 1, y_of(self, s, self.col[x]), x, y_of(self, s, self.col[x + 1]), sr.color)
             end
         end
     end
@@ -143,11 +156,12 @@ function TC:set_time(t)
     self.cursor:SetHidden(false)
     local idx = self.col[xT + 1] or 1
     local text = ""
-    for s = 1, MAX_SERIES do
-        local team = self.teams[s]
-        if team and self.series[s] then
-            local tc = S.team_color(team)
-            text = text .. ((text ~= "") and "  " or "") .. string.format("|c%s%d|r", F.hexc(tc), math.floor((self.series[s][idx] or 0) + 0.5))
+    for s = 1, self.nseries do
+        local sr = self.series[s]
+        if sr then
+            local v = sr.values[idx] or 0
+            local shown = self.fmt and self.fmt(v) or tostring(math.floor(v + 0.5))
+            text = text .. ((text ~= "") and "  " or "") .. string.format("|c%s%s|r", F.hexc(sr.color), shown)
         end
     end
     self.legend:SetText(text)
@@ -162,9 +176,9 @@ function TC:segments_at(t)
     local plot_w = self.cols - 1
     t = math.max(0, math.min(self.tspan, t or self.tspan))
     local xT = math.floor(t / self.tspan * plot_w + 0.5)
-    local nteams = 0
-    for s = 1, MAX_SERIES do if self.teams[s] and self.series[s] then nteams = nteams + 1 end end
-    return xT * nteams
+    local k = 0
+    for s = 1, self.nseries do if self.series[s] then k = k + 1 end end
+    return xT * k
 end
 
 BGMeter.UI.timechart = TC
