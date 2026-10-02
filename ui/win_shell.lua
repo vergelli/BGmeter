@@ -488,6 +488,7 @@ function W.step(dir)
     if want == W.current_index then return end
     W.current_index = want
     W.selected_row = nil
+    if W.prepare then W.prepare(BGMeter.History.get(want)) end
     Sound.play("match"); W.render(true)
 end
 
@@ -599,7 +600,10 @@ function W.on_history_changed(removedIndex)
     local count = BGMeter.History.count()
     if W.current_index > count then W.current_index = math.max(count, 1) end
     W.selected_row = nil
-    if W.built and not W.win:IsHidden() then W.render(false) end
+    if W.built and not W.win:IsHidden() then
+        if W.prepare then W.prepare(BGMeter.History.get(W.current_index)) end
+        W.render(false)
+    end
 end
 
 local function after_hide(was_visible)
