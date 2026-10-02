@@ -567,6 +567,7 @@ function W.show_match(index)
     user_visible = true
     apply_visibility()
     if W.win:IsHidden() then return end
+    if W.prepare then W.prepare(BGMeter.History.get(W.current_index)) end
     W.render(true)
     if Prefs.get("animate") then
         W.win:SetAlpha(0)
