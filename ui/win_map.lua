@@ -712,6 +712,7 @@ local function path_segment(k)
 end
 
 local PATH_STEP = 40
+local SHOW_STEP = 240
 local path_show
 local path_pending = false
 
@@ -730,14 +731,16 @@ path_show = function(upto)
     else pts = (mt - 1) * PATH.sub + 1 end
     local want = math.max(0, pts - 1)
     if want > PATH.shown then
-        local made = 0
+        local made, shown = 0, 0
         local k = PATH.shown + 1
         while k <= want do
             if not PATH.line[k] then
                 made = made + 1
                 if made > PATH_STEP then break end
             end
+            if shown >= SHOW_STEP then break end
             path_segment(k):SetHidden(false)
+            shown = shown + 1
             k = k + 1
         end
         PATH.shown = k - 1
@@ -755,6 +758,7 @@ path_show = function(upto)
 end
 
 function M.path_step() return PATH_STEP end
+function M.show_step() return SHOW_STEP end
 
 local function draw_paths(geo, m, idx, t)
     local mine = geo.mine
@@ -927,6 +931,13 @@ local function now_lines(m, geo, t)
     return lines
 end
 
+local function refresh_now(m, geo, idx)
+    if state.nowM == m and state.nowIdx == idx then return end
+    state.nowM, state.nowIdx = m, idx
+    local lines = now_lines(m, geo, state.t)
+    for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+end
+
 function M.render()
     if not built or c.win:IsHidden() then return end
     local m = BGMeter.History.get(W.current_index)
@@ -986,6 +997,7 @@ function M.render()
         c.empty:SetHidden(false)
         set_text(c.sub, m and (m.name or "Battleground") or "")
         for _, l in ipairs(c.nowLines) do set_text(l, "") end
+        state.nowM, state.nowIdx = nil, nil
         set_text(c.timeLabel, "")
         c.slider:SetHidden(true)
         Prof.enter("map:timechart")
@@ -1022,8 +1034,7 @@ function M.render()
     draw_positions(geo, m, idx, state.t)
     Prof.exit("map:marks")
     set_text(c.timeLabel, "t " .. F.duration(state.t))
-    local lines = now_lines(m, geo, state.t)
-    for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+    refresh_now(m, geo, idx)
     Prof.enter("map:timechart")
     for k = 1, state.shown do state.stack[k].chart:set_time(state.t) end
     Prof.exit("map:timechart")
@@ -1038,8 +1049,7 @@ local function scrub_impl()
     local meIdx = geo.me and BGMeter.Match.geo_index_of(geo.me.t, geo.me.n, state.t) or idx
     if state.lastM == m and state.lastIdx == idx and state.lastMeIdx == meIdx then
         set_text(c.timeLabel, "t " .. F.duration(state.t))
-        local lines = now_lines(m, geo, state.t)
-        for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+        refresh_now(m, geo, idx)
         Prof.enter("map:timechart")
         for k = 1, state.shown do state.stack[k].chart:set_time(state.t) end
         Prof.exit("map:timechart")
