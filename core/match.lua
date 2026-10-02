@@ -780,10 +780,24 @@ function Match.geo_pace(geo)
             sp = math.sqrt(dx * dx + dy * dy) / dt
         end
         v[i] = sp
-        if sp > maxv then maxv = sp end
+    end
+    local moving = {}
+    for i = 2, me.n do if v[i] > 0 then moving[#moving + 1] = v[i] end end
+    if #moving == 0 then return nil end
+    table.sort(moving)
+    local median = moving[math.floor((#moving + 1) / 2)]
+    local cap = median * 3
+    local jumps = 0
+    for i = 2, me.n do
+        if v[i] > cap then
+            v[i] = 0
+            jumps = jumps + 1
+        elseif v[i] > maxv then
+            maxv = v[i]
+        end
     end
     if maxv <= 0 then return nil end
-    geo.pace = { n = me.n, t = me.t, values = v, max = maxv }
+    geo.pace = { n = me.n, t = me.t, values = v, max = maxv, cap = cap, jumps = jumps }
     return geo.pace
 end
 

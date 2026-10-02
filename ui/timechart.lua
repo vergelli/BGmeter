@@ -130,12 +130,21 @@ local function seg(self, x0, y0, x1, y1, tc)
     end
 end
 
+local function color_of(self, sr, idx)
+    local lut = sr.lut
+    if not lut then return sr.color end
+    local v = sr.values[idx] or 0
+    local k = 1 + math.floor((v / self.max) * (#lut - 1) + 0.5)
+    if k < 1 then k = 1 elseif k > #lut then k = #lut end
+    return lut[k]
+end
+
 local function draw_to(self, xT)
     for x = self.drawn + 1, xT do
         for s = 1, self.nseries do
             local sr = self.series[s]
             if sr then
-                seg(self, x - 1, y_of(self, s, self.col[x]), x, y_of(self, s, self.col[x + 1]), sr.color)
+                seg(self, x - 1, y_of(self, s, self.col[x]), x, y_of(self, s, self.col[x + 1]), color_of(self, sr, self.col[x + 1]))
             end
         end
     end
@@ -161,7 +170,7 @@ function TC:set_time(t)
         if sr then
             local v = sr.values[idx] or 0
             local shown = self.fmt and self.fmt(v) or tostring(math.floor(v + 0.5))
-            text = text .. ((text ~= "") and "  " or "") .. string.format("|c%s%s|r", F.hexc(sr.color), shown)
+            text = text .. ((text ~= "") and "  " or "") .. string.format("|c%s%s|r", F.hexc(color_of(self, sr, idx)), shown)
         end
     end
     self.legend:SetText(text)
