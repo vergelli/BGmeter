@@ -74,7 +74,7 @@ local CARDS = {
     { key = "score",    title = "SCORE  ·  TO THIS SECOND", tip = "Team scores up to the slider's second" },
     { key = "cohesion", title = "TEAM COHESION",            tip = "How far your teammates stand from the team's centre, on average.\nLow and green: the team moves together  ·  high and red: the team is split" },
     { key = "kills",    title = "KILL PRESSURE",            tip = "Kills per minute, one line per team" },
-    { key = "pace",     title = "YOUR PACE",                tip = "How fast you were moving.\nZero = standing or fighting. Respawn jumps are left out." },
+    { key = "solo",     title = "YOU AND THE TEAM",         tip = "How far you stood from the centre of your team.\nLow and green: with the team  ·  high and red: on your own" },
 }
 local CHART_MIN_H = CARD_H
 local COHESION_LUT = {}
@@ -368,7 +368,7 @@ local function build()
     c.tc_line_pool = c.cards[1].chart.line_pool
     c.tc_cohesion = c.cards[2].chart.line_pool
     c.tc_kills = c.cards[3].chart.line_pool
-    c.tc_pace = c.cards[4].chart.line_pool
+    c.tc_solo = c.cards[4].chart.line_pool
     c.moreHint = P.label(win, S.FONT.small, K.COLOR.gold)
     c.moreHint:SetText("more cards below  ·  make the window taller")
     c.moreHint:SetDimensions(LEGEND_W, HINT_H)
@@ -923,9 +923,9 @@ function M.render()
         local ks = (m and tspan > 0) and Match.kill_pressure_series(Match.kill_pressure(m.killfeed, tspan)) or nil
         if ks then for _, sr in ipairs(ks.series) do sr.color = S.team_color(sr.team) end end
         c.cards[3].chart:set_data(ks)
-        local pace = state.geo and Match.geo_pace(state.geo) or nil
-        if pace then pace.series = pace.series or { { values = pace.values, color = K.COLOR.you } } end
-        c.cards[4].chart:set_data(pace)
+        local solo = state.geo and Match.geo_solo(state.geo, m) or nil
+        if solo then solo.series = solo.series or { { values = solo.values, color = K.COLOR.you, lut = COHESION_LUT } } end
+        c.cards[4].chart:set_data(solo)
         for _, cd in ipairs(c.cards) do cd.has = cd.chart.cols > 0 end
         place_cards(state.side)
     end

@@ -35,7 +35,7 @@ local TARGETS = {
     { "tc_line_pool",   "map.score",     740,  1, "map" },
     { "tc_cohesion",    "map.cohesion",  250,  1, "map" },
     { "tc_kills",       "map.kills",     740,  1, "map" },
-    { "tc_pace",        "map.pace",      250,  1, "map" },
+    { "tc_solo",        "map.solo",      250,  1, "map" },
     { "icon_pool",      "map.icons",     64,   1, "map" },
     { "hit_pool",       "map.hits",      64,   2, "map" },
     { "heat_pool",      "map.heat",      1024, 1, "map" },

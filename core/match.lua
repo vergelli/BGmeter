@@ -765,42 +765,6 @@ function Match.damage_lead(race, smooth, tl)
              maxT = (tl and tl.t and tl.t[maxI]) or 0, changes = changes }
 end
 
-function Match.geo_pace(geo)
-    local me = geo and geo.me
-    if not me or (me.n or 0) < 2 then return nil end
-    if geo.pace then return geo.pace end
-    local v, maxv = { 0 }, 0
-    for i = 2, me.n do
-        local dt = ((me.t[i] or 0) - (me.t[i - 1] or 0)) / 1000
-        local x0, y0, x1, y1 = me.x[i - 1] or 0, me.y[i - 1] or 0, me.x[i] or 0, me.y[i] or 0
-        local present = (x0 > 0 or y0 > 0) and (x1 > 0 or y1 > 0)
-        local sp = 0
-        if dt > 0 and present then
-            local dx, dy = x1 - x0, y1 - y0
-            sp = math.sqrt(dx * dx + dy * dy) / dt
-        end
-        v[i] = sp
-    end
-    local moving = {}
-    for i = 2, me.n do if v[i] > 0 then moving[#moving + 1] = v[i] end end
-    if #moving == 0 then return nil end
-    table.sort(moving)
-    local median = moving[math.floor((#moving + 1) / 2)]
-    local cap = median * 3
-    local jumps = 0
-    for i = 2, me.n do
-        if v[i] > cap then
-            v[i] = 0
-            jumps = jumps + 1
-        elseif v[i] > maxv then
-            maxv = v[i]
-        end
-    end
-    if maxv <= 0 then return nil end
-    geo.pace = { n = me.n, t = me.t, values = v, max = maxv, cap = cap, jumps = jumps }
-    return geo.pace
-end
-
 function Match.geo_cohesion(geo, m)
     if not geo or (geo.n or 0) < 2 or not m then return nil end
     if geo.cohesion ~= nil then return geo.cohesion or nil end
@@ -835,8 +799,46 @@ function Match.geo_cohesion(geo, m)
         end
     end
     if not any or maxv <= 0 then geo.cohesion = false return nil end
+    v = Match.smooth3(v, geo.n)
+    maxv = 0
+    for i = 1, geo.n do if v[i] > maxv then maxv = v[i] end end
     geo.cohesion = { n = geo.n, t = geo.t, values = v, max = maxv, members = #names }
     return geo.cohesion
+end
+
+function Match.geo_solo(geo, m)
+    if not geo or (geo.n or 0) < 2 or not m or not geo.mine then return nil end
+    if geo.solo ~= nil then return geo.solo or nil end
+    local me = geo.pos[geo.mine]
+    if not me then geo.solo = false return nil end
+    local names = {}
+    for nm in pairs(geo.pos) do
+        if nm ~= geo.mine and geo.team[nm] == m.localTeam then names[#names + 1] = nm end
+    end
+    if #names < 1 then geo.solo = false return nil end
+    local v, maxv, any = {}, 0, false
+    for i = 1, geo.n do
+        local mx, my = me.x[i], me.y[i]
+        local sx, sy, k = 0, 0, 0
+        for _, nm in ipairs(names) do
+            local s = geo.pos[nm]
+            local x, y = s.x[i], s.y[i]
+            if x and y and (x > 0 or y > 0) then sx, sy, k = sx + x, sy + y, k + 1 end
+        end
+        if k >= 1 and mx and my and (mx > 0 or my > 0) then
+            local dx, dy = mx - sx / k, my - sy / k
+            v[i] = math.sqrt(dx * dx + dy * dy)
+            any = true
+        else
+            v[i] = 0
+        end
+    end
+    if not any then geo.solo = false return nil end
+    v = Match.smooth3(v, geo.n)
+    for i = 1, geo.n do if v[i] > maxv then maxv = v[i] end end
+    if maxv <= 0 then geo.solo = false return nil end
+    geo.solo = { n = geo.n, t = geo.t, values = v, max = maxv, teammates = #names }
+    return geo.solo
 end
 
 function Match.kill_pressure_series(kp)
