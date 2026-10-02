@@ -609,10 +609,83 @@ local function scaled(series, upto, smooth, sub)
     return xs, ys, n
 end
 
+local TEAM = { key = nil, n = 0, members = {} }
+
+local function team_reset()
+    TEAM.key, TEAM.n = nil, 0
+    for _, mem in ipairs(TEAM.members) do
+        for k = #mem.line, 1, -1 do mem.line[k] = nil end
+        mem.shown, mem.total = 0, 0
+    end
+    if c.team_pool then c.team_pool:release_all() end
+end
+
+local function team_prepare(geo, m)
+    local key = tostring(m) .. "|" .. tostring(m.capturedAt) .. "|" .. tostring(state.side)
+    if TEAM.key == key then return end
+    team_reset()
+    TEAM.key = key
+    local j = 0
+    for name, s in pairs(geo.pos) do
+        if name ~= geo.mine then
+            j = j + 1
+            local mem = TEAM.members[j]
+            if not mem then
+                mem = { line = {}, xs = {}, ys = {}, cum = {}, shown = 0, total = 0 }
+                TEAM.members[j] = mem
+            end
+            local xs, ys, n = scaled(s, geo.n, false)
+            for i = 1, n do mem.xs[i], mem.ys[i] = xs[i], ys[i] end
+            for i = #mem.xs, n + 1, -1 do mem.xs[i], mem.ys[i] = nil, nil end
+            local cnt = 0
+            for i = 1, geo.n do
+                local x, y = s.x[i] or 0, s.y[i] or 0
+                if x > 0 or y > 0 then cnt = cnt + 1 end
+                mem.cum[i] = cnt
+            end
+            for i = #mem.cum, geo.n + 1, -1 do mem.cum[i] = nil end
+            mem.total = n
+        end
+    end
+    TEAM.n = j
+end
+
+local function team_show(idx, tc)
+    for j = 1, TEAM.n do
+        local mem = TEAM.members[j]
+        local pts = (idx > 0 and mem.cum[idx]) or 0
+        if pts > mem.total then pts = mem.total end
+        local want = math.max(0, pts - 1)
+        if want > mem.shown then
+            for k = mem.shown + 1, want do
+                local ln = mem.line[k]
+                if not ln then
+                    ln = c.team_pool:acquire()
+                    ln:ClearAnchors()
+                    ln:SetAnchor(TOPLEFT, c.map, TOPLEFT, mem.xs[k], mem.ys[k])
+                    ln:SetAnchor(TOPRIGHT, c.map, TOPLEFT, mem.xs[k + 1], mem.ys[k + 1])
+                    ln:SetColor(tc[1], tc[2], tc[3], 0.45)
+                    if ln.SetThickness then ln:SetThickness(1) end
+                    mem.line[k] = ln
+                end
+                ln:SetHidden(false)
+            end
+        elseif want < mem.shown then
+            for k = want + 1, mem.shown do mem.line[k]:SetHidden(true) end
+        end
+        mem.shown = want
+    end
+end
+
+function M.team_state()
+    local shown = 0
+    for j = 1, TEAM.n do shown = shown + TEAM.members[j].shown end
+    return { n = TEAM.n, shown = shown, acquired = c.team_pool and c.team_pool:active_count() or 0 }
+end
+
 local function release_all(keep_heat)
     if not keep_heat then c.heat_pool:release_all() end
     c.dot_pool:release_all()
-    if c.team_pool then c.team_pool:release_all() end
     c.icon_pool:release_all()
     c.hit_pool:release_all()
 end
@@ -764,12 +837,19 @@ local function draw_paths(geo, m, idx, t)
     local mine = geo.mine
     if Prefs.get("map_team") then
         local tc = S.team_color(m.localTeam)
-        for name, s in pairs(geo.pos) do
-            if name ~= mine then
-                local xs, ys, n = scaled(s, idx, false)
-                polyline(c.team_pool, xs, ys, n, tc, 1, 0.45)
+        if c.team_pool then
+            team_prepare(geo, m)
+            team_show(idx, tc)
+        else
+            for name, s in pairs(geo.pos) do
+                if name ~= mine then
+                    local xs, ys, n = scaled(s, idx, false)
+                    polyline(nil, xs, ys, n, tc, 1, 0.45)
+                end
             end
         end
+    elseif TEAM.n > 0 then
+        team_show(0, nil)
     end
     if not Prefs.get("map_path") then
         if PATH.shown > 0 then path_show(0) end
@@ -994,6 +1074,7 @@ function M.render()
         state.heatKey = nil
         state.lastM = nil
         path_reset()
+        team_reset()
         c.empty:SetHidden(false)
         set_text(c.sub, m and (m.name or "Battleground") or "")
         for _, l in ipairs(c.nowLines) do set_text(l, "") end
