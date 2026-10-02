@@ -23,7 +23,7 @@ local PAD = 16
 local SCRUB_H = 26
 local LEGEND_W = 200
 local HEAD_H = 34
-local MIN_SIDE = 240
+local MIN_SIDE = 418
 local BINS = 32
 local WHEEL_MS = 5000
 local SKULL = "EsoUI/Art/TargetMarkers/Target_White_Skull_64.dds"
@@ -66,6 +66,7 @@ local c = nil
 local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, race = nil, docked = true, heatKey = nil, tcM = nil, fromChart = false }
 local CHART_Y = 48 + (30 + 24 + 22 + 4 * 24 + 6) + 10 + (30 + 4 * 16 + 8) + 10
 local CHART_MIN_H = 70
+local CHART_MAX_H = 136
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -376,7 +377,7 @@ local function layout()
     state.side = side
     c.map:SetDimensions(side, side)
     c.slider:SetWidth(math.max(40, side - 60))
-    local chart_h = side - CHART_Y
+    local chart_h = math.min(CHART_MAX_H, side - CHART_Y)
     if chart_h >= CHART_MIN_H then
         c.chartCard:SetHeight(chart_h)
         c.timechart:layout(LEGEND_W - 16, chart_h - 28 - 8)
@@ -1017,6 +1018,11 @@ function M.on_report_shown()
 end
 
 function M.controls() return c end
+
+function M.column_state()
+    return { side = state.side, chart_y = CHART_Y, chart_min_h = CHART_MIN_H, chart_max_h = CHART_MAX_H,
+             min_side = MIN_SIDE, chart_h = c.chartCard:GetHeight() }
+end
 
 function M.ensure_built() build() end
 
