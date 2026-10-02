@@ -13,6 +13,7 @@ local F = BGMeter.Format
 local P = BGMeter.Plot.primitives
 local S = BGMeter.Plot.style
 local Prefs = BGMeter.Prefs
+local Prof = BGMeter.Prof
 
 local function timeline_ok(m)
     local tl = m.timeline
