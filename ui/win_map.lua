@@ -71,11 +71,12 @@ local CARD_H = 96
 local CARD_GAP = 8
 local HINT_H = 18
 local CARDS = {
-    { key = "score",    title = "SCORE  ·  TO THIS SECOND", tip = "Team scores up to the slider's second" },
-    { key = "cohesion", title = "TEAM COHESION",            tip = "How far your teammates stand from the team's centre, on average.\nLow and green: the team moves together  ·  high and red: the team is split" },
-    { key = "kills",    title = "KILL PRESSURE",            tip = "Kills per minute, one line per team" },
-    { key = "solo",     title = "YOU AND THE TEAM",         tip = "How far you stood from the centre of your team.\nLow and green: with the team  ·  high and red: on your own" },
-    { key = "near",     title = "AT THE OBJECTIVES",        tip = "Share of your team within reach of a flag, relic or ball.\nLow: roaming  ·  high: holding" },
+    { key = "score",    title = "SCORE  ·  TO THIS SECOND", tip = "Team scores so far" },
+    { key = "cohesion", title = "TEAM COHESION",            tip = "Team spread  ·  green together, red split" },
+    { key = "solo",     title = "YOU AND THE TEAM",         tip = "Your distance to the team  ·  green with them, red alone" },
+    { key = "kills",    title = "KILL PRESSURE",            tip = "Kills per minute, per team" },
+    { key = "base",     title = "AT THE SPAWN",             tip = "Share of your team at the spawn  ·  wipes and AFKs show as peaks" },
+    { key = "control",  title = "OBJECTIVES HELD",          tip = "Share of the objectives your team holds" },
 }
 local function pct(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end
 local CHART_MIN_H = CARD_H
@@ -89,6 +90,8 @@ do
         COHESION_LUT[k + 1] = { 0.30 + 0.62 * r, 0.30 + 0.55 * g, 0.28 }
     end
 end
+local CONTROL_LUT = {}
+for k = 1, #COHESION_LUT do CONTROL_LUT[k] = COHESION_LUT[#COHESION_LUT + 1 - k] end
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -369,9 +372,10 @@ local function build()
     c.timechart = c.cards[1].chart
     c.tc_line_pool = c.cards[1].chart.line_pool
     c.tc_cohesion = c.cards[2].chart.line_pool
-    c.tc_kills = c.cards[3].chart.line_pool
-    c.tc_solo = c.cards[4].chart.line_pool
-    c.tc_near = c.cards[5].chart.line_pool
+    c.tc_solo = c.cards[3].chart.line_pool
+    c.tc_kills = c.cards[4].chart.line_pool
+    c.tc_base = c.cards[5].chart.line_pool
+    c.tc_control = c.cards[6].chart.line_pool
     c.moreHint = P.label(win, S.FONT.small, K.COLOR.gold)
     c.moreHint:SetText("more cards below  ·  make the window taller")
     c.moreHint:SetDimensions(LEGEND_W, HINT_H)
@@ -923,18 +927,24 @@ function M.render()
         local coh = state.geo and Match.geo_cohesion(state.geo, m) or nil
         if coh then coh.series = coh.series or { { values = coh.values, color = K.COLOR.accent, lut = COHESION_LUT } } end
         c.cards[2].chart:set_data(coh)
-        local ks = (m and tspan > 0) and Match.kill_pressure_series(Match.kill_pressure(m.killfeed, tspan)) or nil
-        if ks then for _, sr in ipairs(ks.series) do sr.color = S.team_color(sr.team) end end
-        c.cards[3].chart:set_data(ks)
         local solo = state.geo and Match.geo_solo(state.geo, m) or nil
         if solo then solo.series = solo.series or { { values = solo.values, color = K.COLOR.you, lut = COHESION_LUT } } end
-        c.cards[4].chart:set_data(solo)
-        local near = state.geo and Match.geo_near(state.geo, m) or nil
-        if near then
-            near.series = near.series or { { values = near.values, color = K.COLOR.accent } }
-            near.fmt = near.fmt or pct
+        c.cards[3].chart:set_data(solo)
+        local ks = (m and tspan > 0) and Match.kill_pressure_series(Match.kill_pressure(m.killfeed, tspan)) or nil
+        if ks then for _, sr in ipairs(ks.series) do sr.color = S.team_color(sr.team) end end
+        c.cards[4].chart:set_data(ks)
+        local base = state.geo and Match.geo_at_base(state.geo, m) or nil
+        if base then
+            base.series = base.series or { { values = base.values, color = K.COLOR.accent, lut = COHESION_LUT } }
+            base.fmt = base.fmt or pct
         end
-        c.cards[5].chart:set_data(near)
+        c.cards[5].chart:set_data(base)
+        local ctl = state.geo and Match.geo_control(state.geo, m) or nil
+        if ctl then
+            ctl.series = ctl.series or { { values = ctl.values, color = K.COLOR.accent, lut = CONTROL_LUT } }
+            ctl.fmt = ctl.fmt or pct
+        end
+        c.cards[6].chart:set_data(ctl)
         for _, cd in ipairs(c.cards) do cd.has = cd.chart.cols > 0 end
         place_cards(state.side)
     end
