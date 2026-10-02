@@ -75,7 +75,9 @@ local CARDS = {
     { key = "cohesion", title = "TEAM COHESION",            tip = "How far your teammates stand from the team's centre, on average.\nLow and green: the team moves together  ·  high and red: the team is split" },
     { key = "kills",    title = "KILL PRESSURE",            tip = "Kills per minute, one line per team" },
     { key = "solo",     title = "YOU AND THE TEAM",         tip = "How far you stood from the centre of your team.\nLow and green: with the team  ·  high and red: on your own" },
+    { key = "near",     title = "AT THE OBJECTIVES",        tip = "Share of your team within reach of a flag, relic or ball.\nLow: roaming  ·  high: holding" },
 }
+local function pct(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end
 local CHART_MIN_H = CARD_H
 local COHESION_LUT = {}
 do
@@ -369,6 +371,7 @@ local function build()
     c.tc_cohesion = c.cards[2].chart.line_pool
     c.tc_kills = c.cards[3].chart.line_pool
     c.tc_solo = c.cards[4].chart.line_pool
+    c.tc_near = c.cards[5].chart.line_pool
     c.moreHint = P.label(win, S.FONT.small, K.COLOR.gold)
     c.moreHint:SetText("more cards below  ·  make the window taller")
     c.moreHint:SetDimensions(LEGEND_W, HINT_H)
@@ -926,6 +929,12 @@ function M.render()
         local solo = state.geo and Match.geo_solo(state.geo, m) or nil
         if solo then solo.series = solo.series or { { values = solo.values, color = K.COLOR.you, lut = COHESION_LUT } } end
         c.cards[4].chart:set_data(solo)
+        local near = state.geo and Match.geo_near(state.geo, m) or nil
+        if near then
+            near.series = near.series or { { values = near.values, color = K.COLOR.accent } }
+            near.fmt = near.fmt or pct
+        end
+        c.cards[5].chart:set_data(near)
         for _, cd in ipairs(c.cards) do cd.has = cd.chart.cols > 0 end
         place_cards(state.side)
     end

@@ -841,6 +841,40 @@ function Match.geo_solo(geo, m)
     return geo.solo
 end
 
+function Match.geo_near(geo, m, radius)
+    if not geo or (geo.n or 0) < 2 or not m or not geo.pins or #geo.pins == 0 then return nil end
+    if geo.near ~= nil then return geo.near or nil end
+    radius = radius or 60
+    local r2 = radius * radius
+    local names = {}
+    for nm in pairs(geo.pos) do
+        if geo.team[nm] == m.localTeam or nm == geo.mine then names[#names + 1] = nm end
+    end
+    if #names < 1 then geo.near = false return nil end
+    local v, any = {}, false
+    for i = 1, geo.n do
+        local present, near = 0, 0
+        for _, nm in ipairs(names) do
+            local s = geo.pos[nm]
+            local x, y = s.x[i], s.y[i]
+            if x and y and (x > 0 or y > 0) then
+                present = present + 1
+                for _, pin in ipairs(geo.pins) do
+                    local px, py = pin.x[i], pin.y[i]
+                    if px and py and (px > 0 or py > 0) then
+                        local dx, dy = x - px, y - py
+                        if dx * dx + dy * dy <= r2 then near = near + 1 break end
+                    end
+                end
+            end
+        end
+        if present > 0 then v[i] = near / present; any = true else v[i] = 0 end
+    end
+    if not any then geo.near = false return nil end
+    geo.near = { n = geo.n, t = geo.t, values = v, max = 1, radius = radius, members = #names }
+    return geo.near
+end
+
 function Match.kill_pressure_series(kp)
     if not kp or not kp.bins or kp.bins < 1 then return nil end
     local t = { 0 }
