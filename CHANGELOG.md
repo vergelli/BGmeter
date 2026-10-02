@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.2] - 2026-10-02
+
+- Fixed: 0.8.1 could not draw the report's timeline (the chart module referenced the profiler without importing it). 0.8.1 was never published.
+
 ## [0.8.1] - 2026-10-02
 
 - Map: opening the map on a match whose path is already built no longer stalls a frame; the path shows in steps of 240 segments, the way it is created in steps of 40. The "at this second" lines are rebuilt only when the sample changes, so a scrub within a sample allocates almost nothing.
