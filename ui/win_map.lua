@@ -72,11 +72,21 @@ local CARD_GAP = 8
 local HINT_H = 18
 local CARDS = {
     { key = "score",    title = "SCORE  ·  TO THIS SECOND", tip = "Team scores up to the slider's second" },
-    { key = "cohesion", title = "TEAM COHESION",            tip = "How far your teammates stand from the team's centre, on average.\nHigh = the team is split" },
+    { key = "cohesion", title = "TEAM COHESION",            tip = "How far your teammates stand from the team's centre, on average.\nLow and green: the team moves together  ·  high and red: the team is split" },
     { key = "kills",    title = "KILL PRESSURE",            tip = "Kills per minute, one line per team" },
-    { key = "pace",     title = "YOUR PACE",                tip = "How fast you were moving.\nZero = standing or fighting" },
+    { key = "pace",     title = "YOUR PACE",                tip = "How fast you were moving.\nZero = standing or fighting. Respawn jumps are left out." },
 }
 local CHART_MIN_H = CARD_H
+local COHESION_LUT = {}
+do
+    local steps = 24
+    for k = 0, steps do
+        local u = k / steps
+        local r = (u < 0.5) and (2 * u) or 1
+        local g = (u < 0.5) and 1 or (2 * (1 - u))
+        COHESION_LUT[k + 1] = { 0.30 + 0.62 * r, 0.30 + 0.55 * g, 0.28 }
+    end
+end
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -908,7 +918,7 @@ function M.render()
         local tspan = (tl and tl.t and tl.t[#tl.t]) or 0
         c.cards[1].chart:set_series(tl)
         local coh = state.geo and Match.geo_cohesion(state.geo, m) or nil
-        if coh then coh.series = coh.series or { { values = coh.values, color = K.COLOR.accent } } end
+        if coh then coh.series = coh.series or { { values = coh.values, color = K.COLOR.accent, lut = COHESION_LUT } } end
         c.cards[2].chart:set_data(coh)
         local ks = (m and tspan > 0) and Match.kill_pressure_series(Match.kill_pressure(m.killfeed, tspan)) or nil
         if ks then for _, sr in ipairs(ks.series) do sr.color = S.team_color(sr.team) end end
