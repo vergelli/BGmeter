@@ -192,6 +192,29 @@ end
 
 function M.is_docked() return state.docked end
 
+local function drag_poll()
+    local cd = state.drag
+    if not cd or not built or c.win:IsHidden() then return end
+    local chart = cd.chart
+    if chart.cols == 0 or chart.w < 2 then return end
+    local A = BGMeter.zenimax.api
+    if type(A.get_ui_mouse) ~= "function" then return end
+    local mx = A.get_ui_mouse()
+    local rel = mx - chart.root:GetLeft()
+    if rel < 0 then rel = 0 elseif rel > chart.w - 1 then rel = chart.w - 1 end
+    local t = (rel / (chart.w - 1)) * chart.tspan
+    state.applying = true
+    c.slider:SetValue(t)
+    state.applying = false
+    M.set_time(t, false)
+end
+
+local function drag_stop()
+    if not state.drag then return end
+    state.drag = nil
+    BGMeter.zenimax.events.unregister_update("BGMeterCardDrag")
+end
+
 local function build()
     if built then return end
     local wm = BGMeter.zenimax.ui.wm
@@ -366,6 +389,14 @@ local function build()
         cd.box:SetMouseEnabled(true)
         cd.box:SetHandler("OnMouseEnter", function() if U.card_show then U.card_show(cd.box, LEFT, spec.tip) end end)
         cd.box:SetHandler("OnMouseExit", function() if U.card_hide then U.card_hide() end end)
+        cd.box:SetHandler("OnMouseDown", function(_, button)
+            if MOUSE_BUTTON_INDEX_LEFT and button and button ~= MOUSE_BUTTON_INDEX_LEFT then return end
+            if U.card_hide then U.card_hide() end
+            state.drag = cd
+            drag_poll()
+            BGMeter.zenimax.events.register_update("BGMeterCardDrag", 16, drag_poll)
+        end)
+        cd.box:SetHandler("OnMouseUp", function() drag_stop() end)
         c.cards[i] = cd
     end
     c.chartCard = c.cards[1].box
@@ -439,7 +470,7 @@ local function place_cards(side)
         if cd.has then n = n + 1; stack[n] = cd end
     end
     for i = n + 1, #stack do stack[i] = nil end
-    local avail = side - CHART_Y
+    local avail = side + SCRUB_H + 6 - CHART_Y
     local shown = math.floor((avail + CARD_GAP) / (CARD_H + CARD_GAP))
     if shown > n then shown = n end
     if shown < n and shown > 0 and shown * (CARD_H + CARD_GAP) - CARD_GAP + HINT_H > avail then shown = shown - 1 end
@@ -1099,6 +1130,7 @@ end
 
 function M.close(silent)
     if not built or c.win:IsHidden() then return end
+    drag_stop()
     c.win:SetHidden(true)
     sv_win().open = false
     if W.battle and W.battle.cursor then W.battle.cursor:SetHidden(true) end
