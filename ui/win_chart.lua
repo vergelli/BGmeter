@@ -790,8 +790,10 @@ function SEC.timeline(m)
 
     local dc = W._derived
     if not dc or dc.m ~= m or dc.tspan ~= tspan then
+        Prof.enter("tl:derive")
         dc = derive(m, tl, tspan, gt)
         W._derived = dc
+        Prof.exit("tl:derive")
     end
     local lanes, relicMode = dc.lanes, dc.relicMode
     local occ, neutralPct, fstats = dc.occ, dc.neutralPct, dc.fstats
@@ -840,7 +842,12 @@ function SEC.timeline(m)
     local race_off = kills_off + ((kills_h > 0) and (kills_h + 2) or 0)
     local bal_off = race_off + ((race_h > 0) and (race_h + 2) or 0)
     local chart_off = bal_off + ((bal_h > 0) and (bal_h + 2) or 0)
-    if bal_h > 0 then SEC.balance(b, dc.bal, dc.sur, bal_h, bal_off, dc.exp) end
+    if bal_h > 0 then
+        Prof.enter("tl:balance")
+        SEC.balance(b, dc.bal, dc.sur, bal_h, bal_off, dc.exp)
+        Prof.exit("tl:balance")
+    end
+    Prof.enter("tl:score")
     b.chart:SetHidden(false)
     b.chart:ClearAnchors()
     b.chart:SetAnchor(BOTTOMLEFT, b.container, BOTTOMLEFT, 0, -chart_off)
@@ -960,20 +967,31 @@ function SEC.timeline(m)
         end
     end
 
+    Prof.exit("tl:score")
     if race_h > 0 then
+        Prof.enter("tl:lead")
         SEC.race(b, dc.race, dc.dlead, m, tl, n, tspan, w, race_h, race_off)
+        Prof.exit("tl:lead")
     end
     if kills_h > 0 then
+        Prof.enter("tl:kills")
         SEC.kills(b, dc.kp, tspan, w, kills_h, kills_off)
+        Prof.exit("tl:kills")
     end
     if lanes then
+        Prof.enter("tl:ribbon")
         SEC.ribbon(b, lanes, ribbon_h, tspan, w, rib_off, gt, dc.mine)
+        Prof.exit("tl:ribbon")
     end
     if occ then
+        Prof.enter("tl:occupation")
         SEC.occupation(b, occ, neutralPct, fstats, w)
+        Prof.exit("tl:occupation")
     end
     if mom_h > 0 then
+        Prof.enter("tl:momentum")
         SEC.momentum(b, m, tl, n, tspan, w, mom_h, mom_off, lead, tdm_line, dc.cmom, dc.cmomMax)
+        Prof.exit("tl:momentum")
     end
 
     W.chart_state = { tl = tl, n = n, w = w, smax = smax, lanes = lanes, kf = m.killfeed, mine = dc.mine }
