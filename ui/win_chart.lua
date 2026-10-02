@@ -810,6 +810,15 @@ local function derived_for(m, tl, tspan, gt)
 end
 W.derived_cache = DERIVED
 
+function W.prepare(m)
+    if not m or not timeline_ok(m) then return end
+    local tl = m.timeline
+    local n = #tl.t
+    local tspan = math.max(1, tl.t[n] or 1)
+    local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
+    W._derived = derived_for(m, tl, tspan, gt)
+end
+
 function SEC.timeline(m)
     local b = W.battle
     SEC.clear_chart(b)

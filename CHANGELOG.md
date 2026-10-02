@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 - Map: teammates' paths are built once per match and shown up to the slider's second, like your own path, instead of being re-anchored on every scrub; their pool is reserved at login, so turning Team paths on no longer stalls the first open.
-- Report: the match derivations (lead, momentum, lanes, balance) are kept for the last three matches viewed, so flipping between matches from the drawers does not recompute them every time.
+- Report: the match derivations (lead, momentum, lanes, balance) are kept for the last three matches viewed, so flipping between matches from the drawers does not recompute them every time. They are computed when a match is shown, before the report draws, so the drawing pass has its own budget. Dev build: `tl:derive` carries that budget.
 
 ## [0.8.2] - 2026-10-02
 
