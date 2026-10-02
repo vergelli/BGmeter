@@ -1,8 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.1] - 2026-10-02
 
 - Map: opening the map on a match whose path is already built no longer stalls a frame; the path shows in steps of 240 segments, the way it is created in steps of 40. The "at this second" lines are rebuilt only when the sample changes, so a scrub within a sample allocates almost nothing.
+- Dev build: the timeline section reports its phases apart (derive, score chart, lead, kills, ribbon, occupation, momentum, balance), so the first render of a match can be read phase by phase in `/bgmeter prof`.
 
 ## [0.8.0] - 2026-10-02
 
