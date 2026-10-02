@@ -112,6 +112,14 @@ Sixth (43 min, first cut of the cards, before the fixes): map:scrub 1 246 calls,
 
 Seventh (147 s, after the fixes, scrub only): map:scrub 1 349 calls, p50 1 / p95 2 / max 5 ms, 1 over; map:timechart 1 363 calls, p50 0 / p95 0 / max 4 ms, 57 KB in total (43 B per call, worst 0.7 KB); up:BGMeterCardDrag 1 524 polls at 0 ms and 177 B. Every card pool stayed at its reserve (map.score 740 created, 729 active with six cards drawn to the end). map:render max 176 ms and map:paths max 158 ms are the first draw-in of the path on open, as in the fourth session, not the cards.
 
+## Eighth to tenth sessions (2026-10-02, after 0.8.2)
+
+Eighth (178 s, Team paths on, drawers used): map:open max 357 ms and map:paths max 346 ms, with `map.team` at 1 688 created and 1 688 active: teammates' paths were re-anchored on every scrub and their pool had no warm-up target, so the first open created them all in one frame. tl:derive 28 calls in 54 timeline renders, 6.3 MB: the derive memo held one match and flipping between matches from the drawers recomputed it. drawer:about 722 KB per open, worst 3.5 MB, storage:report 58 ms (#116).
+
+Ninth (151 s, after #115): map:open max 22, map:paths max 9, map:scrub 1 / 1 / 3 with 0 over, `map.team` 1 700 reserved; tl:derive 11 of 40. ui:render still 10 of 35 over, by KB: the derive of a newly viewed match (368 KB) ran inside the render span.
+
+Tenth (66 s, after #117): ui:render 6 of 17 over by KB with one show_match: the header arrows and the history-change path rendered without show_match and derived inside the render (fixed in #118: prepare on every path). One GC step of 384 ms inside map:render early in the session, right after a warm-up that created 11 MB of controls; a single sample, excluded from p50/p95 by design, to be watched over the next sessions before anything is changed.
+
 ## Reading the table
 
 - Two rows are over budget on every call: the Registry panel (26 KB per refresh, budget 16) and the samplers' array growth spikes (worst 48 KB in one tick of the own-track sampler).
