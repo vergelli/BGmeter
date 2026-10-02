@@ -63,7 +63,9 @@ end
 
 local built = false
 local c = nil
-local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, race = nil, docked = true, heatKey = nil }
+local state = { m = nil, geo = nil, t = nil, side = 0, applying = false, race = nil, docked = true, heatKey = nil, tcM = nil, fromChart = false }
+local CHART_Y = 48 + (30 + 24 + 22 + 4 * 24 + 6) + 10 + (30 + 4 * 16 + 8) + 10
+local CHART_MIN_H = 70
 
 local function sv_win()
     local sv = BGMeter.zenimax.savedvars.get()
@@ -330,6 +332,12 @@ local function build()
         c.nowLines[i] = l
     end
 
+    c.chartCard = card(win, CHART_Y, CHART_MIN_H, "SCORE  ·  TO THIS SECOND")
+    c.timechart = BGMeter.UI.timechart.new(c.chartCard, "map.timechart")
+    c.timechart.root:SetAnchor(TOPLEFT, c.chartCard, TOPLEFT, 8, 28)
+    c.tc_line_pool = c.timechart.line_pool
+    c.chartCard:SetHidden(true)
+
     c.timeLabel = P.label(win, S.FONT.small, K.COLOR.gold)
     c.timeLabel:SetAnchor(BOTTOMLEFT, c.map, BOTTOMLEFT, 0, SCRUB_H)
     c.timeLabel:SetDimensions(56, 16)
@@ -368,6 +376,15 @@ local function layout()
     state.side = side
     c.map:SetDimensions(side, side)
     c.slider:SetWidth(math.max(40, side - 60))
+    local chart_h = side - CHART_Y
+    if chart_h >= CHART_MIN_H then
+        c.chartCard:SetHeight(chart_h)
+        c.timechart:layout(LEGEND_W - 16, chart_h - 28 - 8)
+        c.chartCard:SetHidden(false)
+    else
+        c.chartCard:SetHidden(true)
+        c.timechart:layout(0, 0)
+    end
     if W.map_art_path then
         c.art:SetTexture(W.map_art_path)
         c.art:SetHidden(false)
@@ -812,6 +829,10 @@ function M.render()
     state.m = m
     state.geo = m and BGMeter.Match.geo_cached(m) or nil
     apply_tiles(m or {})
+    if state.tcM ~= m then
+        state.tcM = m
+        c.timechart:set_series(m and m.timeline or nil)
+    end
     if not state.geo then
         state.heatKey = nil
         state.lastM = nil
@@ -821,6 +842,9 @@ function M.render()
         for _, l in ipairs(c.nowLines) do set_text(l, "") end
         set_text(c.timeLabel, "")
         c.slider:SetHidden(true)
+        Prof.enter("map:timechart")
+        c.timechart:set_time(nil)
+        Prof.exit("map:timechart")
         return
     end
     c.empty:SetHidden(true)
@@ -854,6 +878,10 @@ function M.render()
     set_text(c.timeLabel, "t " .. F.duration(state.t))
     local lines = now_lines(m, geo, state.t)
     for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+    Prof.enter("map:timechart")
+    c.timechart:set_time(state.t)
+    Prof.exit("map:timechart")
+    if not state.fromChart and W.chart_cursor_at then W.chart_cursor_at(state.t) end
 end
 
 local function scrub_impl()
@@ -866,6 +894,10 @@ local function scrub_impl()
         set_text(c.timeLabel, "t " .. F.duration(state.t))
         local lines = now_lines(m, geo, state.t)
         for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
+        Prof.enter("map:timechart")
+        c.timechart:set_time(state.t)
+        Prof.exit("map:timechart")
+        if not state.fromChart and W.chart_cursor_at then W.chart_cursor_at(state.t) end
         return
     end
     M.render()
@@ -881,6 +913,7 @@ function M.set_time(t, from_chart, force)
     t = math.max(0, math.min(tspan, t or tspan))
     if not force and math.abs(t - (state.t or -1)) < 250 then return end
     state.t = t
+    state.fromChart = from_chart and true or false
     if from_chart then
         state.applying = true
         c.slider:SetValue(t)
@@ -953,6 +986,7 @@ function M.close(silent)
     if not built or c.win:IsHidden() then return end
     c.win:SetHidden(true)
     sv_win().open = false
+    if W.battle and W.battle.cursor then W.battle.cursor:SetHidden(true) end
     if not silent then Sound.play("close") end
 end
 

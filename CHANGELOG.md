@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - The report carries the addon version in the bottom right corner of the footer, small and dim, so a shared screenshot says which build it came from.
+- Map: a SCORE card in the side column draws the team scores up to the slider's second. Scrub forward and the lines grow; scrub back and they redraw; the current scores sit in the card's corner. The slider also places the cursor on the report's timeline, so the report strips, the map figures and the card point at the same instant, in both directions.
 
 ## [0.7.0] - 2026-10-01
 
