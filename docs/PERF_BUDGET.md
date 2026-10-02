@@ -35,7 +35,9 @@ Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every c
 | panel:refresh | 43 | 1 / 2 / 2 | 25.7 / 46 | 10 ms, 16 KB | **34** | was strings rebuilt per stat; stats memoised on their inputs, veterancy re-read only after a veterancy event |
 | menu:show_menu | 10 | 2 / 4 / 5 | 25 / 60 | | | |
 | match:geo | **34** | 0 / 2 / 2 | 36 / 339 | | | was 34 decodes in 43 renders; memo of the last three matches (#77) |
-| map:scrub | | | | 8 ms, 8 KB | | 0.28 ms / 2 KB per tick on the full synthetic match (#73) |
+| map:scrub | 1349 | 1 / 2 / 5 | 1.4 / 18 | 8 ms, 8 KB | 1 | 0.14 ms / 2 KB per tick on the full synthetic match; sixth and seventh sessions below (#109) |
+| map:timechart | 1363 | 0 / 0 / 4 | 0.04 / 0.7 | | | the map's time cards drawn to the slider; seventh session (#109) |
+| up:BGMeterCardDrag | 1524 | 0 / 0 / 1 | 0.18 / 0.3 | | | mouse poll at 16 ms while a card is pressed; seventh session (#109) |
 | drawer:dev | 261 | 0 / 1 / 48 | 0.15 / 36 | | | dev only |
 
 ## Cold paths (per match, per session)
@@ -71,6 +73,8 @@ Controls are created by ZO_ObjectPool on first use and never destroyed. The firs
 | kills | 44 | 220 |
 | hits | 21 | 220 |
 | ribbon.rects / ribbon.pins / occupation | not exercised by that match | 260 / 60 / 12 |
+| map.score / map.kills (time cards, up to three series) | 729 / 480 | 740 / 740 |
+| map.cohesion / map.solo / map.base / map.control (one series) | 243 each | 250 each |
 
 `ui/warmup.lua` reserves the targets 8 cost units per 50 ms tick after the player activates (a scoreboard row weighs 8, a hit box 2, a rect or line 1; the second session showed one 33 ms tick when eight rows were created together), pausing during matches and combat, about 30 s for a cold session. The `pools` section of `/bgmeter prof` shows created and active per pool; a pool whose created count passes its target in a real session means the target is short and should be raised.
 
@@ -101,6 +105,12 @@ Fourth (13.5 min): map:open max 9 ms (was 1 534); no pool created past its targe
 Fifth (7.5 min, the first real 6v6v6): ev:BGMeter_Roster 285 calls at 0 KB; ScoreSample and PosSample 0 over; map:paths max 117 ms for a 120-segment draw-in step, so a segment costs the engine close to a millisecond in anchors alone (step lowered to 40 in this PR; /bgmeter probe anchors measures the calls one by one); up:BGMeterWarmup called 6 608 times while busy (this PR: one check a second while busy); ui:render 1 over. Validation 0 in every session so far.
 
 On ui:render's budget misses: the first render of a match runs derive (damage race, momentum, lanes, surrender, geo) once for that match, 130 to 590 KB, inside sec:timeline. That is cold cost accounted under a warm stage; the budget is meant for the renders after it. A separate stage for the first render per match is the honest fix and stays on the list.
+
+## Sixth and seventh sessions (2026-10-02, the map's time cards, #109)
+
+Sixth (43 min, first cut of the cards, before the fixes): map:scrub 1 246 calls, p50 2 / p95 8 / max 11 ms, 40 over the 8 ms budget; map:timechart 1 249 calls, p50 0 / p95 4 / max **434** ms, 779 KB in total with one call of 706 KB. Two causes, both found by the span: the max was the card pools being created on demand (the map was opened before the warm-up reached them, last in the list), and the p95 was the backward scrub releasing and redrawing every column up to the cursor, up to 732 line anchors per card per tick.
+
+Seventh (147 s, after the fixes, scrub only): map:scrub 1 349 calls, p50 1 / p95 2 / max 5 ms, 1 over; map:timechart 1 363 calls, p50 0 / p95 0 / max 4 ms, 57 KB in total (43 B per call, worst 0.7 KB); up:BGMeterCardDrag 1 524 polls at 0 ms and 177 B. Every card pool stayed at its reserve (map.score 740 created, 729 active with six cards drawn to the end). map:render max 176 ms and map:paths max 158 ms are the first draw-in of the path on open, as in the fourth session, not the cards.
 
 ## Reading the table
 
