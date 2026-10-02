@@ -32,6 +32,7 @@ local TARGETS = {
     { "kills_pool",     "kills",         220,  1 },
     { "hit_pool",       "hits",          220,  2 },
     { "line_pool",      "map.path",      1500, 1, "map" },
+    { "team_pool",      "map.team",      1700, 1, "map" },
     { "tc_line_pool",   "map.score",     740,  1, "map" },
     { "tc_cohesion",    "map.cohesion",  250,  1, "map" },
     { "tc_solo",        "map.solo",      250,  1, "map" },

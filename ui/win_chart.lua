@@ -779,6 +779,37 @@ local function minute_step(tspan)
     return 300000
 end
 
+local DERIVED = { n = 0, tick = 0 }
+local DERIVED_MAX = 3
+
+local function derived_for(m, tl, tspan, gt)
+    local cur = W._derived
+    if cur and cur.m == m and cur.tspan == tspan then return cur end
+    if not cur then DERIVED.n = 0 end
+    DERIVED.tick = DERIVED.tick + 1
+    for i = 1, DERIVED.n do
+        local e = DERIVED[i]
+        if e.m == m and e.tspan == tspan then
+            e.tick = DERIVED.tick
+            return e
+        end
+    end
+    Prof.enter("tl:derive")
+    local dc = derive(m, tl, tspan, gt)
+    Prof.exit("tl:derive")
+    dc.tick = DERIVED.tick
+    if DERIVED.n < DERIVED_MAX then
+        DERIVED.n = DERIVED.n + 1
+        DERIVED[DERIVED.n] = dc
+    else
+        local oldest = 1
+        for i = 2, DERIVED.n do if DERIVED[i].tick < DERIVED[oldest].tick then oldest = i end end
+        DERIVED[oldest] = dc
+    end
+    return dc
+end
+W.derived_cache = DERIVED
+
 function SEC.timeline(m)
     local b = W.battle
     SEC.clear_chart(b)
@@ -789,13 +820,8 @@ function SEC.timeline(m)
     local tspan = math.max(1, tl.t[n] or 1)
     local gt = C.GAME_TYPE_LABEL and C.GAME_TYPE_LABEL[m.gameType] or nil
 
-    local dc = W._derived
-    if not dc or dc.m ~= m or dc.tspan ~= tspan then
-        Prof.enter("tl:derive")
-        dc = derive(m, tl, tspan, gt)
-        W._derived = dc
-        Prof.exit("tl:derive")
-    end
+    local dc = derived_for(m, tl, tspan, gt)
+    W._derived = dc
     local lanes, relicMode = dc.lanes, dc.relicMode
     local occ, neutralPct, fstats = dc.occ, dc.neutralPct, dc.fstats
     local lead = dc.lead

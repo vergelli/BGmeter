@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Map: teammates' paths are built once per match and shown up to the slider's second, like your own path, instead of being re-anchored on every scrub; their pool is reserved at login, so turning Team paths on no longer stalls the first open.
+- Report: the match derivations (lead, momentum, lanes, balance) are kept for the last three matches viewed, so flipping between matches from the drawers does not recompute them every time.
+
 ## [0.8.2] - 2026-10-02
 
 - Fixed: 0.8.1 could not draw the report's timeline (the chart module referenced the profiler without importing it). 0.8.1 was never published.
