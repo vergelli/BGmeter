@@ -70,8 +70,8 @@ K.LAYOUT = {
     race_h     = 48,
     kills_h    = 44,
     balance_h  = 50,
-    map_h      = 560,
-    map_w      = 760,
+    map_h      = 640,
+    map_w      = 840,
     map_min    = 280,
 }
 

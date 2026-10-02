@@ -1066,6 +1066,17 @@ local function chart_hover_poll()
     if BGMeter.UI.map and BGMeter.UI.map.is_open() then BGMeter.UI.map.set_time(want_t, true) end
 end
 
+function W.chart_cursor_at(t)
+    local b, st = W.battle, W.chart_state
+    if not st or not b or not b.cursor or b.chart:IsHidden() then return end
+    local tl, n = st.tl, st.n
+    local tspan = math.max(1, tl.t[n] or 1)
+    local x = math.floor((math.max(0, math.min(t or 0, tspan)) / tspan) * (st.w - 6) + 0.5)
+    b.cursor:ClearAnchors()
+    b.cursor:SetAnchor(TOPLEFT, b.chart, TOPLEFT, x, 2)
+    b.cursor:SetHidden(false)
+end
+
 function W._chart_hover_start()
     if not W.chart_state then return end
     BGMeter.zenimax.events.register_update("BGMeterChartHover", 100, chart_hover_poll)
