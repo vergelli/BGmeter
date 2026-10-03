@@ -1242,9 +1242,12 @@ local function near_any_pin(geo, x, y, r)
     return false
 end
 
+function Match.base_radius() return BASE_RADIUS end
+
 function Match.spawn_point(m, geo)
     local me = geo and geo.me
     if not geo or not geo.pos then return nil end
+    if geo.spawnPt ~= nil then return geo.spawnPt or nil end
     local xs, ys, how = {}, {}, nil
     if me and me.n >= 2 then
         for _, k in ipairs(m and m.killfeed or {}) do
@@ -1288,9 +1291,12 @@ function Match.spawn_point(m, geo)
         end
     end
     local x, y = median_of(xs), median_of(ys)
-    if not x then return nil end
-    if near_any_pin(geo, x, y, BASE_RADIUS) then return nil end
-    return { x = x, y = y, samples = #xs, how = how }
+    if not x or near_any_pin(geo, x, y, BASE_RADIUS) then
+        geo.spawnPt = false
+        return nil
+    end
+    geo.spawnPt = { x = x, y = y, samples = #xs, how = how }
+    return geo.spawnPt
 end
 
 function Match.geo_at_base(geo, m)
