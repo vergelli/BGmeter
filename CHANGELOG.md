@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Fixed: the spawn point behind AT THE SPAWN and the balance strip's "at base" signal was estimated from where you stood twelve seconds after each death, which in Chaosball is already the middle of the arena; the card could read 95% at the ball spawn. The spawn is now where you land after the respawn teleport (the jump in your own path after a death), or, when you never died, where your team stood before the gates opened; an estimate that falls on an objective is discarded rather than shown. Checked against 38 recorded matches: the new estimate agrees with the pre-gate position within 7 units, the old one was off by 59 on median and sat on the ball in Chaosball.
+
 ## [0.8.3] - 2026-10-02
 
 - Map: teammates' paths are built once per match and shown up to the slider's second, like your own path, instead of being re-anchored on every scrub; their pool is reserved at login, so turning Team paths on no longer stalls the first open.
