@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.4] - 2026-10-03
 
 - Fixed: the spawn point behind AT THE SPAWN and the balance strip's "at base" signal was estimated from where you stood twelve seconds after each death, which in Chaosball is already the middle of the arena; the card could read 95% at the ball spawn. The spawn is now where you land after the respawn teleport (the jump in your own path after a death), or, when you never died, where your team stood before the gates opened; an estimate that falls on an objective is discarded rather than shown. Checked against 38 recorded matches: the new estimate agrees with the pre-gate position within 7 units, the old one was off by 59 on median and sat on the ball in Chaosball.
 - Map: your team's spawn is drawn on the arena, a camp glyph in your team's colour inside a faint square the size of the radius that counts as "at the spawn"; hover it for where the estimate came from. If the map shows it in the wrong place, the card is wrong too, and now you can tell.
