@@ -13,7 +13,9 @@ local MAX_SERIES = 2
 local MAX_AXES = 8
 local FAN = 60
 local LABEL_R = 1.18
-local MARGIN = 14
+local MARGIN = 10
+local LABEL_W = 56
+local LABEL_H = 14
 local TWO_PI = 2 * math.pi
 
 function R.new(parent, label)
@@ -49,6 +51,7 @@ function R:set_axes(names)
     for i = 1, n do self.axes[i] = names[i] end
     for i = n + 1, #self.axes do self.axes[i] = nil end
     self.n = n
+    self.r = fit_radius(self)
 end
 
 function R:clear_series()
@@ -61,12 +64,30 @@ function R:set_series(i, values, color, opts)
                        width = (opts and opts.width) or 2, alpha = (opts and opts.alpha) or 0.9 }
 end
 
+fit_radius = function(self)
+    local n = self.n
+    if n < 3 then return 0 end
+    local xmax, ymax = 0, 0
+    for i = 1, n do
+        local a = -math.pi / 2 + (i - 1) * TWO_PI / n
+        local x, y = math.abs(math.cos(a)), math.abs(math.sin(a))
+        if x > xmax then xmax = x end
+        if y > ymax then ymax = y end
+    end
+    local r = math.min(self.w, self.h) / 2 - MARGIN
+    if xmax > 0 then r = math.min(r, (self.w / 2 - LABEL_W / 2 - 2) / (LABEL_R * xmax)) end
+    if ymax > 0 then r = math.min(r, (self.h / 2 - LABEL_H / 2 - 2) / (LABEL_R * ymax)) end
+    return math.max(0, r)
+end
+
 function R:layout(w, h)
     self.w, self.h = w, h
     self.root:SetDimensions(w, h)
     self.cx, self.cy = w / 2, h / 2
-    self.r = math.max(0, math.min(w, h) / 2 - MARGIN)
+    self.r = fit_radius(self)
 end
+
+local fit_radius
 
 local function point(self, i, v)
     local a = -math.pi / 2 + (i - 1) * TWO_PI / self.n
@@ -158,7 +179,7 @@ function R:render()
         local lbl = self.labels[i]
         if not lbl then
             lbl = P.label(self.root, S.FONT.small, K.COLOR.text_dim)
-            lbl:SetDimensions(64, 14)
+            lbl:SetDimensions(LABEL_W, LABEL_H)
             lbl:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
             self.labels[i] = lbl
         end
