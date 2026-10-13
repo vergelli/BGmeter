@@ -190,27 +190,35 @@ function Profile.label(v, axes, n)
     return Profile.classify(v, axes, n).name
 end
 
-local function pct(x) return math.floor((x or 0) * 100 + 0.5) end
+Profile.MEANING = {
+    Killer = "Most kills on the board.",
+    Brawler = "Raw damage.",
+    Anchor = "Soaks the damage.",
+    Medic = "The heals.",
+    Supporter = "In every kill the team lands.",
+    Runner = "Lives on the objective.",
+    Slayer = "Kills and the damage behind them.",
+    Duelist = "Kills while soaking damage.",
+    Paladin = "Kills and heals.",
+    Finisher = "Lands the last hit in the team's fights.",
+    Hunter = "Kills around the objective.",
+    Bruiser = "Deals and takes the damage.",
+    Crusader = "Damage and heals.",
+    Vanguard = "Damage at the front of every fight.",
+    Raider = "Damage on the objective.",
+    Guardian = "Soaks and heals.",
+    Bulwark = "Soaks damage in every fight of the team.",
+    Sentinel = "Holds the objective and soaks for it.",
+    Healer = "Heals in every fight.",
+    Escort = "Heals the objective push.",
+    Captain = "In every fight, on the objective.",
+    Quiet = "Nothing above the match median.",
+    Ace = "Above the median on every axis.",
+    Balanced = "No dominant axis.",
+}
 
-function Profile.explain(v, axes, n)
-    local c = Profile.classify(v, axes, n)
-    local N = Profile.NAMES
-    if not c.top then return c.name end
-    local top, second = axes[c.top], c.second and axes[c.second]
-    if c.kind == "quiet" then
-        if (v[c.top] or 0) <= 0 then return string.format("%s: no mark on any axis", c.name) end
-        return string.format("%s: nothing above the match median, best is %s at %d%%", c.name, N[top], pct(v[c.top]))
-    elseif c.kind == "ace" then
-        return string.format("%s: every axis above the match median, mean %d%%", c.name, pct(c.mean or 0))
-    elseif c.kind == "pair" then
-        return string.format("%s: %s %d%% and %s %d%%, within %d%% of each other", c.name, N[top], pct(v[c.top]), N[axes[c.with]], pct(v[c.with]), pct(c.near))
-    elseif c.kind == "balanced" then
-        return string.format("%s: a flat polygon, top %s at %d%%", c.name, N[top], pct(v[c.top]))
-    end
-    if second then
-        return string.format("%s: top axis %s at %d%%, next %s at %d%%", c.name, N[top], pct(v[c.top]), N[second], pct(v[c.second]))
-    end
-    return string.format("%s: top axis %s at %d%%", c.name, N[top], pct(v[c.top]))
+function Profile.meaning(name)
+    return Profile.MEANING[name] or ""
 end
 
 function Profile.career(matches, limit)

@@ -361,7 +361,7 @@ local function standing_visible(m)
     return true
 end
 
-local function haul_profile(p, top)
+local function haul_profile_body(p, top)
     local Profile = BGMeter.Profile
     local data = p.profile
     local idx = data and ((p.profileHover and Profile.index_of(data, p.profileHover)) or data.me) or nil
@@ -391,13 +391,17 @@ local function haul_profile(p, top)
     else p.radar:set_emphasis(nil, nil) end
     p.radar:render()
     local label = c.name:upper()
-    W.tips[p.archetype] = Profile.explain(pl.v, data.axes, data.n)
+    W.tips[p.archetype] = Profile.meaning(c.name)
     p.archetype:ClearAnchors()
     p.archetype:SetAnchor(TOPLEFT, p.container, TOPLEFT, 16, top + (p.radarSide or RADAR_MIN) + 2)
     set_text(p.archetype, label)
     S.color(p.archetype, pl.row.isLocal and K.COLOR.gold or col)
     p.archetype:SetHidden(false)
     return true
+end
+
+local function haul_profile(p, top)
+    return BGMeter.Prof.span("haul:profile", haul_profile_body, p, top)
 end
 
 function U.profile_hover(prow)
