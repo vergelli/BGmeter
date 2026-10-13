@@ -24,8 +24,6 @@ local SCRUB_H = 26
 local LEGEND_W = 260
 local HEAD_H = 34
 local MIN_SIDE = 418
-local PROFILE_H = 150
-local PROFILE_GAP = 8
 local BINS = 32
 local WHEEL_MS = 5000
 local SKULL = "EsoUI/Art/TargetMarkers/Target_White_Skull_64.dds"
@@ -124,7 +122,7 @@ local function gold(a) return { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3
 
 local function card(parent, y, h, heading)
     local box = BGMeter.zenimax.ui.create_control(nil, parent, CT_CONTROL)
-    box:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, y - PROFILE_H - PROFILE_GAP)
+    box:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, y)
     box:SetDimensions(LEGEND_W, h)
     local bg = P.rect(box, { 1, 1, 1, K.ALPHA.chart_bg })
     bg:SetAnchorFill(box)
@@ -217,50 +215,6 @@ local function drag_stop()
     BGMeter.zenimax.events.unregister_update("BGMeterCardDrag")
 end
 
-local function profile_build(win)
-    local pr = {}
-    local box = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
-    box:SetAnchor(TOPLEFT, win, TOPLEFT, PAD, HEAD_H + 12)
-    box:SetDimensions(MIN_SIDE, PROFILE_H)
-    local bg = P.rect(box, { 1, 1, 1, K.ALPHA.chart_bg })
-    bg:SetAnchorFill(box)
-    P.hairline_box(box, { K.COLOR.text_dim[1], K.COLOR.text_dim[2], K.COLOR.text_dim[3], K.ALPHA.chart_edge })
-    local hd = P.label(box, S.FONT.small, K.COLOR.gold)
-    hd:SetText("PROFILE")
-    hd:SetAnchor(TOPLEFT, box, TOPLEFT, 8, 5)
-    hd:SetDimensions(200, 14)
-    local rule = P.rect(box, gold(0.22))
-    rule:SetAnchor(TOPLEFT, box, TOPLEFT, 8, 22)
-    rule:SetAnchor(TOPRIGHT, box, TOPRIGHT, -8, 22)
-    rule:SetHeight(1)
-    pr.box = box
-    pr.radar = BGMeter.UI.radar.new(box, "map.profile")
-    local side = PROFILE_H - 28
-    pr.radar.root:SetAnchor(TOPLEFT, box, TOPLEFT, 8, 24)
-    pr.radar:layout(side, side)
-    local x = 8 + side + 16
-    pr.name = P.label(box, S.FONT.row, K.COLOR.text)
-    pr.name:SetAnchor(TOPLEFT, box, TOPLEFT, x, 34)
-    pr.name:SetDimensions(160, 18)
-    U.clamp_line(pr.name)
-    pr.archetype = P.label(box, S.FONT.header, K.COLOR.gold)
-    pr.archetype:SetAnchor(TOPLEFT, box, TOPLEFT, x, 56)
-    pr.archetype:SetDimensions(160, 26)
-    pr.legend = P.label(box, S.FONT.small, K.COLOR.text_dim)
-    pr.legend:SetAnchor(TOPLEFT, box, TOPLEFT, x, 92)
-    pr.legend:SetDimensions(160, 14)
-    pr.rows = {}
-    for i = 1, 6 do
-        local l = P.label(box, S.FONT.small, K.COLOR.text)
-        l:SetAnchor(TOPLEFT, box, TOPLEFT, x + 170, 28 + (i - 1) * 17)
-        l:SetDimensions(200, 16)
-        U.clamp_line(l)
-        pr.rows[i] = l
-    end
-    pr.has = false
-    return pr
-end
-
 local function build()
     if built then return end
     local wm = BGMeter.zenimax.ui.wm
@@ -274,7 +228,7 @@ local function build()
     win:SetHidden(true)
     win:SetDrawTier(DT_HIGH)
     win:SetResizeHandleSize(L.resize_h)
-    win:SetDimensionConstraints(MIN_SIDE + LEGEND_W + 3 * PAD, MIN_SIDE + HEAD_H + 12 + PAD + SCRUB_H + 6 + PROFILE_H + PROFILE_GAP, L.max_w, L.max_h)
+    win:SetDimensionConstraints(MIN_SIDE + LEGEND_W + 3 * PAD, MIN_SIDE + HEAD_H + 12 + PAD + SCRUB_H + 6, L.max_w, L.max_h)
     win:SetHandler("OnResizeStop", function()
         M.snap_size()
         M.render()
@@ -309,9 +263,8 @@ local function build()
     c.headRule:SetAnchor(TOPRIGHT, c.head, BOTTOMRIGHT, -(PAD - 6), 0)
     c.headRule:SetHeight(1)
 
-    c.profile = profile_build(win)
     c.map = BGMeter.zenimax.ui.create_control(nil, win, CT_CONTROL)
-    c.map:SetAnchor(TOPLEFT, win, TOPLEFT, PAD, HEAD_H + 12 + PROFILE_H + PROFILE_GAP)
+    c.map:SetAnchor(TOPLEFT, win, TOPLEFT, PAD, HEAD_H + 12)
     c.map:SetMouseEnabled(true)
     c.map:SetHandler("OnMouseWheel", function(_, delta) M.on_wheel(delta) end)
     c.mapBg = P.rect(c.map, { 0, 0, 0, 0.7 })
@@ -480,13 +433,13 @@ local function build()
 end
 
 local function side_for(w, h)
-    return math.max(MIN_SIDE, math.min(w - LEGEND_W - 3 * PAD, h - HEAD_H - 12 - PAD - SCRUB_H - 6 - PROFILE_H - PROFILE_GAP))
+    return math.max(MIN_SIDE, math.min(w - LEGEND_W - 3 * PAD, h - HEAD_H - 12 - PAD - SCRUB_H - 6))
 end
 
 function M.snap_size()
     local win = c.win
     local side = side_for(win:GetWidth(), win:GetHeight())
-    local w, h = side + LEGEND_W + 3 * PAD, side + HEAD_H + 12 + PAD + SCRUB_H + 6 + PROFILE_H + PROFILE_GAP
+    local w, h = side + LEGEND_W + 3 * PAD, side + HEAD_H + 12 + PAD + SCRUB_H + 6
     win:SetDimensions(w, h)
     local gg = sv_win()
     gg.w, gg.h = w, h
@@ -517,7 +470,7 @@ local function place_cards(side)
         if cd.has then n = n + 1; stack[n] = cd end
     end
     for i = n + 1, #stack do stack[i] = nil end
-    local avail = side + SCRUB_H + 6 - CHART_Y + PROFILE_H + PROFILE_GAP
+    local avail = side + SCRUB_H + 6 - CHART_Y
     local shown = math.floor((avail + CARD_GAP) / (CARD_H + CARD_GAP))
     if shown > n then shown = n end
     if shown < n and shown > 0 and shown * (CARD_H + CARD_GAP) - CARD_GAP + HINT_H > avail then shown = shown - 1 end
@@ -528,7 +481,7 @@ local function place_cards(side)
         for k = 1, shown do if stack[k] == cd then at = k end end
         if at then
             cd.box:ClearAnchors()
-            cd.box:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, CHART_Y + (at - 1) * (CARD_H + CARD_GAP) - PROFILE_H - PROFILE_GAP)
+            cd.box:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, CHART_Y + (at - 1) * (CARD_H + CARD_GAP))
             cd.box:SetHidden(false)
         else
             cd.box:SetHidden(true)
@@ -536,7 +489,7 @@ local function place_cards(side)
     end
     if n > shown then
         c.moreHint:ClearAnchors()
-        c.moreHint:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, CHART_Y + shown * (CARD_H + CARD_GAP) - PROFILE_H - PROFILE_GAP)
+        c.moreHint:SetAnchor(TOPLEFT, c.map, TOPRIGHT, PAD, CHART_Y + shown * (CARD_H + CARD_GAP))
         c.moreHint:SetHidden(false)
         pulse_hint()
     else
@@ -549,7 +502,6 @@ local function layout()
     local side = side_for(win:GetWidth(), win:GetHeight())
     state.side = side
     c.map:SetDimensions(side, side)
-    c.profile.box:SetWidth(side)
     c.slider:SetWidth(math.max(40, side - 60))
     for _, cd in ipairs(c.cards) do cd.chart:layout(LEGEND_W - 16, CARD_H - 28 - 8) end
     place_cards(side)
@@ -1108,75 +1060,6 @@ local function refresh_now(m, geo, idx)
     for i, l in ipairs(c.nowLines) do set_text(l, lines[i] or "") end
 end
 
-local function hex(col)
-    return string.format("%02x%02x%02x", math.floor(col[1] * 255 + 0.5), math.floor(col[2] * 255 + 0.5), math.floor(col[3] * 255 + 0.5))
-end
-
-local function profile_render(m)
-    Prof.enter("map:profile")
-    local pr = c.profile
-    local Profile = BGMeter.Profile
-    local data = state.profile
-    if state.profileFor ~= m or data == nil then
-        data = m and Profile.compute(m) or nil
-        state.profile, state.profileFor = data, m
-    end
-    local idx = nil
-    if data then
-        idx = (state.profileHover and Profile.index_of(data, state.profileHover)) or data.me
-        if not idx and data.n > 0 then idx = 1 end
-    end
-    if not (data and idx) then
-        pr.has = false
-        pr.radar:clear()
-        set_text(pr.name, "")
-        set_text(pr.archetype, "")
-        set_text(pr.legend, "")
-        for i = 1, 6 do set_text(pr.rows[i], "") end
-        Prof.exit("map:profile")
-        return
-    end
-    local p = data.players[idx]
-    local tm = data.teams[p.team]
-    local names = {}
-    for a = 1, #data.axes do names[a] = Profile.NAMES[data.axes[a]] end
-    local col = S.team_color(p.team)
-    pr.radar:set_axes(names)
-    pr.radar:clear_series()
-    if tm then pr.radar:set_series(1, tm.v, K.COLOR.text_dim, { width = 1, alpha = 0.8 }) end
-    pr.radar:set_series(2, p.v, col, { fan = true, width = 2 })
-    pr.radar:render()
-    local who = p.row.isLocal and "you" or (p.row.displayName or p.row.charName or "?")
-    set_text(pr.name, who)
-    S.color(pr.name, col)
-    set_text(pr.archetype, Profile.label(p.v, data.axes))
-    set_text(pr.legend, string.format("|c%s%s|r  ·  |c%steam|r", hex(col), p.row.isLocal and "you" or "them", hex(K.COLOR.text_dim)))
-    local table_fits = (state.side or 0) >= 524
-    for a = 1, 6 do
-        if a <= #data.axes and table_fits then
-            set_text(pr.rows[a], string.format("%-10s %3d  ·  %3d", names[a], math.floor(p.v[a] * 100 + 0.5), math.floor(((tm and tm.v[a]) or 0) * 100 + 0.5)))
-        else
-            set_text(pr.rows[a], "")
-        end
-    end
-    pr.has = true
-    Prof.exit("map:profile")
-end
-
-function M.profile_hover(prow)
-    if not built or c.win:IsHidden() then return end
-    if state.profileHover == prow then return end
-    state.profileHover = prow
-    profile_render(state.m)
-end
-
-function M.profile_state()
-    local pr = c and c.profile
-    if not pr then return nil end
-    return { has = pr.has, name = pr.name:GetText(), label = pr.archetype:GetText(), axes = pr.radar:axis_count(),
-             lines = pr.radar:count(), hover = state.profileHover ~= nil, rows = pr.rows }
-end
-
 function M.render()
     if not built or c.win:IsHidden() then return end
     local m = BGMeter.History.get(W.current_index)
@@ -1228,11 +1111,6 @@ function M.render()
         c.cards[6].chart:set_data(ctl)
         for _, cd in ipairs(c.cards) do cd.has = cd.chart.cols > 0 end
         place_cards(state.side)
-    end
-    if state.profileM ~= m then
-        state.profileM = m
-        state.profileHover = nil
-        profile_render(m)
     end
     if not state.geo then
         state.heatKey = nil
@@ -1424,7 +1302,7 @@ function M.controls() return c end
 function M.column_state()
     return { side = state.side, chart_y = CHART_Y, chart_min_h = CHART_MIN_H, card_h = CARD_H, card_gap = CARD_GAP,
              min_side = MIN_SIDE, chart_h = c.chartCard:GetHeight(), shown = state.shown, hidden = state.hidden,
-             available = #state.stack, hint = not c.moreHint:IsHidden(), profile_h = PROFILE_H }
+             available = #state.stack, hint = not c.moreHint:IsHidden() }
 end
 
 function M.ensure_built() build() end

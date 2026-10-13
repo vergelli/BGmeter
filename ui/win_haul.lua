@@ -21,11 +21,13 @@ local SHARE_SIZE = 26
 local SHARE_COLS = 3
 local SHARE_ROW_GAP = 4
 local SHARE_MIN_FREE = 60
-local EFF_BOTTOM = 369
+local EFF_BOTTOM = 349
 local STAND_H = 90
 local SHARE_KEYS = { "dmg", "heal", "kills", "taken", "obj", "medals" }
 local RINGS_H = SHARE_ROW_GAP + 2 * (SHARE_SIZE + SHARE_ROW_GAP)
 local MINI_GAP = 10
+local RADAR_SIDE = 130
+local RADAR_H = RADAR_SIDE + 18
 local flag_col_spec, caps_count = U.flag_col_spec, U.caps_count
 local Donut = BGMeter.Plot.donut
 local SHARE_TRACK = { 0.50, 0.50, 0.56, 0.28 }
@@ -152,13 +154,8 @@ local function build_haul(win)
     p.vetDelta:SetAnchor(TOPLEFT, p.track.container, BOTTOMLEFT, 0, 8)
     p.vetDelta:SetDimensions(INNER, 16)
 
-    p.season = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
-    U.clamp_line(p.season)
-    p.season:SetAnchor(TOPLEFT, p.vetDelta, BOTTOMLEFT, 0, 4)
-    p.season:SetDimensions(INNER, 16)
-
     p.div1 = P.rect(p.container, { 1, 1, 1, 0.10 })
-    p.div1:SetAnchor(TOPLEFT, p.season, BOTTOMLEFT, 0, 8)
+    p.div1:SetAnchor(TOPLEFT, p.vetDelta, BOTTOMLEFT, 0, 8)
     p.div1:SetDimensions(INNER, 1)
 
     local VAL_W = 74
@@ -235,6 +232,16 @@ local function build_haul(win)
         W.tip_dynamic(s.hit)
         p.share[key] = s
     end
+
+    p.radar = BGMeter.UI.radar.new(p.container, "haul.profile")
+    p.radar:layout(INNER, RADAR_SIDE)
+    p.radar.root:SetHidden(true)
+    p.archetype = P.label(p.container, S.FONT.row, K.COLOR.gold)
+    U.clamp_line(p.archetype)
+    p.archetype:SetDimensions(INNER, 18)
+    p.archetype:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    p.archetype:SetHidden(true)
+    p.profileFor, p.profile, p.profileHover = nil, nil, nil
 
     p.sep = P.rect(p.container, { 1, 1, 1, 0.10 })
     p.sep:SetAnchor(BOTTOMLEFT, p.container, BOTTOMLEFT, PAD, -STAND_H)
@@ -332,11 +339,62 @@ function SEC.haul_share(m, lr)
     return true
 end
 
+local function haul_profile(p, top)
+    local Profile = BGMeter.Profile
+    local data = p.profile
+    local idx = data and ((p.profileHover and Profile.index_of(data, p.profileHover)) or data.me) or nil
+    if not idx then
+        p.radar:clear()
+        p.radar.root:SetHidden(true)
+        p.archetype:SetHidden(true)
+        return false
+    end
+    local pl = data.players[idx]
+    local tm = data.teams[pl.team]
+    local names = p.axisNames or {}
+    p.axisNames = names
+    for a = 1, #data.axes do names[a] = Profile.NAMES[data.axes[a]] end
+    for a = #data.axes + 1, #names do names[a] = nil end
+    local col = S.team_color(pl.team)
+    p.radar.root:ClearAnchors()
+    p.radar.root:SetAnchor(TOPLEFT, p.container, TOPLEFT, 16, top)
+    p.radar.root:SetHidden(false)
+    p.radar:set_axes(names)
+    p.radar:clear_series()
+    if tm then p.radar:set_series(1, tm.v, K.COLOR.text_dim, { width = 1, alpha = 0.8 }) end
+    p.radar:set_series(2, pl.v, col, { fan = true, width = 2 })
+    p.radar:render()
+    local label = Profile.label(pl.v, data.axes):upper()
+    if not pl.row.isLocal then label = (pl.row.displayName or pl.row.charName or "?") .. "  ·  " .. label end
+    p.archetype:ClearAnchors()
+    p.archetype:SetAnchor(TOPLEFT, p.container, TOPLEFT, 16, top + RADAR_SIDE)
+    set_text(p.archetype, label)
+    S.color(p.archetype, pl.row.isLocal and K.COLOR.gold or col)
+    p.archetype:SetHidden(false)
+    return true
+end
+
+function U.profile_hover(prow)
+    local p = W.haul
+    if not (p and p.profile) or p.container:IsHidden() then return end
+    if p.profileHover == prow then return end
+    p.profileHover = prow
+    if not p.radarTop then return end
+    haul_profile(p, p.radarTop)
+end
+
+function U.profile_state()
+    local p = W.haul
+    if not p then return nil end
+    return { shown = not p.radar.root:IsHidden(), label = p.archetype:GetText(), axes = p.radar:axis_count(),
+             lines = p.radar:count(), hover = p.profileHover ~= nil, top = p.radarTop }
+end
+
 function SEC.haul(m, animate)
     local p, h = W.haul, m.haul
     local rec = m.records or {}
     local vet = h.vetEnd or h.vetStart
-    local vetControls = { p.vetIcon, p.vetIconHit, p.vetTitle, p.vetTier, p.track.container, p.vetDelta, p.season }
+    local vetControls = { p.vetIcon, p.vetIconHit, p.vetTitle, p.vetTier, p.track.container, p.vetDelta }
 
     if not Prefs.get("show_veterancy") then
         hide_all(vetControls, true)
@@ -367,7 +425,6 @@ function SEC.haul(m, animate)
         else
             set_text(p.vetDelta, "")
         end
-        set_text(p.season, vet.seasonName or "")
         local endsTxt = (vet.secondsLeft and vet.secondsLeft > 0)
             and ("\nseason ends in " .. F.countdown(vet.secondsLeft)) or ""
         W.tips[p.vetIconHit] = string.format("%s%s\n%s%s",
@@ -379,7 +436,7 @@ function SEC.haul(m, animate)
         hide_all(vetControls, false)
         p.vetIcon:SetHidden(true)
         set_text(p.vetTitle, "Veterancy"); set_text(p.vetTier, "(no season data)")
-        Bar.set_hidden(p.track, true); set_text(p.vetDelta, ""); set_text(p.season, "")
+        Bar.set_hidden(p.track, true); set_text(p.vetDelta, "")
         W.tips[p.vetIconHit] = nil
     end
 
@@ -420,9 +477,15 @@ function SEC.haul(m, animate)
 
     set_text(p.eff, string.format("%s AP/min  ·  %s AP/kill", F.commas(h.apPerMin), F.commas(h.apPerKill)))
     local rings = SEC.haul_share(m, lr)
+    local contH = (W.cur_h or L.window_h) - L.header_h - L.footer_h
+    local top = EFF_BOTTOM + (rings and RINGS_H or 0) + MINI_GAP
+    if p.profileFor ~= m then
+        p.profileFor, p.profileHover = m, nil
+        p.profile = BGMeter.Profile.compute(m)
+    end
+    p.radarTop = top
+    if haul_profile(p, top) then top = top + RADAR_H + MINI_GAP end
     if BGMeter.UI.map then
-        local contH = (W.cur_h or L.window_h) - L.header_h - L.footer_h
-        local top = EFF_BOTTOM + (rings and RINGS_H or 0) + MINI_GAP
         local avail = contH - STAND_H - top - MINI_GAP
         BGMeter.UI.map.mini_update(m, p.container, 16, top, avail)
     end

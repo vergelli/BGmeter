@@ -12,8 +12,8 @@ R.__index = R
 local MAX_SERIES = 2
 local MAX_AXES = 8
 local FAN = 60
-local LABEL_R = 1.24
-local MARGIN = 18
+local LABEL_R = 1.18
+local MARGIN = 14
 local TWO_PI = 2 * math.pi
 
 function R.new(parent, label)
