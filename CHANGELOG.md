@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- A PROFILE band above the map: a radar of six axes (Killer, Brawler, Anchor, Medic, Team, Objective; five in Deathmatch) built from the scoreboard counters, each axis your rank among every player of the match, your polygon filled in your team's colour over your team's mean in grey, and an archetype name from the shape: Slayer, Bruiser, Guardian, Healer, Captain, Hunter or Balanced. Hover a scoreboard row and the radar shows that player instead.
+
 ## [0.8.4] - 2026-10-03
 
 - Fixed: the spawn point behind AT THE SPAWN and the balance strip's "at base" signal was estimated from where you stood twelve seconds after each death, which in Chaosball is already the middle of the arena; the card could read 95% at the ball spawn. The spawn is now where you land after the respawn teleport (the jump in your own path after a death), or, when you never died, where your team stood before the gates opened; an estimate that falls on an objective is discarded rather than shown. Checked against 38 recorded matches: the new estimate agrees with the pre-gate position within 7 units, the old one was off by 59 on median and sat on the ball in Chaosball.
