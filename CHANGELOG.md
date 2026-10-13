@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.9.0] - 2026-10-13
 
 ### Changed
 - The scoreboard's header icons grow from 24 to 26 px, as far as the narrowest column allows beside its sort arrow, and the rows start 2 px lower. In the profile radar the team's polygon is gold, so it reads apart from the grey grid and from your own in your team's colour.
