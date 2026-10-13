@@ -43,6 +43,7 @@ function R.new(parent, label)
     end
     self.w, self.h, self.cx, self.cy, self.r = 0, 0, 0, 0, 0
     self.lines = 0
+    self.em1, self.em2 = nil, nil
     return self
 end
 
@@ -56,6 +57,10 @@ end
 
 function R:clear_series()
     for s = 1, MAX_SERIES do self.series[s] = nil end
+end
+
+function R:set_emphasis(a, b)
+    self.em1, self.em2 = a, b
 end
 
 function R:set_series(i, values, color, opts)
@@ -187,6 +192,8 @@ function R:render()
         lbl:ClearAnchors()
         lbl:SetAnchor(CENTER, self.root, TOPLEFT, x, y)
         lbl:SetText(self.axes[i])
+        local em = (i == self.em1 or i == self.em2) and K.COLOR.gold or K.COLOR.text_dim
+        lbl:SetColor(em[1], em[2], em[3], 1)
         lbl:SetHidden(false)
     end
 end
