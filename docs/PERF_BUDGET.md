@@ -37,6 +37,7 @@ Budgets live in `observability/prof.lua` (`BUDGET`); the profiler counts every c
 | match:geo | **34** | 0 / 2 / 2 | 36 / 339 | | | was 34 decodes in 43 renders; memo of the last three matches (#77) |
 | map:scrub | 1349 | 1 / 2 / 5 | 1.4 / 18 | 8 ms, 8 KB | 1 | 0.14 ms / 2 KB per tick on the full synthetic match; sixth and seventh sessions below (#109) |
 | map:timechart | 1363 | 0 / 0 / 4 | 0.04 / 0.7 | | | the map's time cards drawn to the slider; seventh session (#109) |
+| haul:profile | | | | 4 ms, 4 KB | | the profile radar in Your Haul: drawn with the haul on match change and on scoreboard row hover only; the six percentiles are computed once per match and reused on hover; harness: 0.08 ms and 1.7 KB per hover swap on an 18-player match (first draw 13 KB); game session pending |
 | up:BGMeterCardDrag | 1524 | 0 / 0 / 1 | 0.18 / 0.3 | | | mouse poll at 16 ms while a card is pressed; seventh session (#109) |
 | drawer:dev | 261 | 0 / 1 / 48 | 0.15 / 36 | | | dev only |
 
