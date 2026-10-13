@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- The scoreboard's header icons grow from 24 to 26 px, as far as the narrowest column allows beside its sort arrow, and the rows start 2 px lower. In the profile radar the team's polygon is gold, so it reads apart from the grey grid and from your own in your team's colour.
+
 ### Added
 - A profile radar in Your Haul, above the minimap: six axes (Killer, Brawler, Anchor, Medic, Team, Objective; five in Deathmatch) built from the scoreboard counters, each axis your rank among every player of the match, your polygon filled in your team's colour over your team's mean in grey, and an archetype name from the shape: Slayer, Bruiser, Guardian, Healer, Captain, Hunter or Balanced. Hover a scoreboard row and the radar shows that player instead. To make room the report window's default height grows from 800 to 930 and the veterancy block loses its season line, which the hover keeps. Your Haul is reordered around thin gold separators: veterancy, the AP, XP and CP receipt, medals, the share rings, the radar, the minimap; the AP per minute and per kill line is gone; Competitive Standing is two lines, the rank with the rating beside it in green or red; the minimap sits centred; the radar grows into whatever height is left, more in casual matches without a standing.
 

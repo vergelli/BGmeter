@@ -382,7 +382,7 @@ local function haul_profile(p, top)
     p.radar.root:SetHidden(false)
     p.radar:set_axes(names)
     p.radar:clear_series()
-    if tm then p.radar:set_series(1, tm.v, K.COLOR.text_dim, { width = 1, alpha = 0.8 }) end
+    if tm then p.radar:set_series(1, tm.v, K.COLOR.gold, { width = 1, alpha = 0.75 }) end
     p.radar:set_series(2, pl.v, col, { fan = true, width = 2 })
     p.radar:render()
     local label = Profile.label(pl.v, data.axes):upper()

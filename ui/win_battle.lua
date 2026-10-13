@@ -33,8 +33,8 @@ local FLAG_ICONS = {
     caps    = "EsoUI/Art/MapPins/battlegrounds_capturePoint_pin_neutral.dds",
     carried = "esoui/art/icons/mapkey/mapkey_bg_murderball.dds",
 }
-local HEADER_ICON = 24
-local ROWS_TOP = 30
+local HEADER_ICON = 26
+local ROWS_TOP = 32
 local Grid = BGMeter.UI.Grid
 local caps_shown = false
 local FACE_ICON = "EsoUI/Art/Help/help_tabIcon_overview_up.dds"
@@ -57,7 +57,7 @@ end
 
 local INDEX_X, ICON_X, NAME_X = 6, 24, 50
 local BAR_X, BAR_RIGHT = 50, 6
-local GRID_TOP = 26
+local GRID_TOP = 28
 
 local function tint(icon, color)
     icon:SetColor(color[1], color[2], color[3], 1)
