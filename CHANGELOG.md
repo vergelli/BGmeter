@@ -9,6 +9,7 @@
 
 ### Added
 - `/bgmeter trackers` dumps the objective counters of the shown match to the copybox.
+- The radar's lines and dots are reserved by the warm-up like every other pool, so the first draw of Your Haul no longer pays for creating them.
 
 ## [0.9.0] - 2026-10-13
 
