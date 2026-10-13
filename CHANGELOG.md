@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.9.1] - 2026-10-13
 
 ### Changed
 - Profile titles follow a new rule, checked against sixty real players: Quiet when no axis reaches the match median, Ace when every axis is above it with a high mean, Balanced for a flat polygon, otherwise the top axis pairs with the second wherever it sits on the hexagon, within a window that scales with the match size. All fifteen pairs have a name: Slayer, Duelist, Paladin, Finisher, Hunter, Bruiser, Crusader, Vanguard, Raider, Guardian, Bulwark, Sentinel, Healer, Escort, Captain. The assists single is Supporter and the objective single is Runner; the radar axis reads Assists.
