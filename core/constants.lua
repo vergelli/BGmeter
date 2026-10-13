@@ -47,11 +47,11 @@ K.TEAM_ART = {
 
 K.LAYOUT = {
     window_w   = 760,
-    window_h   = 800,
+    window_h   = 930,
     min_w      = 700,
-    min_h      = 780,
+    min_h      = 920,
     max_w      = 1240,
-    max_h      = 1080,
+    max_h      = 980,
     row_h      = 28,
     margin     = 16,
     header_h   = 68,
@@ -70,7 +70,7 @@ K.LAYOUT = {
     race_h     = 48,
     kills_h    = 44,
     balance_h  = 50,
-    map_h      = 798,
+    map_h      = 640,
     map_w      = 840,
     map_min    = 280,
 }
