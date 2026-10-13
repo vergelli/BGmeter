@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.1] - 2026-10-13
+
+### Changed
+- Profile titles follow a new rule, checked against sixty real players: Quiet when no axis reaches the match median, Ace when every axis is above it with a high mean, Balanced for a flat polygon, otherwise the top axis pairs with the second wherever it sits on the hexagon, within a window that scales with the match size. All fifteen pairs have a name: Slayer, Duelist, Paladin, Finisher, Hunter, Bruiser, Crusader, Vanguard, Raider, Guardian, Bulwark, Sentinel, Healer, Escort, Captain. The assists single is Supporter and the objective single is Runner; the radar axis reads Assists.
+- Hover the title for what it means in plain words; the axes that made the title are drawn in gold on the radar.
+- The Objective axis is the sum of the player's ranks on every objective counter of the mode, so a tracker's scale no longer weighs it: caps, carried time, carrier kills, damage to carriers and healing on carriers in the relic modes; defence points, kills on attackers and defenders and healing on defenders in the area modes. The five new counters are read from the scoreboard into every match captured from this version on.
+
+### Added
+- `/bgmeter trackers` dumps the objective counters of the shown match to the copybox.
+- The radar's lines and dots are reserved by the warm-up like every other pool, so the first draw of Your Haul no longer pays for creating them.
+
 ## [0.9.0] - 2026-10-13
 
 ### Changed

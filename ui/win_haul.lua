@@ -249,6 +249,7 @@ local function build_haul(win)
     p.archetype:SetDimensions(INNER, 18)
     p.archetype:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     p.archetype:SetHidden(true)
+    W.tip_dynamic(p.archetype)
     p.profileFor, p.profile, p.profileHover = nil, nil, nil
 
     p.sep = P.rect(p.container, gold_line())
@@ -360,7 +361,7 @@ local function standing_visible(m)
     return true
 end
 
-local function haul_profile(p, top)
+local function haul_profile_body(p, top)
     local Profile = BGMeter.Profile
     local data = p.profile
     local idx = data and ((p.profileHover and Profile.index_of(data, p.profileHover)) or data.me) or nil
@@ -384,14 +385,23 @@ local function haul_profile(p, top)
     p.radar:clear_series()
     if tm then p.radar:set_series(1, tm.v, K.COLOR.gold, { width = 1, alpha = 0.75 }) end
     p.radar:set_series(2, pl.v, col, { fan = true, width = 2 })
+    local c = Profile.classify(pl.v, data.axes, data.n)
+    if c.kind == "pair" then p.radar:set_emphasis(c.top, c.with)
+    elseif c.kind == "single" then p.radar:set_emphasis(c.top, nil)
+    else p.radar:set_emphasis(nil, nil) end
     p.radar:render()
-    local label = Profile.label(pl.v, data.axes):upper()
+    local label = c.name:upper()
+    W.tips[p.archetype] = Profile.meaning(c.name)
     p.archetype:ClearAnchors()
     p.archetype:SetAnchor(TOPLEFT, p.container, TOPLEFT, 16, top + (p.radarSide or RADAR_MIN) + 2)
     set_text(p.archetype, label)
     S.color(p.archetype, pl.row.isLocal and K.COLOR.gold or col)
     p.archetype:SetHidden(false)
     return true
+end
+
+local function haul_profile(p, top)
+    return BGMeter.Prof.span("haul:profile", haul_profile_body, p, top)
 end
 
 function U.profile_hover(prow)
@@ -407,7 +417,8 @@ function U.profile_state()
     local p = W.haul
     if not p then return nil end
     return { shown = not p.radar.root:IsHidden(), label = p.archetype:GetText(), axes = p.radar:axis_count(),
-             lines = p.radar:count(), hover = p.profileHover ~= nil, top = p.radarTop, side = p.radarSide, mini = p.miniAvail }
+             lines = p.radar:count(), hover = p.profileHover ~= nil, top = p.radarTop, side = p.radarSide, mini = p.miniAvail,
+             tip = W.tips[p.archetype] }
 end
 
 function SEC.haul(m, animate)
