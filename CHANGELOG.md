@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Jerall Marks, the currency of Update 52's Jerall Pass campaign, sit beside Tel Var in the currency row of the panel when the client has them. The currency is found by name, so the row needs no update when ZOS names the constant.
+
 ## [0.9.1] - 2026-10-13
 
 ### Changed
