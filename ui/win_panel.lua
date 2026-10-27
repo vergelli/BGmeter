@@ -21,6 +21,7 @@ local GLINT = "EsoUI/Art/HUD/starburst.dds"
 
 local stats = nil
 local host = nil
+local split_currency_row
 
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
@@ -347,6 +348,38 @@ local function refresh_standing()
     end
 end
 
+local SPLIT_W = 62
+local SPLIT_ICON = 20
+
+split_currency_row = function(on)
+    local tv, jm = stats.telvar, stats.jerall
+    if not (tv and jm) then return end
+    local right = -(host.inset_pad + 2)
+    local y = host.head_h + 30
+    tv.c:ClearAnchors()
+    jm.c:ClearAnchors()
+    if on then
+        tv.c:SetAnchor(TOPRIGHT, host.win, TOPRIGHT, right - SPLIT_W - 2, y)
+        tv.c:SetWidth(SPLIT_W)
+        jm.c:SetAnchor(TOPRIGHT, host.win, TOPRIGHT, right, y)
+        jm.c:SetWidth(SPLIT_W)
+        for _, st in ipairs({ tv, jm }) do
+            if st.icon then st.icon:SetDimensions(SPLIT_ICON, SPLIT_ICON) end
+            st.label:ClearAnchors()
+            st.label:SetAnchor(LEFT, st.c, LEFT, SPLIT_ICON + 3, 0)
+            st.label:SetAnchor(RIGHT, st.c, RIGHT, 0, 0)
+        end
+    else
+        tv.c:SetAnchor(TOPRIGHT, host.win, TOPRIGHT, right, y)
+        tv.c:SetWidth(126)
+        if tv.icon then tv.icon:SetDimensions(26, 26) end
+        tv.label:ClearAnchors()
+        tv.label:SetAnchor(LEFT, tv.c, LEFT, 32, 0)
+        tv.label:SetAnchor(RIGHT, tv.c, RIGHT, 0, 0)
+        jm.c:SetHidden(true)
+    end
+end
+
 local function refresh_currencies()
     local A = BGMeter.zenimax.api
     local C = BGMeter.zenimax.constants
@@ -359,14 +392,35 @@ local function refresh_currencies()
         st.tip = "Alliance Points"
     end
 
+    local JM = A.jerall_currency and A.jerall_currency() or nil
+    local split = (TELVAR ~= nil) and (JM ~= nil)
+    if stats._split ~= split then
+        stats._split = split
+        split_currency_row(split)
+    end
+
     st = stats.telvar
     if TELVAR then
         st.c:SetHidden(false)
         local tv = safe(A.get_currency, TELVAR, C.CURRENCY_LOCATION_CHARACTER) or 0
         if not same(st, tv) then
             if st.icon then st.icon:SetTexture(safe(A.get_currency_icon, TELVAR) or "") end
-            set_text(st.label, F.commas(tv))
-            st.tip = "Tel Var Stones"
+            set_text(st.label, split and F.abbrev(tv) or F.commas(tv))
+            st.tip = "Tel Var Stones\n" .. F.commas(tv)
+        end
+    else
+        st.c:SetHidden(true)
+    end
+
+    st = stats.jerall
+    if JM then
+        st.c:SetHidden(false)
+        local jm = safe(A.get_currency, JM, C.CURRENCY_LOCATION_CHARACTER) or 0
+        if not same(st, jm) then
+            if st.icon then st.icon:SetTexture(safe(A.get_currency_icon, JM) or "") end
+            set_text(st.label, split and F.abbrev(jm) or F.commas(jm))
+            local nm = safe(A.get_currency_name, JM, false, false)
+            st.tip = ((nm and nm ~= "") and nm or "Jerall Marks") .. "\n" .. F.commas(jm)
         end
     else
         st.c:SetHidden(true)
@@ -542,10 +596,12 @@ function Panel.build(pw, opts)
         stand   = make_stat(pw, 3, false, true, false, { tx = TX.board, fn = opts.open_leaderboard, tip = "View competitive leaderboard" }),
         ap      = make_stat(pw, 1, true, true),
         telvar  = make_stat(pw, 2, true, true),
+        jerall  = make_stat(pw, 2, true, true),
         session = make_stat(pw, 3, true, false),
         balance = make_stat(pw, 4, true, true),
     }
-    for _, key in ipairs({ "ap", "telvar" }) do
+    stats.jerall.c:SetHidden(true)
+    for _, key in ipairs({ "ap", "telvar", "jerall" }) do
         local lbl = stats[key].label
         if lbl.SetFont then lbl:SetFont(S.FONT.row) end
     end
