@@ -481,7 +481,7 @@ local function apply_dynamic_min_width(m)
         if tw > maxw then maxw = tw end
     end
     if maxw <= 0 then return end
-    local needed = math.ceil(maxw) + 26 + NAME_X + W.battle.grid:fixed_width() + 2 * L.margin + L.haul_w + L.gap
+    local needed = math.ceil(maxw) + 26 + 22 + NAME_X + W.battle.grid:fixed_width() + 2 * L.margin + L.haul_w + L.gap
     local dyn = math.max(L.min_w, math.min(needed, L.dyn_min_cap))
 
     local extra
@@ -606,6 +606,20 @@ function SEC.battle(m, animate)
     end
 
     local awards = Prefs.get("show_awards") and Awards.compute(m) or { leaders = {}, mvp = nil }
+    local Profile = BGMeter.Profile
+    if b.titlesFor ~= m then
+        b.titlesFor = m
+        b.titles = b.titles or {}
+        local data = Profile.compute(m)
+        for i = 1, #m.battle do
+            local ttl = nil
+            if data and data.players[i] and data.players[i].row == m.battle[i] then
+                ttl = Profile.icon(Profile.classify(data.players[i].v, data.axes, data.n).name)
+            end
+            b.titles[i] = ttl or false
+        end
+        for i = #m.battle + 1, #b.titles do b.titles[i] = nil end
+    end
     local show_faces = Prefs.get("show_faces") ~= false
     local barKey = (key == "name" or key == "deaths") and "damage" or key
     local maxVal = BGMeter.Match.column_max(m, barKey)
@@ -641,6 +655,8 @@ function SEC.battle(m, animate)
         if cicon then row.classIcon:SetTexture(cicon); row.classIcon:SetHidden(false) else row.classIcon:SetHidden(true) end
 
         local nm = U.player_ident(prow)
+        local tic = b.titles and b.titles[i]
+        if tic then nm = F.icon(tic, 18) .. " " .. nm end
         if awards.mvp == prow then nm = F.icon(ICON_STAR, 20) .. " " .. nm end
         local face = (show_faces and not prow.isLocal) and Faces.get(prow) or nil
         if face and Faces.is_familiar(face) then

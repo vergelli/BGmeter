@@ -391,6 +391,8 @@ local function haul_profile_body(p, top)
     else p.radar:set_emphasis(nil, nil) end
     p.radar:render()
     local label = c.name:upper()
+    local ic = Profile.icon(c.name)
+    if ic then label = F.icon(ic, 20) .. " " .. label end
     W.tips[p.archetype] = Profile.meaning(c.name)
     p.archetype:ClearAnchors()
     p.archetype:SetAnchor(TOPLEFT, p.container, TOPLEFT, 16, top + (p.radarSide or RADAR_MIN) + 2)
