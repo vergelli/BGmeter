@@ -52,7 +52,14 @@ local function paint(ic, r, g, b)
     end
 end
 
+function Panel.trophy_textures(tier)
+    return tier.metal_tex or TROPHY_METAL, tier.glass_tex or TROPHY_GLASS
+end
+
 function Panel.trophy_paint(metal, glass, tier)
+    local mt, gt = Panel.trophy_textures(tier)
+    metal:SetTexture(mt)
+    glass:SetTexture(gt)
     local m = tier.metal or WHITE
     paint(metal, m[1], m[2], m[3])
     local gc = tier.glass or tier.col
@@ -355,9 +362,9 @@ local function refresh_standing()
             local tierTag = ""
             if tier then
                 ensure_fx_controls(st)
-                st.icon:SetTexture(TROPHY_METAL)
                 st.glass:SetHidden(false)
                 Panel.trophy_paint(st.icon, st.glass, tier)
+                if st.sheen then st.sheen:SetTexture(tier.metal_tex or TROPHY_METAL) end
                 local col = tier.col
                 st.glow:SetColor(col[1], col[2], col[3], tier.glow)
                 st.glow:SetHidden(false)

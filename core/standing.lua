@@ -7,8 +7,10 @@ local Standing = {}
 local pending = nil
 
 Standing.TIERS = {
-    { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true, sheen = true, fx = "glitter", fxcol = { 1, 1, 1 } },
-    { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60, glass = { 1.00, 0.22, 0.12 }, metal = { 0.34, 0.31, 0.34 }, sheen = true, fx = "embers", fxcol = { 1.00, 0.45, 0.10 } },
+    { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true, sheen = true, fx = "glitter", fxcol = { 1, 1, 1 },
+      metal_tex = "bgmeter/assets/trophies/trophy_champion_metal.dds", glass_tex = "bgmeter/assets/trophies/trophy_champion_glass.dds" },
+    { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60, glass = { 1.00, 0.22, 0.12 }, sheen = true, fx = "embers", fxcol = { 1.00, 0.45, 0.10 },
+      metal_tex = "bgmeter/assets/trophies/trophy_mythic_metal.dds", glass_tex = "bgmeter/assets/trophies/trophy_mythic_glass.dds" },
     { max = 50,   word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50, sheen = true, fx = "glitter" },
     { max = 100,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42, sheen = true },
     { max = 250,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36, sheen = true },

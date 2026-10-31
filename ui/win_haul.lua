@@ -580,11 +580,7 @@ function SEC.haul(m, animate)
     elseif st.rank and st.rank > 0 then
         local Pn = BGMeter.UI.panel
         local tier = Pn and Pn.tier_of and Pn.tier_of(st.rank)
-        if tier then
-            p.standCup:SetTexture(Pn.TROPHY_METAL)
-            p.standCupGlass:SetTexture(Pn.TROPHY_GLASS)
-            Pn.trophy_paint(p.standCup, p.standCupGlass, tier)
-        end
+        if tier then Pn.trophy_paint(p.standCup, p.standCupGlass, tier) end
         p.standCup:SetHidden(not tier)
         p.standCupGlass:SetHidden(not tier)
         set_text(p.standRank, "#" .. F.commas(st.rank))

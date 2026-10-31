@@ -143,6 +143,7 @@ function T.show(tier, rank)
     if not tier then return end
     local u = build()
     BGMeter.UI.panel.trophy_paint(u.metal, u.glass, tier)
+    u.sheen:SetTexture((BGMeter.UI.panel.trophy_textures(tier)))
     local word = tier.word:gsub("!", "")
     u.title:SetText(word:upper())
     S.color(u.title, tier.col)
