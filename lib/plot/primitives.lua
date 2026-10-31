@@ -42,9 +42,12 @@ function P.backdrop(parent, name)
     return P.rect(parent, BGMeter.Constants.COLOR.panel, name or uniq("BGMeterBd"))
 end
 
+P.FRAME_EDGE = "bgmeter/assets/frame.dds"
+P.FRAME_SIZE = 14
+
 function P.frame(parent, name)
     local c = ui().create_control(name or uniq("BGMeterFrame"), parent, CT_BACKDROP)
-    c:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16, 8)
+    c:SetEdgeTexture(P.FRAME_EDGE, 256, 32, P.FRAME_SIZE)
     c:SetCenterColor(0, 0, 0, 0)
     c:SetInsets(0, 0, 0, 0)
     return c
