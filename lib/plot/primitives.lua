@@ -44,10 +44,20 @@ end
 
 P.FRAME_EDGE = "bgmeter/assets/frame.dds"
 P.FRAME_SIZE = 14
+P.FRAME_THIN_EDGE = "bgmeter/assets/frame_thin.dds"
+P.FRAME_THIN_SIZE = 8
 
 function P.frame(parent, name)
     local c = ui().create_control(name or uniq("BGMeterFrame"), parent, CT_BACKDROP)
     c:SetEdgeTexture(P.FRAME_EDGE, 256, 32, P.FRAME_SIZE)
+    c:SetCenterColor(0, 0, 0, 0)
+    c:SetInsets(0, 0, 0, 0)
+    return c
+end
+
+function P.frame_thin(parent, name)
+    local c = ui().create_control(name or uniq("BGMeterFrameThin"), parent, CT_BACKDROP)
+    c:SetEdgeTexture(P.FRAME_THIN_EDGE, 128, 16, P.FRAME_THIN_SIZE)
     c:SetCenterColor(0, 0, 0, 0)
     c:SetInsets(0, 0, 0, 0)
     return c

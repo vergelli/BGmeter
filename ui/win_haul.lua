@@ -47,7 +47,7 @@ local function build_medal_card()
 
     local bg = P.rect(root, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
     bg:SetAnchorFill(root)
-    P.frame(root):SetAnchorFill(root)
+    P.frame_thin(root):SetAnchorFill(root)
 
     local strip = P.rect(root, K.COLOR.gold)
     strip:SetAnchor(TOPLEFT, root, TOPLEFT, 4, 4)
@@ -127,7 +127,7 @@ local function build_haul(win)
 
     p.bd = P.backdrop(p.container)
     p.bd:SetAnchorFill(p.container)
-    P.frame(p.container):SetAnchorFill(p.container)
+    P.frame_thin(p.container):SetAnchorFill(p.container)
 
     p.heading = P.label(p.container, S.FONT.header, K.COLOR.gold)
     p.heading:SetText("YOUR HAUL")

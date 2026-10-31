@@ -365,7 +365,7 @@ local function build()
 
     panel.insetBg = P.rect(panel.inset, { 0, 0, 0, 0.45 })
     panel.insetBg:SetAnchorFill(panel.inset)
-    P.frame(panel.inset):SetAnchorFill(panel.inset)
+    P.frame_thin(panel.inset):SetAnchorFill(panel.inset)
 
     panel.scroll = {}
     local ac = K.COLOR.accent

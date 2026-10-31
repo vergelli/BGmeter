@@ -343,9 +343,14 @@ local function refresh_standing()
     if demo then standing = { rank = demo, score = 123456 } end
     st.c:SetHidden(false)
     if st.link then st.link:SetHidden(false) end
-    if same(st, standing and standing.rank or 0, standing and standing.score or 0, demo or 0, Prefs.get("animate") and 1 or 0) then return end
+    if same(st, standing and standing.rank or 0, standing and standing.score or 0, demo or 0, Prefs.get("animate") and 1 or 0) then
+        if st.tier and not FX.on and Prefs.get("animate") then fx_start(st.tier, st.rankNum) end
+        return
+    end
+    st.tier, st.rankNum = nil, 0
     if standing and (standing.rank or 0) > 0 then
         local tier = trophy_tier(standing.rank)
+        st.tier, st.rankNum = tier, standing.rank
         if st.icon then
             local tierTag = ""
             if tier then
