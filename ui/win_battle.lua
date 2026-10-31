@@ -657,7 +657,7 @@ function SEC.battle(m, animate)
         local nm = U.player_ident(prow)
         local tic = b.titles and b.titles[i]
         if tic then nm = F.icon(tic, 18) .. " " .. nm end
-        if awards.mvp == prow then nm = F.icon(ICON_STAR, 20) .. " " .. nm end
+        if awards.mvp == prow then nm = F.icon(Profile.MVP_STAR, 18) .. " " .. nm end
         local face = (show_faces and not prow.isLocal) and Faces.get(prow) or nil
         if face and Faces.is_familiar(face) then
             row.face = face

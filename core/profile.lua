@@ -218,6 +218,8 @@ Profile.MEANING = {
 }
 
 Profile.ICON_DIR = "bgmeter/assets/titles/"
+Profile.MVP_ICON = Profile.ICON_DIR .. "mvp.dds"
+Profile.MVP_STAR = Profile.ICON_DIR .. "mvp_star.dds"
 local icon_path = {}
 
 function Profile.icon(name)

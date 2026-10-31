@@ -391,6 +391,7 @@ local function haul_profile_body(p, top)
     else p.radar:set_emphasis(nil, nil) end
     p.radar:render()
     local label = c.name:upper()
+    if p.mvpRow and p.mvpRow == pl.row then label = F.icon(Profile.MVP_ICON, 20) .. " " .. label end
     local ic = Profile.icon(c.name)
     if ic then label = F.icon(ic, 20) .. " " .. label end
     W.tips[p.archetype] = Profile.meaning(c.name)
@@ -517,6 +518,7 @@ function SEC.haul(m, animate)
     if p.profileFor ~= m then
         p.profileFor, p.profileHover = m, nil
         p.profile = BGMeter.Profile.compute(m)
+        p.mvpRow = Prefs.get("show_awards") and BGMeter.Awards.compute(m).mvp or nil
     end
     local room = contH - bottom - top - MINI_GAP
     local side = room - 18 - MINI_GAP - MINI_OUTER_MIN
