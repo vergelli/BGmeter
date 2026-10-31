@@ -77,6 +77,7 @@ ui/win_about.lua
 ui/win_saved.lua
 ui/win_dev.lua
 ui/win_panel.lua
+ui/win_tierup.lua
 ui/win_queue.lua
 ui/win_menu.lua
 ui/warmup.lua

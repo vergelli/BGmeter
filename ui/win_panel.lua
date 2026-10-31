@@ -37,14 +37,7 @@ end
 
 local TROPHY_METAL = "bgmeter/assets/trophies/trophy_metal.dds"
 local TROPHY_GLASS = "bgmeter/assets/trophies/trophy_glass.dds"
-local TIERS = {
-    { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true },
-    { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60, glass = { 1.00, 0.22, 0.12 }, metal = { 0.34, 0.31, 0.34 } },
-    { max = 50,   word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50 },
-    { max = 100,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42 },
-    { max = 250,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36 },
-    { max = 500,  word = "Fine",      col = { 0.45, 0.82, 0.35 }, glow = 0.30 },
-}
+local TIERS = BGMeter.Standing.TIERS
 Panel.TIERS = TIERS
 Panel.TROPHY_METAL, Panel.TROPHY_GLASS = TROPHY_METAL, TROPHY_GLASS
 local LEADERBOARD_ICON = "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds"
@@ -93,10 +86,7 @@ local function hue_rgb(h)
 end
 
 local function trophy_tier(rank)
-    for _, tier in ipairs(TIERS) do
-        if rank <= tier.max then return tier end
-    end
-    return nil
+    return BGMeter.Standing.tier_of(rank)
 end
 
 function Panel.tier_of(rank) return trophy_tier(rank) end
