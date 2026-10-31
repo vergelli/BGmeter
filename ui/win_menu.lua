@@ -715,11 +715,12 @@ function M.demo_trophy()
     local idx = M._demo_idx or 0
     idx = idx + 1
     if idx > #DEMO_RANKS then
-        M._demo_idx, M._demo_rank = nil, nil
+        M._demo_idx, M._demo_rank, M._demo_style = nil, nil, nil
         BGMeter.Log.say("trophy demo OFF (real standing restored)")
     else
         M._demo_idx, M._demo_rank = idx, DEMO_RANKS[idx]
-        BGMeter.Log.say("trophy demo: rank #%d", M._demo_rank)
+        M._demo_style = (idx == #DEMO_RANKS) and "prism" or "crystal"
+        BGMeter.Log.say("trophy demo: rank #%d%s", M._demo_rank, M._demo_rank <= 10 and (" · champion " .. M._demo_style) or "")
     end
     if panel.win:IsHidden() then M.show_menu() else M.refresh() end
 end

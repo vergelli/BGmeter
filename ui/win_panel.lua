@@ -35,15 +35,37 @@ local function clean(s)
     return (tostring(s):gsub("%^.*$", ""))
 end
 
+local TROPHY_DIR = "bgmeter/assets/trophies/"
 local TIERS = {
-    { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true },
-    { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60 },
-    { max = 50,   word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50 },
-    { max = 100,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42 },
-    { max = 250,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36 },
-    { max = 500,  word = "Fine",      col = { 0.45, 0.82, 0.35 }, glow = 0.30 },
+    { max = 10,   word = "Champion!", col = { 0.97, 0.97, 1.00 }, glow = 0.90, hue = true, tex = TROPHY_DIR .. "trophy_champion.dds", prism = TROPHY_DIR .. "trophy_champion_prism.dds" },
+    { max = 25,   word = "Mythic!",   col = { 1.00, 0.55, 0.15 }, glow = 0.60, tex = TROPHY_DIR .. "trophy_mythic.dds" },
+    { max = 50,   word = "Legendary", col = { 1.00, 0.84, 0.30 }, glow = 0.50, tex = TROPHY_DIR .. "trophy_legendary.dds" },
+    { max = 100,  word = "Epic",      col = { 0.72, 0.53, 0.98 }, glow = 0.42, tex = TROPHY_DIR .. "trophy_epic.dds" },
+    { max = 250,  word = "Superior",  col = { 0.40, 0.68, 0.98 }, glow = 0.36, tex = TROPHY_DIR .. "trophy_superior.dds" },
+    { max = 500,  word = "Fine",      col = { 0.45, 0.82, 0.35 }, glow = 0.30, tex = TROPHY_DIR .. "trophy_fine.dds" },
 }
 Panel.TIERS = TIERS
+Panel.CHAMPION_STYLE = "crystal"
+local LEADERBOARD_ICON = "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds"
+local VERTS = { VERTEX_POINTS_TOPLEFT or 1, VERTEX_POINTS_TOPRIGHT or 2, VERTEX_POINTS_BOTTOMLEFT or 4, VERTEX_POINTS_BOTTOMRIGHT or 8 }
+local VERT_HUE = { 0, 0.25, 0.75, 0.5 }
+
+local function champion_style()
+    local menu = BGMeter.UI.menu
+    return (menu and menu._demo_style) or Panel.CHAMPION_STYLE
+end
+
+function Panel.trophy_tex(tier)
+    if tier.prism and champion_style() == "prism" then return tier.prism end
+    return tier.tex
+end
+
+local function paint_white(ic)
+    ic:SetColor(1, 1, 1, 1)
+    if ic.SetVertexColors then
+        for i = 1, 4 do ic:SetVertexColors(VERTS[i], 1, 1, 1, 1) end
+    end
+end
 
 local FX = { name = "BGMeterStandingFx", ms = 40, on = false, t0 = 0, tier = nil, rank = 0 }
 local BREATH_MS = 2600
@@ -149,8 +171,12 @@ local function fx_tick()
         local u = (t % HUE_MS) / HUE_MS
         local r, g, b = hue_rgb(u)
         st.glow:SetColor(0.45 + 0.55 * r, 0.45 + 0.55 * g, 0.45 + 0.55 * b, tier.glow * breath)
-        local r2, g2, b2 = hue_rgb(u + 0.5)
-        st.icon:SetColor(0.80 + 0.20 * r2, 0.80 + 0.20 * g2, 0.80 + 0.20 * b2, 1)
+        if not st.prism and st.icon.SetVertexColors then
+            for i = 1, 4 do
+                local r2, g2, b2 = hue_rgb(u + VERT_HUE[i])
+                st.icon:SetVertexColors(VERTS[i], 0.45 + 0.55 * r2, 0.45 + 0.55 * g2, 0.45 + 0.55 * b2, 1)
+            end
+        end
     else
         st.glow:SetColor(col[1], col[2], col[3], tier.glow * breath)
     end
@@ -303,17 +329,17 @@ local function refresh_standing()
     if demo then standing = { rank = demo, score = 123456 } end
     st.c:SetHidden(false)
     if st.link then st.link:SetHidden(false) end
-    if same(st, standing and standing.rank or 0, standing and standing.score or 0, demo or 0, Prefs.get("animate") and 1 or 0) then return end
+    if same(st, standing and standing.rank or 0, standing and standing.score or 0, demo or 0, Prefs.get("animate") and 1 or 0, champion_style()) then return end
     if standing and (standing.rank or 0) > 0 then
         local tier = trophy_tier(standing.rank)
         if st.icon then
-            st.icon:SetTexture(tier and "EsoUI/Art/Inventory/inventory_tabIcon_trophy_up.dds"
-                or "EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
+            st.icon:SetTexture(tier and Panel.trophy_tex(tier) or LEADERBOARD_ICON)
+            paint_white(st.icon)
+            st.prism = (tier ~= nil and tier.prism ~= nil and champion_style() == "prism")
             local tierTag = ""
             if tier then
                 ensure_fx_controls(st)
                 local col = tier.col
-                st.icon:SetColor(col[1], col[2], col[3], 1)
                 st.glow:SetColor(col[1], col[2], col[3], tier.glow)
                 st.glow:SetHidden(false)
                 st.rankText = "#" .. F.commas(standing.rank)
@@ -323,7 +349,6 @@ local function refresh_standing()
                 tierTag = string.format(" · |c%s%s|r", F.hexc(col), tier.word)
             else
                 Panel.podium_stop()
-                st.icon:SetColor(1, 1, 1, 1)
                 if st.glow then st.glow:SetHidden(true) end
             end
             st.tierTag = tierTag
@@ -334,8 +359,8 @@ local function refresh_standing()
     else
         Panel.podium_stop()
         if st.icon then
-            st.icon:SetTexture("EsoUI/Art/Journal/journal_tabIcon_leaderboard_up.dds")
-            st.icon:SetColor(1, 1, 1, 1)
+            st.icon:SetTexture(LEADERBOARD_ICON)
+            paint_white(st.icon)
             if st.glow then st.glow:SetHidden(true) end
         end
         set_text(st.label, "unranked")

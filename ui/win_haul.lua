@@ -568,7 +568,9 @@ function SEC.haul(m, animate)
         set_text(p.standSub, "loading"); S.color(p.standSub, K.COLOR.text_dim)
         W.tips[p.standRank] = "Competitive leaderboard standing"
     elseif st.rank and st.rank > 0 then
-        set_text(p.standRank, "#" .. F.commas(st.rank))
+        local Pn = BGMeter.UI.panel
+        local tier = Pn and Pn.tier_of and Pn.tier_of(st.rank)
+        set_text(p.standRank, (tier and (F.icon(Pn.trophy_tex(tier), 26) .. " ") or "") .. "#" .. F.commas(st.rank))
         local rankCol, move = K.COLOR.text, ""
         if st.rankDelta > 0 then rankCol = K.COLOR.heal; move = F.icon(ICON_SORTUP, 16) .. string.format(" |c5cc85f%d up|r   ", st.rankDelta)
         elseif st.rankDelta < 0 then rankCol = K.COLOR.accent; move = F.icon(ICON_SORTDN, 16) .. string.format(" |ce34234%d down|r   ", -st.rankDelta)
