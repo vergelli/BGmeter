@@ -653,9 +653,15 @@ function Panel.build(pw, opts)
         telvar  = make_stat(pw, 2, true, true),
         jerall  = make_stat(pw, 2, true, true),
         session = make_stat(pw, 3, true, false),
-        balance = make_stat(pw, 4, true, true),
+        balance = make_stat(pw, opts.session_y and 3 or 4, true, true),
     }
     stats.jerall.c:SetHidden(true)
+    if opts.session_y then
+        local c = stats.session.c
+        c:ClearAnchors()
+        c:SetAnchor(BOTTOMRIGHT, pw, BOTTOMRIGHT, -(host.inset_pad + 2), opts.session_y)
+        stats.session.label:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    end
     for _, key in ipairs({ "ap", "telvar", "jerall" }) do
         local lbl = stats[key].label
         if lbl.SetFont then lbl:SetFont(S.FONT.row) end

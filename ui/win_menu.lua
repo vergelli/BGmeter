@@ -346,7 +346,7 @@ local function build()
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
     panel.stats = Panel.build(pw, {
-        head_h = HEAD_H, inset_pad = INSET_PAD,
+        head_h = HEAD_H, inset_pad = INSET_PAD, session_y = -(FOOT_H + 4),
         open_veterancy = function() M.open_veterancy() end,
         claim_veterancy = function() M.claim_veterancy() end,
         open_leaderboard = function() M.open_leaderboard() end,
@@ -539,7 +539,7 @@ function M.refresh()
     local w = panel.win:GetWidth()
     local h = panel.win:GetHeight()
 
-    Queue.layout(math.max(36, w - 2 * INSET_PAD - 168 - 4 - 92 - 8 - 20))
+    Queue.layout(math.max(36, w - 2 * INSET_PAD - 168 - 4 - 92 - 8 - 20 - 134))
     local insetH = h - HEAD_H - PANEL_H - QUEUE_H - FOOT_H - 10
     panel.vis = math.max(1, math.floor(insetH / (ROW_H + 2)))
 
