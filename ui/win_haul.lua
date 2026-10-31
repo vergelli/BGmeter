@@ -27,6 +27,8 @@ local SHARE_KEYS = { "dmg", "heal", "kills", "taken", "obj", "medals" }
 local RINGS_H = SHARE_ROW_GAP + 2 * (SHARE_SIZE + SHARE_ROW_GAP)
 local MINI_GAP = 10
 local RADAR_MIN = 110
+local ARCH_H = 28
+local MEDAL = 28
 local MINI_OUTER_MIN = 130
 local function gold_line() return { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 } end
 local flag_col_spec, caps_count = U.flag_col_spec, U.caps_count
@@ -246,7 +248,7 @@ local function build_haul(win)
     p.radarSide = RADAR_MIN
     p.archetype = P.label(p.container, S.FONT.row, K.COLOR.gold)
     U.clamp_line(p.archetype)
-    p.archetype:SetDimensions(INNER, 18)
+    p.archetype:SetDimensions(INNER, ARCH_H)
     p.archetype:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     p.archetype:SetHidden(true)
     W.tip_dynamic(p.archetype)
@@ -391,9 +393,9 @@ local function haul_profile_body(p, top)
     else p.radar:set_emphasis(nil, nil) end
     p.radar:render()
     local label = c.name:upper()
-    if p.mvpRow and p.mvpRow == pl.row then label = F.icon(Profile.MVP_ICON, 20) .. " " .. label end
+    if p.mvpRow and p.mvpRow == pl.row then label = F.icon(Profile.MVP_ICON, MEDAL) .. " " .. label end
     local ic = Profile.icon(c.name)
-    if ic then label = F.icon(ic, 20) .. " " .. label end
+    if ic then label = F.icon(ic, MEDAL) .. " " .. label end
     W.tips[p.archetype] = Profile.meaning(c.name)
     p.archetype:ClearAnchors()
     p.archetype:SetAnchor(TOPLEFT, p.container, TOPLEFT, 16, top + (p.radarSide or RADAR_MIN) + 2)
@@ -521,13 +523,13 @@ function SEC.haul(m, animate)
         p.mvpRow = Prefs.get("show_awards") and BGMeter.Awards.compute(m).mvp or nil
     end
     local room = contH - bottom - top - MINI_GAP
-    local side = room - 18 - MINI_GAP - MINI_OUTER_MIN
+    local side = room - ARCH_H - MINI_GAP - MINI_OUTER_MIN
     if side > inner then side = inner end
     if side < RADAR_MIN then side = RADAR_MIN end
     p.radarSide = side
     p.radar:layout(inner, side)
     p.radarTop = top
-    if haul_profile(p, top) then top = top + side + 18 + MINI_GAP end
+    if haul_profile(p, top) then top = top + side + ARCH_H + MINI_GAP end
     p.miniAvail = contH - bottom - top - MINI_GAP
     if BGMeter.UI.map then
         local outer = math.min(p.miniAvail, inner)
