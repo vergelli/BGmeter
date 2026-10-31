@@ -269,6 +269,14 @@ local function build_haul(win)
     p.standRank:SetDimensions(math.floor(INNER * 0.5) - 5, 30)
     p.standRank:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     p.standRank:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    p.standCupGlass = P.icon(p.container)
+    p.standCupGlass:SetDimensions(26, 26)
+    p.standCupGlass:SetAnchor(LEFT, p.standRank, LEFT, 0, 0)
+    p.standCupGlass:SetHidden(true)
+    p.standCup = P.icon(p.container)
+    p.standCup:SetDimensions(26, 26)
+    p.standCup:SetAnchor(LEFT, p.standRank, LEFT, 0, 0)
+    p.standCup:SetHidden(true)
 
     p.standSub = P.label(p.container, S.FONT.small, K.COLOR.text_dim)
     U.clamp_line(p.standSub)
@@ -538,6 +546,8 @@ function SEC.haul(m, animate)
     end
 
     local standControls = { p.sep, p.standHeading, p.standRank, p.standSub }
+    p.standCup:SetHidden(true)
+    p.standCupGlass:SetHidden(true)
     local casual = (m.competitive == false)
         or (m.competitive == nil and m.teamSize == nil and #m.battle > 10)
     if not Prefs.get("show_standing") then hide_all(standControls, true); return end
@@ -570,7 +580,14 @@ function SEC.haul(m, animate)
     elseif st.rank and st.rank > 0 then
         local Pn = BGMeter.UI.panel
         local tier = Pn and Pn.tier_of and Pn.tier_of(st.rank)
-        set_text(p.standRank, (tier and (F.icon(Pn.trophy_tex(tier), 26) .. " ") or "") .. "#" .. F.commas(st.rank))
+        if tier then
+            p.standCup:SetTexture(Pn.TROPHY_METAL)
+            p.standCupGlass:SetTexture(Pn.TROPHY_GLASS)
+            Pn.trophy_paint(p.standCup, p.standCupGlass, tier)
+        end
+        p.standCup:SetHidden(not tier)
+        p.standCupGlass:SetHidden(not tier)
+        set_text(p.standRank, "#" .. F.commas(st.rank))
         local rankCol, move = K.COLOR.text, ""
         if st.rankDelta > 0 then rankCol = K.COLOR.heal; move = F.icon(ICON_SORTUP, 16) .. string.format(" |c5cc85f%d up|r   ", st.rankDelta)
         elseif st.rankDelta < 0 then rankCol = K.COLOR.accent; move = F.icon(ICON_SORTDN, 16) .. string.format(" |ce34234%d down|r   ", -st.rankDelta)
