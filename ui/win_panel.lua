@@ -92,6 +92,8 @@ end
 function Panel.tier_of(rank) return trophy_tier(rank) end
 
 local SWEEP_REST = 0.62
+local SHEEN_ON = 0.30
+local SHEEN_LAG = 900
 
 local function shimmer(word, col, spot, u)
     local n = #word
@@ -146,7 +148,11 @@ function Panel.podium_stop()
     FX.tier = nil
     BGMeter.zenimax.events.unregister_update(FX.name)
     local st = stats and stats.stand
-    if st then glint_set(st.glint1, nil); glint_set(st.glint2, nil) end
+    if st then
+        glint_set(st.glint1, nil); glint_set(st.glint2, nil)
+        BGMeter.UI.cupfx.sheen_tick(st.sheen, nil)
+        st.ps = BGMeter.UI.cupfx.stop(st.ps)
+    end
 end
 
 local function fx_tick()
@@ -170,6 +176,10 @@ local function fx_tick()
         st.glow:SetColor(col[1], col[2], col[3], tier.glow * breath)
     end
     local g = (t % GLINT_MS) / GLINT_MS
+    if tier.sheen then
+        local gs = ((t + SHEEN_LAG) % GLINT_MS) / GLINT_MS
+        BGMeter.UI.cupfx.sheen_tick(st.sheen, (gs < SHEEN_ON) and (gs / SHEEN_ON) or nil)
+    end
     glint_set(st.glint1, (g < GLINT_ON) and (g / GLINT_ON) or nil, 1)
     local g2 = ((t + GLINT_MS / 2) % GLINT_MS) / GLINT_MS
     glint_set(st.glint2, (FX.rank == 1 and g2 < GLINT_ON) and (g2 / GLINT_ON) or nil, -1)
@@ -189,7 +199,18 @@ local function fx_tick()
     end
 end
 
+local function fx_particles(st, tier)
+    st.ps = BGMeter.UI.cupfx.stop(st.ps)
+    if tier.fx then
+        local c = tier.fxcol or tier.col
+        st.ps = BGMeter.UI.cupfx.particles(st.icon, tier.fx, c[1], c[2], c[3], 5)
+        if st.ps then st.ps:Start() end
+    end
+end
+
 local function fx_start(tier, rank)
+    local st = stats and stats.stand
+    if st and (FX.tier ~= tier or not FX.on) then fx_particles(st, tier) end
     FX.tier, FX.rank = tier, rank
     if FX.on then return end
     FX.on = true
@@ -211,6 +232,7 @@ local function ensure_fx_controls(st)
     st.glass:SetAnchorFill(st.icon)
     if st.glass.SetDrawLevel then st.glass:SetDrawLevel(1) end
     if st.icon.SetDrawLevel then st.icon:SetDrawLevel(2) end
+    st.sheen = BGMeter.UI.cupfx.sheen(st.c, st.icon, TROPHY_METAL, 3)
     st.glint1 = P.icon(st.c, GLINT)
     st.glint1:SetDimensions(14, 14)
     st.glint1:SetAnchor(CENTER, st.icon, TOPRIGHT, -8, 7)

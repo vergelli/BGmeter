@@ -16,6 +16,7 @@ local IN_MS, HOLD_MS, OUT_MS = 350, 2600, 600
 local STILL_MS = 3000
 local BREATH_MS = 2600
 local HUE_MS = 1200
+local SHEEN_MS = 1600
 local CUP = 96
 local GLOW = 190
 local TOP_Y = 150
@@ -71,6 +72,7 @@ local function build()
     metal:SetDimensions(CUP, CUP)
     metal:SetAnchor(CENTER, root, TOP, 0, CUP / 2 + 6)
     if metal.SetDrawLevel then metal:SetDrawLevel(3) end
+    local sheen = BGMeter.UI.cupfx.sheen(root, metal, Pn.TROPHY_METAL, 4)
     local title = P.label(root, S.FONT.banner, K.COLOR.gold)
     title:SetAnchor(TOP, root, TOP, 0, CUP + 14)
     title:SetDimensions(460, 38)
@@ -79,7 +81,7 @@ local function build()
     sub:SetAnchor(TOP, title, BOTTOM, 0, 2)
     sub:SetDimensions(460, 20)
     sub:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-    ui = { root = root, glow = glow, glass = glass, metal = metal, title = title, sub = sub }
+    ui = { root = root, glow = glow, glass = glass, metal = metal, sheen = sheen, title = title, sub = sub }
     return ui
 end
 
@@ -88,7 +90,11 @@ local function stop()
     run.on = false
     run.tier = nil
     BGMeter.zenimax.events.unregister_update(NAME)
-    if ui then ui.root:SetHidden(true) end
+    if ui then
+        ui.root:SetHidden(true)
+        BGMeter.UI.cupfx.sheen_tick(ui.sheen, nil)
+        ui.ps = BGMeter.UI.cupfx.stop(ui.ps)
+    end
 end
 
 local function tick()
@@ -112,6 +118,10 @@ local function tick()
     ui.root:SetAlpha(a)
     ui.metal:SetScale(s)
     ui.glass:SetScale(s)
+    if tier.sheen then
+        local gs = (t % SHEEN_MS) / SHEEN_MS
+        BGMeter.UI.cupfx.sheen_tick(ui.sheen, (gs < 0.5) and (gs / 0.5) or nil)
+    end
     local breath = 0.80 + 0.20 * math.sin(2 * math.pi * t / BREATH_MS)
     if tier.hue then
         local u = (t % HUE_MS) / HUE_MS
@@ -143,6 +153,12 @@ function T.show(tier, rank)
     u.metal:SetScale(1)
     u.glass:SetScale(1)
     u.root:SetHidden(false)
+    u.ps = BGMeter.UI.cupfx.stop(u.ps)
+    if tier.fx and not run.still then
+        local c = tier.fxcol or tier.col
+        u.ps = BGMeter.UI.cupfx.particles(u.metal, tier.fx, c[1], c[2], c[3], 6)
+        if u.ps then u.ps:Start() end
+    end
     BGMeter.Sound.play("rankup")
     if not run.on then
         run.on = true
