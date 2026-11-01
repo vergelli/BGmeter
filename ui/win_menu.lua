@@ -342,7 +342,7 @@ local function build()
     panel.close = U.mk_plate_button(pw, TX.close, 24, function() M.hide_menu() end, "Close")
     panel.close:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -14, 15)
 
-    panel.gear = U.mk_plate_button(pw, TX.gear, 24, function() W.toggle_settings() end, "Settings")
+    panel.gear = U.mk_text_button(pw, "Settings", 68, 24, function() W.toggle_settings() end, "Open the settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
     panel.stats = Panel.build(pw, {

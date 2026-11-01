@@ -227,6 +227,17 @@ local function mk_plate_button(parent, tx, size, onclick, tipText)
     return plate
 end
 
+local function mk_text_button(parent, label, w, h, onclick, tipText)
+    local b = P.gold_button(parent, label)
+    b:SetDimensions(w, h)
+    b:SetHandler("OnClicked", function() onclick() end)
+    if tipText then
+        b:SetHandler("OnMouseEnter", function() if U.card_show then U.card_show(b, BOTTOM, tipText) end end)
+        b:SetHandler("OnMouseExit", function() if U.card_hide then U.card_hide() end end)
+    end
+    return b
+end
+
 local function anim_on(want) return want and Prefs.get("animate") end
 
 local function set_count(label, value, prefix, animate)
@@ -475,6 +486,7 @@ U.set_text = set_text
 U.make_clickable = make_clickable
 U.mk_button = mk_button
 U.mk_plate_button = mk_plate_button
+U.mk_text_button = mk_text_button
 U.set_count = set_count
 U.set_bar = set_bar
 U.pop = pop
