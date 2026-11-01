@@ -30,6 +30,29 @@ local RADAR_MIN = 110
 local ARCH_H = 28
 local MEDAL = 28
 local ICE = { 0.72, 0.90, 1.00 }
+local MVP_PULSE = { name = "BGMeterHaulMvp", ms = 50, on = false, t0 = 0 }
+local MVP_PULSE_MS = 2400
+
+local function mvp_pulse_stop()
+    if not MVP_PULSE.on then return end
+    MVP_PULSE.on = false
+    BGMeter.zenimax.events.unregister_update(MVP_PULSE.name)
+end
+
+local function mvp_pulse_tick()
+    local p = W.haul
+    local g = p and p.mvpGlow
+    if not g or g:IsHidden() or (W.win and W.win:IsHidden()) then mvp_pulse_stop() return end
+    local t = GetGameTimeMilliseconds() - MVP_PULSE.t0
+    g:SetColor(ICE[1], ICE[2], ICE[3], 0.45 + 0.30 * math.sin(2 * math.pi * t / MVP_PULSE_MS))
+end
+
+local function mvp_pulse_start()
+    if MVP_PULSE.on then return end
+    MVP_PULSE.on = true
+    MVP_PULSE.t0 = GetGameTimeMilliseconds()
+    BGMeter.zenimax.events.register_update(MVP_PULSE.name, MVP_PULSE.ms, mvp_pulse_tick)
+end
 local MINI_OUTER_MIN = 130
 local function gold_line() return { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 } end
 local flag_col_spec, caps_count = U.flag_col_spec, U.caps_count
@@ -422,11 +445,15 @@ local function haul_profile_body(p, top)
             p.mvpGlow:SetColor(ICE[1], ICE[2], ICE[3], 0.7)
         end
         local tw = p.archetype.GetTextWidth and p.archetype:GetTextWidth() or 0
+        local first = Profile.icon(c.name) and (MEDAL + 5) or 0
         p.mvpGlow:ClearAnchors()
-        p.mvpGlow:SetAnchor(CENTER, p.archetype, LEFT, math.floor((L.haul_w - 32 - tw) / 2 + MEDAL / 2 + 0.5), 0)
+        p.mvpGlow:SetAnchor(CENTER, p.archetype, LEFT, math.floor((L.haul_w - 32 - tw) / 2 + first + MEDAL / 2 + 0.5), 0)
+        p.mvpGlow:SetColor(ICE[1], ICE[2], ICE[3], 0.7)
         p.mvpGlow:SetHidden(false)
+        if Prefs.get("animate") then mvp_pulse_start() else mvp_pulse_stop() end
     elseif p.mvpGlow then
         p.mvpGlow:SetHidden(true)
+        mvp_pulse_stop()
     end
     return true
 end
