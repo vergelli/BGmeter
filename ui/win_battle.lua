@@ -749,6 +749,16 @@ function SEC.battle(m, animate)
             row.mvpFrame:SetHidden(true)
             row.mvpGlow:SetHidden(true)
         end
+        if prow.isLocal and not isMvp then
+            if not row.youFrame then
+                row.youFrame = P.frame_thin(row.container)
+                row.youFrame:SetAnchorFill(row.container)
+                if row.youFrame.SetEdgeColor then row.youFrame:SetEdgeColor(0.86, 0.86, 0.86, 0.7) end
+            end
+            row.youFrame:SetHidden(false)
+        elseif row.youFrame then
+            row.youFrame:SetHidden(true)
+        end
         row.container:SetHandler("OnMouseUp", function(_, button, upInside)
             if not upInside then return end
             if MOUSE_BUTTON_INDEX_RIGHT and button == MOUSE_BUTTON_INDEX_RIGHT then
