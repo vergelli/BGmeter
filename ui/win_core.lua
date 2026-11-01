@@ -202,6 +202,29 @@ local function mk_button(parent, tx, size, onclick, tipText)
     return b
 end
 
+local function mk_plate_button(parent, tx, size, onclick, tipText, tint)
+    local b = P.gold_button(parent, nil, nil, true)
+    b._tex_normal = tx.n
+    b:SetDimensions(size, size)
+    local g = P.icon(b, tx.n)
+    local gs = math.floor(size * 0.62 + 0.5)
+    g:SetDimensions(gs, gs)
+    g:SetAnchor(CENTER, b, CENTER, 0, 0)
+    local col = tint or K.COLOR.gold
+    g:SetColor(col[1], col[2], col[3], 1)
+    b.glyph = g
+    b:SetHandler("OnClicked", function() onclick() end)
+    b:SetHandler("OnMouseEnter", function()
+        g:SetColor(math.min(1, col[1] * 1.15 + 0.05), math.min(1, col[2] * 1.15 + 0.05), math.min(1, col[3] * 1.15 + 0.05), 1)
+        if tipText and U.card_show then U.card_show(b, BOTTOM, tipText) end
+    end)
+    b:SetHandler("OnMouseExit", function()
+        g:SetColor(col[1], col[2], col[3], 1)
+        if U.card_hide then U.card_hide() end
+    end)
+    return b
+end
+
 local function anim_on(want) return want and Prefs.get("animate") end
 
 local function set_count(label, value, prefix, animate)
@@ -449,6 +472,7 @@ U.ICON_SORTDN = ICON_SORTDN
 U.set_text = set_text
 U.make_clickable = make_clickable
 U.mk_button = mk_button
+U.mk_plate_button = mk_plate_button
 U.set_count = set_count
 U.set_bar = set_bar
 U.pop = pop

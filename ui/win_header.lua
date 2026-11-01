@@ -68,11 +68,11 @@ local function build_header(win)
         h.chips[i] = chip
     end
 
-    h.close = mk_button(win, TX.close, 22, function() W.hide() end, "Close")
-    h.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -L.margin, 14)
+    h.close = U.mk_plate_button(win, TX.close, 26, function() W.hide() end, "Close", { 1, 1, 1 })
+    h.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -L.margin, 12)
 
-    h.gear = mk_button(win, TX.gear, 28, function() W.toggle_settings() end, "Settings")
-    h.gear:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 30), 11)
+    h.gear = U.mk_plate_button(win, TX.gear, 26, function() W.toggle_settings() end, "Settings")
+    h.gear:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 30), 12)
 
     h.next = mk_button(win, TX.nextb, 26, function() W.step(1) end, "Older match")
     h.next:SetAnchor(TOPRIGHT, win, TOPRIGHT, -(L.margin + 64), 13)

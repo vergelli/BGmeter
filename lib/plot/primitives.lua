@@ -100,15 +100,20 @@ P.BUTTON_TEX = {
     down = "bgmeter/assets/button_down.dds", disabled = "bgmeter/assets/button_disabled.dds",
 }
 P.BUTTON_FACE = { 0.18, 0.13, 0.12 }
+P.BUTTON_SQ_TEX = {
+    up = "bgmeter/assets/button_sq_up.dds", over = "bgmeter/assets/button_sq_over.dds",
+    down = "bgmeter/assets/button_sq_down.dds", disabled = "bgmeter/assets/button_sq_disabled.dds",
+}
 
-function P.gold_button(parent, label, name)
+function P.gold_button(parent, label, name, square)
     local b = ui().create_from_virtual(name or uniq("BGMeterGoldButton"), parent, "ZO_DefaultButton")
     if label then b:SetText(label) end
+    local tex = square and P.BUTTON_SQ_TEX or P.BUTTON_TEX
     if b.SetNormalTexture then
-        b:SetNormalTexture(P.BUTTON_TEX.up)
-        b:SetMouseOverTexture(P.BUTTON_TEX.over)
-        b:SetPressedTexture(P.BUTTON_TEX.down)
-        b:SetDisabledTexture(P.BUTTON_TEX.disabled)
+        b:SetNormalTexture(tex.up)
+        b:SetMouseOverTexture(tex.over)
+        b:SetPressedTexture(tex.down)
+        b:SetDisabledTexture(tex.disabled)
         if b.SetEndCapWidth then b:SetEndCapWidth(0) end
         if b.SetMouseOverBlendMode then b:SetMouseOverBlendMode(TEX_BLEND_MODE_ALPHA or 0) end
     end

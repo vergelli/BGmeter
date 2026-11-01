@@ -121,7 +121,7 @@ local function build_settings()
     title:SetText(K.TITLE .. "  ·  Settings")
     title:SetAnchor(LEFT, emblem, RIGHT, 8, 0)
 
-    s.close = mk_button(win, TX.close, 20, function() W.toggle_settings() end, "Close")
+    s.close = U.mk_plate_button(win, TX.close, 22, function() W.toggle_settings() end, "Close", { 1, 1, 1 })
     s.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -14, 15)
 
     s.rows = {}
