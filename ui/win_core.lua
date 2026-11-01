@@ -202,27 +202,29 @@ local function mk_button(parent, tx, size, onclick, tipText)
     return b
 end
 
-local function mk_plate_button(parent, tx, size, onclick, tipText, tint)
-    local b = P.gold_button(parent, nil, nil, true)
+local function mk_plate_button(parent, tx, size, onclick, tipText)
+    local plate = P.icon(parent, P.BUTTON_SQ_TEX.up)
+    plate:SetDimensions(size, size)
+    if plate.SetDrawLevel then plate:SetDrawLevel(1) end
+    local b = P.button(plate, tx.n, tx.p, tx.o)
     b._tex_normal = tx.n
-    b:SetDimensions(size, size)
-    local g = P.icon(b, tx.n)
     local gs = math.floor(size * 0.62 + 0.5)
-    g:SetDimensions(gs, gs)
-    g:SetAnchor(CENTER, b, CENTER, 0, 0)
-    local col = tint or K.COLOR.gold
-    g:SetColor(col[1], col[2], col[3], 1)
-    b.glyph = g
+    b:SetDimensions(gs, gs)
+    b:SetAnchor(CENTER, plate, CENTER, 0, 0)
+    if b.SetDrawLevel then b:SetDrawLevel(2) end
     b:SetHandler("OnClicked", function() onclick() end)
     b:SetHandler("OnMouseEnter", function()
-        g:SetColor(math.min(1, col[1] * 1.15 + 0.05), math.min(1, col[2] * 1.15 + 0.05), math.min(1, col[3] * 1.15 + 0.05), 1)
-        if tipText and U.card_show then U.card_show(b, BOTTOM, tipText) end
+        plate:SetTexture(P.BUTTON_SQ_TEX.over)
+        if tipText and U.card_show then U.card_show(plate, BOTTOM, tipText) end
     end)
     b:SetHandler("OnMouseExit", function()
-        g:SetColor(col[1], col[2], col[3], 1)
+        plate:SetTexture(P.BUTTON_SQ_TEX.up)
         if U.card_hide then U.card_hide() end
     end)
-    return b
+    b:SetHandler("OnMouseDown", function() plate:SetTexture(P.BUTTON_SQ_TEX.down) end)
+    b:SetHandler("OnMouseUp", function() plate:SetTexture(P.BUTTON_SQ_TEX.over) end)
+    plate.btn = b
+    return plate
 end
 
 local function anim_on(want) return want and Prefs.get("animate") end

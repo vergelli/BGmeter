@@ -339,10 +339,10 @@ local function build()
     panel.title:SetText(K.TITLE .. "  ·  Registry")
     panel.title:SetAnchor(LEFT, panel.logo, RIGHT, 2, 8)
 
-    panel.close = mk_button(pw, TX.close, 20, function() M.hide_menu() end, "Close")
+    panel.close = U.mk_plate_button(pw, TX.close, 24, function() M.hide_menu() end, "Close")
     panel.close:SetAnchor(TOPRIGHT, pw, TOPRIGHT, -14, 15)
 
-    panel.gear = mk_button(pw, TX.gear, 28, function() W.toggle_settings() end, "Settings")
+    panel.gear = U.mk_plate_button(pw, TX.gear, 24, function() W.toggle_settings() end, "Settings")
     panel.gear:SetAnchor(RIGHT, panel.close, LEFT, -8, 0)
 
     panel.stats = Panel.build(pw, {
