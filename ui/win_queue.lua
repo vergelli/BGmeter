@@ -264,7 +264,13 @@ function Q.build(pw, opts)
     local bgc = qc.GetNamedChild and qc:GetNamedChild("BG")
     if bgc and bgc.SetEdgeTexture then
         bgc:SetEdgeTexture(P.FRAME_THIN_EDGE, 128, 16, P.FRAME_THIN_SIZE)
-        bgc:SetCenterColor(0.05, 0.04, 0.04, 0.9)
+        bgc:SetCenterColor(0.18, 0.13, 0.12, 1)
+    end
+    if q.combo then
+        local g = K.COLOR.gold
+        if q.combo.SetFont then q.combo:SetFont("ZoFontGameBold") end
+        if q.combo.SetSelectedColor then q.combo:SetSelectedColor(g[1], g[2], g[3], 1) end
+        if q.combo.SetHighlightedColor then q.combo:SetHighlightedColor(1, 0.94, 0.66, 1) end
     end
     if type(ZO_ComboBox_ObjectFromContainer) == "function" then
         local ok, obj = pcall(ZO_ComboBox_ObjectFromContainer, qc)
@@ -284,7 +290,8 @@ function Q.build(pw, opts)
         q.btn:SetMouseOverTexture("bgmeter/assets/button_over.dds")
         q.btn:SetPressedTexture("bgmeter/assets/button_down.dds")
         q.btn:SetDisabledTexture("bgmeter/assets/button_disabled.dds")
-        if q.btn.SetEndCapWidth then q.btn:SetEndCapWidth(11) end
+        if q.btn.SetEndCapWidth then q.btn:SetEndCapWidth(0) end
+        if q.btn.SetMouseOverBlendMode then q.btn:SetMouseOverBlendMode(TEX_BLEND_MODE_ALPHA or 0) end
     end
     if q.btn.SetNormalFontColor then
         local g = K.COLOR.gold
