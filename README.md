@@ -1,8 +1,7 @@
 # BGmeter
 
-![Version](https://img.shields.io/badge/version-0.1.4-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Lua](https://img.shields.io/badge/Lua-5.1-2C2D72?logo=lua&logoColor=white)
-![ESO](https://img.shields.io/badge/ESO-Update%2050%20%C2%B7%20API%20101050-orange)
 ![ESO](https://img.shields.io/badge/ESO-Update%2051%20%C2%B7%20API%20101051-orange)
 ![No dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -10,73 +9,59 @@
 _BGmeter is not created by, affiliated with, or sponsored by ZeniMax Media Inc. or its affiliates. The Elder Scrolls® and related logos are registered trademarks or trademarks of ZeniMax Media Inc. in the United States and/or other countries. All in-game imagery, icons and emblem designs shown or adapted in this repository (including the BGmeter logo, which is derived from in-game battleground team emblems) are the property of ZeniMax Media Inc., are used for non-commercial, informational purposes only, and no ownership over them is claimed._
 
 <p align="center">
-  <img src="docs/assets/logo-1-recut.png" width="300" alt="BGmeter" />
+  <img src="docs/assets/logo-1-recut.png" width="260" alt="BGmeter" />
 </p>
 
-**Battleground analytics for The Elder Scrolls Online.** BGmeter records every battleground you play and turns it into a report.
+**Battleground records for The Elder Scrolls Online.**
+An addon that records Battleground events and shows them at the end of the match in a friendly way. It also keeps a registry of your games and other tools to help you keep track of your matches. The aim of the project is to emphasize the value of teamwork across the different Battleground modes rather than the individual performance of a player.
 
-## The Registry
+Thanks to unit220 and ruskiii for testing and suggestions. Thanks to Solinur, whose [LibCombat](https://github.com/Solinur/LibCombat) taught me how the game's combat events are meant to be consumed. The research this addon draws on is credited at the end.
 
-A browsable history of every recorded battle, and a warrior panel with relevant personal information.
+A mention too for Solantris's [Battleboard](https://www.esoui.com/downloads/info4672-Battleboard.html), a great improvement over the game's own scoreboard. Go check it out.
 
 <p align="center">
-  <img src="docs/assets/main-menu-1.png" width="420" alt="The Registry" />
+  <a href="docs/assets/showcase.mp4"><img src="docs/assets/showcase.gif" width="640" alt="BGmeter showcase" /></a>
 </p>
 
-Some aesthetic details around the leaderboards:
-
-<p align="center">
-  <img src="docs/assets/standing-tiers.gif" alt="Standing tiers: Epic, Legendary, Mythic, Champion" />
-</p>
-
-You can also queue for battlegrounds directly from the Registry (this does not aim to replace the original menu, it's just a convenience).
+<p align="center"><sub>Click the preview for the full-quality video.</sub></p>
 
 ## The Battle Report
 
-When a match ends (or when you open one from the Registry), you get the whole
-story:
+Scoreboard with damage, healing, K/D/A, objectives and medals, sortable by any column. Below it, the match as it happened: score over time, combat momentum and the objective lanes of the mode you played (flags, relics, ball carriers, kill pressure). On the right, your haul: AP, XP, Champion Points, veterancy, medals, your title for the match and your competitive standing. Every mode is covered, multi-round formats included, and each match has a map of where it was fought.
 
-- **Full scoreboard**: damage, healing, K/D/A, captures, score and medals, sortable by any column, and more.
-- **Match timeline**: team score over time, your kills and deaths marked,
-  the bloodiest minute highlighted.
-- **Combat momentum**: who was steamrolling whom, minute by minute.
-- **Objective charts per mode**: flag control lanes for Domination and Crazy
-  King, relic runs for Capture the Relic, carrier possession for Chaosball.
-  Every current battleground mode is supported, including multi-round formats.
-- **Your haul**: AP, XP and Champion Points earned, veterancy season-track progress, the medals you collected, and your
-  competitive standing with movement since the last match.
+## The Registry
+
+Every recorded battle in one list, with your rank progress and currencies on top. The icons on its edge open your personal bests, your record per arena and the faces you keep meeting. You can queue from here too.
 
 <p align="center">
-  <img src="docs/assets/crazy-king-1.png" width="640" alt="Crazy King report" />
+  <img src="docs/assets/registry.png" width="400" alt="The Registry" />
 </p>
 
-<p align="center">
-  <img src="docs/assets/chaos-ball-1.png" width="560" alt="Chaosball report" />
-</p>
+## Install and use
 
-## Install
-
-- Download the zip from [ESOUI](https://www.esoui.com/) and extract it into `Documents/Elder Scrolls Online/live/AddOns/`.
-
-## Use
+Download from [ESOUI](https://www.esoui.com/) and extract into `Documents/Elder Scrolls Online/live/AddOns/`. No dependencies.
 
 | | |
 |---|---|
-| `/bgmeter` | Open / close the Battle Registry |
-| Launcher icon | Draggable shield on your screen, click to open. (Yes, you can deactivate it) |
+| `/bgmeter` | Open or close the Registry |
+| Launcher | Draggable shield on screen, click to open (can be turned off) |
 | Keybind | *Toggle BGmeter* under Controls → Keybindings |
 
-Everything else lives in the UI: open a match from the Registry, use the gear
-for settings.
+Settings live behind the **Settings** button of either window.
 
-## Good citizen
+## Performance
 
-BGmeter is built to be invisible while you fight. I measured and profiled it myself several times: combat events are filtered
-by the game engine itself (not in Lua), the per-sample data path allocates
-zero memory, and nothing is written to chat. If you find a bug, a comment on
-ESOUI reaches the author (me).
+BGmeter stays out of the way while you fight: combat events are filtered by the game engine, not in Lua, the per-sample path allocates no memory, and nothing is written to chat. Bugs and ideas: a comment on ESOUI or an issue here.
 
+## Where the ideas come from
+
+BGmeter was written with the help of a coding agent. The ideas below reached the code through it and through me, and none of them is ours, so their authors are named here. Links go to the authors' own copies where one exists; the rest point to the publisher.
+
+- The radar reads shapes rather than areas because of Cleveland & McGill, [*Graphical Perception*](https://doi.org/10.1080/01621459.1984.10478080) (JASA, 1984), and keeps to the limits set out by Draper, Livnat & Riesenfeld in [*A Survey of Radial Methods for Information Visualization*](https://doi.org/10.1109/TVCG.2009.23) (IEEE TVCG, 2009).
+- The team cohesion and distance cards on the map use the team centroid and spread of Frencken, Lemmink, Delleman & Visscher, [*Oscillations of centroid position and surface area of soccer teams in small-sided games*](https://doi.org/10.1080/17461391.2010.499967) (European Journal of Sport Science, 2011), Bourbousson, Sève & McGarry, [*Space-time coordination dynamics in basketball, Part 2*](https://mip.univ-nantes.fr/medias/fichier/2010bourboussonsevemcgarryjss2_1266958503934.pdf?ID_FICHE=420463&INLINE=FALSE) (Journal of Sports Sciences, 2010) and Drachen et al., [*Skill-based differences in spatio-temporal team behaviour in DotA 2*](https://arxiv.org/abs/1603.07738) (IEEE GEM, 2014).
+- The reading of momentum and comebacks follows Elias, Garfield & Gutschera, [*Characteristics of Games*](https://mitpress.mit.edu/9780262017138/characteristics-of-games/) (MIT Press, 2012).
+- The performance rules follow Holzmann, [*The Power of 10*](https://spinroot.com/gerard/pdf/P10.pdf) (IEEE Computer, 2006), Ierusalimschy, [*Lua Performance Tips*](https://www.lua.org/gems/sample.pdf) (Lua Programming Gems, 2008) and Nystrom, [*Game Programming Patterns*](https://gameprogrammingpatterns.com/).
 
 ## License
 
-[MIT](LICENSE). The license covers the addon code only: game artwork and derived designs remain the property of ZeniMax Media Inc.
+[MIT](LICENSE), covering the addon code only. Game artwork and derived designs remain the property of ZeniMax Media Inc.
