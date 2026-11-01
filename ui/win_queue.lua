@@ -261,6 +261,11 @@ function Q.build(pw, opts)
     qc:SetDimensions(168, 30)
     qc:SetAnchor(BOTTOMLEFT, pw, BOTTOMLEFT, opts.x, opts.y)
     q = { combo_c = qc, sel = 1 }
+    local bgc = qc.GetNamedChild and qc:GetNamedChild("BG")
+    if bgc and bgc.SetEdgeTexture then
+        bgc:SetEdgeTexture(P.FRAME_THIN_EDGE, 128, 16, P.FRAME_THIN_SIZE)
+        bgc:SetCenterColor(0.05, 0.04, 0.04, 0.9)
+    end
     if type(ZO_ComboBox_ObjectFromContainer) == "function" then
         local ok, obj = pcall(ZO_ComboBox_ObjectFromContainer, qc)
         if ok then q.combo = obj end
