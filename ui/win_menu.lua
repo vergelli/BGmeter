@@ -25,8 +25,8 @@ local LAUNCHER_IDLE = 0.90
 local MENU_ART = "esoui/art/loadingscreens/loadscreen_battleground_ularra_01.dds"
 local MENU_ART_ALPHA = 0.30
 
-local MENU_W = 388
-local MENU_H = 530
+local MENU_W = 412
+local MENU_H = 496
 local ROW_H = 28
 local HEAD_H = 46
 local PANEL_H = 128
