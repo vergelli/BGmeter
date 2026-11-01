@@ -29,6 +29,7 @@ local MINI_GAP = 10
 local RADAR_MIN = 110
 local ARCH_H = 28
 local MEDAL = 28
+local ICE = { 0.72, 0.90, 1.00 }
 local MINI_OUTER_MIN = 130
 local function gold_line() return { K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.22 } end
 local flag_col_spec, caps_count = U.flag_col_spec, U.caps_count
@@ -410,6 +411,21 @@ local function haul_profile_body(p, top)
     set_text(p.archetype, label)
     S.color(p.archetype, pl.row.isLocal and K.COLOR.gold or col)
     p.archetype:SetHidden(false)
+    local isMvp = p.mvpRow ~= nil and p.mvpRow == pl.row
+    if isMvp then
+        if not p.mvpGlow then
+            p.mvpGlow = P.icon(p.container, "bgmeter/assets/glow.dds")
+            p.mvpGlow:SetDimensions(52, 52)
+            if p.mvpGlow.SetBlendMode then p.mvpGlow:SetBlendMode(TEX_BLEND_MODE_ADD) end
+            p.mvpGlow:SetColor(ICE[1], ICE[2], ICE[3], 0.7)
+        end
+        local tw = p.archetype.GetTextWidth and p.archetype:GetTextWidth() or 0
+        p.mvpGlow:ClearAnchors()
+        p.mvpGlow:SetAnchor(CENTER, p.archetype, LEFT, math.floor((L.haul_w - 32 - tw) / 2 + MEDAL / 2 + 0.5), 0)
+        p.mvpGlow:SetHidden(false)
+    elseif p.mvpGlow then
+        p.mvpGlow:SetHidden(true)
+    end
     return true
 end
 

@@ -739,27 +739,15 @@ function SEC.battle(m, animate)
                 row.mvpFrame:SetAnchorFill(row.container)
                 row.mvpGlow = P.icon(row.container, MVP_GLOW)
                 row.mvpGlow:SetDimensions(40, 40)
-                row.mvpGlow:SetAnchor(CENTER, row.name, LEFT, 9, 0)
+                row.mvpGlow:SetAnchor(CENTER, row.name, LEFT, 11, 0)
                 if row.mvpGlow.SetBlendMode then row.mvpGlow:SetBlendMode(TEX_BLEND_MODE_ADD) end
-                row.mvpGlow:SetColor(K.COLOR.gold[1], K.COLOR.gold[2], K.COLOR.gold[3], 0.55)
+                row.mvpGlow:SetColor(ICE[1], ICE[2], ICE[3], 0.7)
             end
             row.mvpFrame:SetHidden(false)
             row.mvpGlow:SetHidden(false)
         elseif row.mvpFrame then
             row.mvpFrame:SetHidden(true)
             row.mvpGlow:SetHidden(true)
-        end
-        if prow.isLocal then
-            if not row.youGlow then
-                row.youGlow = P.icon(row.container, MVP_GLOW)
-                row.youGlow:SetDimensions(36, 36)
-                row.youGlow:SetAnchor(CENTER, row.index, CENTER, 0, 0)
-                if row.youGlow.SetBlendMode then row.youGlow:SetBlendMode(TEX_BLEND_MODE_ADD) end
-                row.youGlow:SetColor(ICE[1], ICE[2], ICE[3], 0.6)
-            end
-            row.youGlow:SetHidden(false)
-        elseif row.youGlow then
-            row.youGlow:SetHidden(true)
         end
         row.container:SetHandler("OnMouseUp", function(_, button, upInside)
             if not upInside then return end
