@@ -274,6 +274,20 @@ function Q.build(pw, opts)
     q.btn:SetAnchor(LEFT, qc, RIGHT, 4, 0)
     q.btn:SetText("Queue")
     q.btn:SetHandler("OnClicked", function() Q.click() end)
+    if q.btn.SetNormalTexture then
+        q.btn:SetNormalTexture("bgmeter/assets/button_up.dds")
+        q.btn:SetMouseOverTexture("bgmeter/assets/button_over.dds")
+        q.btn:SetPressedTexture("bgmeter/assets/button_down.dds")
+        q.btn:SetDisabledTexture("bgmeter/assets/button_disabled.dds")
+        if q.btn.SetEndCapWidth then q.btn:SetEndCapWidth(11) end
+    end
+    if q.btn.SetNormalFontColor then
+        local g = K.COLOR.gold
+        q.btn:SetNormalFontColor(g[1], g[2], g[3], 1)
+        q.btn:SetMouseOverFontColor(1, 0.94, 0.66, 1)
+        q.btn:SetPressedFontColor(g[1] * 0.85, g[2] * 0.85, g[3] * 0.85, 1)
+        q.btn:SetDisabledFontColor(0.45, 0.42, 0.35, 1)
+    end
 
     q.status = P.label(pw, S.FONT.small, K.COLOR.text_dim)
     q.status:SetAnchor(LEFT, q.btn, RIGHT, 8, 0)
