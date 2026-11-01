@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0] - 2026-11-01
 
 ### Added
 - Every profile title has its own gold medal: twenty-four icons drawn for the addon, shown beside the title in Your Haul at 28 px and in the title column of the scoreboard. The medals are keyed by player, so they follow their owner through every sort.
