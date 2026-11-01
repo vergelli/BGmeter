@@ -136,6 +136,15 @@ function P.button_text_color(b, lit)
     b:SetDisabledFontColor(0.45, 0.42, 0.35, 1)
 end
 
+function P.button_text_silver(b, font)
+    if font and b.SetFont then b:SetFont(font) end
+    if not b.SetNormalFontColor then return end
+    b:SetNormalFontColor(0.84, 0.82, 0.78, 1)
+    b:SetMouseOverFontColor(1, 1, 1, 1)
+    b:SetPressedFontColor(0.66, 0.64, 0.60, 1)
+    b:SetDisabledFontColor(0.45, 0.42, 0.35, 1)
+end
+
 function P.icon(parent, texturePath, name)
     local c = ui().create_control(name or uniq("BGMeterIcon"), parent, CT_TEXTURE)
     if texturePath then c:SetTexture(texturePath) end

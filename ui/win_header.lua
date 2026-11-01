@@ -71,7 +71,7 @@ local function build_header(win)
     h.close = U.mk_plate_button(win, TX.close, 26, function() W.hide() end, "Close")
     h.close:SetAnchor(TOPRIGHT, win, TOPRIGHT, -9, 12)
 
-    h.gear = U.mk_text_button(win, "Settings", 72, 26, function() W.toggle_settings() end, "Open the settings")
+    h.gear = U.mk_text_button(win, "Settings", 72, 26, function() W.toggle_settings() end, "Open the settings", true)
     h.gear:SetAnchor(TOPRIGHT, win, TOPRIGHT, -41, 12)
 
     h.next = U.mk_plate_button(win, TX.nextb, 26, function() W.step(1) end, "Older match")

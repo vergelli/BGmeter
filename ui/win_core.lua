@@ -227,9 +227,10 @@ local function mk_plate_button(parent, tx, size, onclick, tipText)
     return plate
 end
 
-local function mk_text_button(parent, label, w, h, onclick, tipText)
+local function mk_text_button(parent, label, w, h, onclick, tipText, silver)
     local b = P.gold_button(parent, label)
     b:SetDimensions(w, h)
+    if silver then P.button_text_silver(b, S.FONT.small) end
     b:SetHandler("OnClicked", function() onclick() end)
     if tipText then
         b:SetHandler("OnMouseEnter", function() if U.card_show then U.card_show(b, BOTTOM, tipText) end end)
