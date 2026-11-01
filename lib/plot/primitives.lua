@@ -95,6 +95,42 @@ function P.button(parent, normal, pressed, over, name)
     return b
 end
 
+P.BUTTON_TEX = {
+    up = "bgmeter/assets/button_up.dds", over = "bgmeter/assets/button_over.dds",
+    down = "bgmeter/assets/button_down.dds", disabled = "bgmeter/assets/button_disabled.dds",
+}
+P.BUTTON_FACE = { 0.18, 0.13, 0.12 }
+
+function P.gold_button(parent, label, name)
+    local b = ui().create_from_virtual(name or uniq("BGMeterGoldButton"), parent, "ZO_DefaultButton")
+    if label then b:SetText(label) end
+    if b.SetNormalTexture then
+        b:SetNormalTexture(P.BUTTON_TEX.up)
+        b:SetMouseOverTexture(P.BUTTON_TEX.over)
+        b:SetPressedTexture(P.BUTTON_TEX.down)
+        b:SetDisabledTexture(P.BUTTON_TEX.disabled)
+        if b.SetEndCapWidth then b:SetEndCapWidth(0) end
+        if b.SetMouseOverBlendMode then b:SetMouseOverBlendMode(TEX_BLEND_MODE_ALPHA or 0) end
+    end
+    P.button_text_color(b, true)
+    return b
+end
+
+function P.button_text_color(b, lit)
+    if not b.SetNormalFontColor then return end
+    local g = BGMeter.Constants.COLOR.gold
+    if lit then
+        b:SetNormalFontColor(g[1], g[2], g[3], 1)
+        b:SetMouseOverFontColor(1, 0.94, 0.66, 1)
+        b:SetPressedFontColor(g[1] * 0.85, g[2] * 0.85, g[3] * 0.85, 1)
+    else
+        b:SetNormalFontColor(0.62, 0.58, 0.50, 1)
+        b:SetMouseOverFontColor(0.80, 0.76, 0.66, 1)
+        b:SetPressedFontColor(0.50, 0.46, 0.40, 1)
+    end
+    b:SetDisabledFontColor(0.45, 0.42, 0.35, 1)
+end
+
 function P.icon(parent, texturePath, name)
     local c = ui().create_control(name or uniq("BGMeterIcon"), parent, CT_TEXTURE)
     if texturePath then c:SetTexture(texturePath) end

@@ -72,9 +72,7 @@ local SETTINGS_SECTIONS = {
 }
 
 local function text_button(parent, label)
-    local b = BGMeter.zenimax.ui.create_from_virtual(nil, parent, "ZO_DefaultButton")
-    b:SetText(label)
-    return b
+    return P.gold_button(parent, label)
 end
 
 local function on_pref_changed(key)
@@ -187,7 +185,11 @@ local function build_settings()
                         paint(); on_pref_changed(key)
                     end)
                 else
-                    paint = function() btn:SetText(Prefs.get(key) and "ON" or "OFF") end
+                    paint = function()
+                        local on = Prefs.get(key) and true or false
+                        btn:SetText(on and "ON" or "OFF")
+                        P.button_text_color(btn, on)
+                    end
                     btn:SetHandler("OnClicked", function()
                         Prefs.toggle(key)
                         paint(); on_pref_changed(key)
