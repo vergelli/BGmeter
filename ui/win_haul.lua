@@ -21,7 +21,7 @@ local SHARE_SIZE = 26
 local SHARE_COLS = 3
 local SHARE_ROW_GAP = 4
 local SHARE_MIN_FREE = 60
-local EFF_BOTTOM = 335
+local EFF_BOTTOM = 281
 local STAND_H = 70
 local SHARE_KEYS = { "dmg", "heal", "kills", "taken", "obj", "medals" }
 local RINGS_H = SHARE_ROW_GAP + 2 * (SHARE_SIZE + SHARE_ROW_GAP)
@@ -133,10 +133,11 @@ local function build_haul(win)
     p.heading = P.label(p.container, S.FONT.header, K.COLOR.gold)
     p.heading:SetText("YOUR HAUL")
     p.heading:SetAnchor(TOP, p.container, TOP, 0, 14)
+    p.heading:SetHidden(true)
 
     p.vetIcon = P.icon(p.container)
     p.vetIcon:SetDimensions(46, 46)
-    p.vetIcon:SetAnchor(TOPLEFT, p.container, TOPLEFT, PAD, 44)
+    p.vetIcon:SetAnchor(TOPLEFT, p.container, TOPLEFT, PAD, 16)
 
     p.vetTitle = P.label(p.container, S.FONT.row, K.COLOR.veterancy)
     U.clamp_line(p.vetTitle)
@@ -189,8 +190,9 @@ local function build_haul(win)
     p.div2 = P.rect(p.container, gold_line())
     p.div2:SetAnchor(TOPLEFT, p.cp.icon, BOTTOMLEFT, 0, 8)
     p.div2:SetDimensions(INNER, 1)
-    p.medalLabel:SetAnchor(TOPLEFT, p.div2, BOTTOMLEFT, 0, 8)
-    p.medalLabel:SetDimensions(INNER, 18)
+    p.medalLabel:SetAnchor(TOPLEFT, p.div2, BOTTOMLEFT, 0, 0)
+    p.medalLabel:SetDimensions(INNER, 0)
+    p.medalLabel:SetHidden(true)
     p.medalIcons = {}
     p.medalBadges = {}
     for i = 1, MEDAL_CAP do
