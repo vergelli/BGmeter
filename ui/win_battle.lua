@@ -9,6 +9,7 @@ local ICON_STAR, ICON_SORTUP, ICON_SORTDN = U.ICON_STAR, U.ICON_SORTUP, U.ICON_S
 local VP_LEFT = (VERTEX_POINTS_TOPLEFT or 1) + (VERTEX_POINTS_BOTTOMLEFT or 4)
 local VP_RIGHT = (VERTEX_POINTS_TOPRIGHT or 2) + (VERTEX_POINTS_BOTTOMRIGHT or 8)
 local MVP_GLOW = "bgmeter/assets/glow.dds"
+local ICE = { 0.72, 0.90, 1.00 }
 
 local C = BGMeter.zenimax.constants
 local K = BGMeter.Constants
@@ -667,7 +668,7 @@ function SEC.battle(m, animate)
         local nm = U.player_ident(prow)
         local tic = b.titles and b.titles[prow]
         if tic then nm = F.icon(tic, 18) .. " " .. nm end
-        if isMvp then nm = F.icon(Profile.MVP_STAR, 18) .. " " .. nm end
+        if isMvp then nm = F.icon(Profile.MVP_STAR, 22) .. " " .. nm end
         local face = (show_faces and not prow.isLocal) and Faces.get(prow) or nil
         if face and Faces.is_familiar(face) then
             row.face = face
@@ -747,6 +748,18 @@ function SEC.battle(m, animate)
         elseif row.mvpFrame then
             row.mvpFrame:SetHidden(true)
             row.mvpGlow:SetHidden(true)
+        end
+        if prow.isLocal then
+            if not row.youGlow then
+                row.youGlow = P.icon(row.container, MVP_GLOW)
+                row.youGlow:SetDimensions(36, 36)
+                row.youGlow:SetAnchor(CENTER, row.index, CENTER, 0, 0)
+                if row.youGlow.SetBlendMode then row.youGlow:SetBlendMode(TEX_BLEND_MODE_ADD) end
+                row.youGlow:SetColor(ICE[1], ICE[2], ICE[3], 0.6)
+            end
+            row.youGlow:SetHidden(false)
+        elseif row.youGlow then
+            row.youGlow:SetHidden(true)
         end
         row.container:SetHandler("OnMouseUp", function(_, button, upInside)
             if not upInside then return end
