@@ -104,6 +104,9 @@ local function build_settings()
 
     local bg = P.rect(win, { K.COLOR.bg[1], K.COLOR.bg[2], K.COLOR.bg[3], 0.98 })
     bg:SetAnchorFill(win)
+    s.weave = P.icon(win, "bgmeter/assets/settings_bg.dds")
+    s.weave:SetAnchorFill(win)
+    s.weave:SetColor(1, 1, 1, 0.6)
     P.frame(win):SetAnchorFill(win)
 
     local strip = P.rect(win, K.COLOR.accent)
