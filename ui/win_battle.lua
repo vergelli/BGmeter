@@ -610,15 +610,15 @@ function SEC.battle(m, animate)
     if b.titlesFor ~= m then
         b.titlesFor = m
         b.titles = b.titles or {}
+        for k in pairs(b.titles) do b.titles[k] = nil end
         local data = Profile.compute(m)
         for i = 1, #m.battle do
             local ttl = nil
             if data and data.players[i] and data.players[i].row == m.battle[i] then
                 ttl = Profile.icon(Profile.classify(data.players[i].v, data.axes, data.n).name)
             end
-            b.titles[i] = ttl or false
+            b.titles[m.battle[i]] = ttl or false
         end
-        for i = #m.battle + 1, #b.titles do b.titles[i] = nil end
     end
     local show_faces = Prefs.get("show_faces") ~= false
     local barKey = (key == "name" or key == "deaths") and "damage" or key
@@ -655,7 +655,7 @@ function SEC.battle(m, animate)
         if cicon then row.classIcon:SetTexture(cicon); row.classIcon:SetHidden(false) else row.classIcon:SetHidden(true) end
 
         local nm = U.player_ident(prow)
-        local tic = b.titles and b.titles[i]
+        local tic = b.titles and b.titles[prow]
         if tic then nm = F.icon(tic, 18) .. " " .. nm end
         if awards.mvp == prow then nm = F.icon(Profile.MVP_STAR, 18) .. " " .. nm end
         local face = (show_faces and not prow.isLocal) and Faces.get(prow) or nil
