@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0] - 2026-11-01
+
+### Added
+- Every profile title has its own gold medal: twenty-four icons drawn for the addon, shown beside the title in Your Haul at 28 px and in the title column of the scoreboard. The medals are keyed by player, so they follow their owner through every sort.
+- The match MVP wears a laurel beside the title in the haul and a star in the rows, replacing the game's star; an ice-blue glow breathes behind both, and a footer line names the MVP and their title. The MVP row is a gold gradient inside a thin gold frame.
+- Competitive Standing has a trophy: one cup in two layers, metal and glass, tinted by code for each of the six tiers, Mythic in black stone and Champion in platinum, in the panel and in the haul. The cup carries effects by tier through the game's particle system: a sheen sweep, glitter, embers. When the standing climbs a tier a banner rises with the cup.
+- The radar fan rays carry a heat gradient and its vertices are round.
+- Jerall Marks, the currency of Update 52's Jerall Pass campaign, sit beside Tel Var in the currency row of the panel when the client has them. The currency is found by name, so the row needs no update when ZOS names the constant.
+
+### Changed
+- Every window wears a gold frame drawn for the addon, eight edge cells of 32 px, and the inner sections, the hover card included, a thin version of it. The settings sit on a charcoal parchment, their buttons are gold with a dim face when a toggle is off, and the closed state of each combo box is framed gold too.
+- The queue has its own gold button; the session record moved beside it. Gear, close, the registry glyph and the arrows ride square gold plates; Settings is spelled out in small silver type to match the close cross; the header margin is tighter.
+- Your own row: name in saturated amber inside a light grey thin frame.
+- Your Haul drops its heading and the Medals word, so the radar takes the room.
+- The Registry opens squarer, 412 by 496.
+- The launcher logo has a gold rim.
+
+### Fixed
+- When the game's reward track was not ready as the match began, the veterancy baseline came back empty; the haul could then announce a reward that never happened. The baseline is read again on the following seconds until it answers, and a match without one never reports a reward.
+
 ## [0.9.1] - 2026-10-13
 
 ### Changed
