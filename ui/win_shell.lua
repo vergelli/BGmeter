@@ -435,8 +435,18 @@ function W.render_detail(m)
         S.color(W.detail, K.COLOR.text_dim)
     else
         local session = BGMeter.Session and BGMeter.Session.summary()
-        set_text(W.detail, session or "click a row for detail  ·  click a column header to sort  ·  drag an edge to resize")
-        S.color(W.detail, session and K.COLOR.gold or K.COLOR.text_dim)
+        local bt = W.battle
+        local mvp = bt and bt.titlesFor == m and bt.mvpRow or nil
+        if mvp then
+            local Profile = BGMeter.Profile
+            local line = F.icon(Profile.MVP_STAR, 16) .. " |cf2cc55MVP  " .. U.player_ident(mvp)
+                .. (bt.mvpTitle and ("  ·  " .. bt.mvpTitle) or "") .. "|r"
+            set_text(W.detail, session and (line .. "     ·     " .. session) or line)
+            S.color(W.detail, K.COLOR.gold)
+        else
+            set_text(W.detail, session or "click a row for detail  ·  click a column header to sort  ·  drag an edge to resize")
+            S.color(W.detail, session and K.COLOR.gold or K.COLOR.text_dim)
+        end
     end
 end
 
